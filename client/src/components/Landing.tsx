@@ -5,7 +5,7 @@ import type { PageView } from '../types.ts';
 import {
   Vote, BarChart2, ShieldCheck,
   LockKeyhole, Network, Activity, Megaphone, ExternalLink, Users, Briefcase, ArrowRight, FileText,
-  CheckSquare, BarChart3, ArrowUpRight
+  CheckSquare, BarChart3, ArrowUpRight, MapPin
 } from 'lucide-react';
 import { electionAPI } from '../services/api';
 
@@ -291,7 +291,7 @@ export const Landing: React.FC<LandingProps> = ({ onNavigate, isLoggedIn, langua
                     
                     {/* Left: Illustration / Image */}
                     <div className="w-full md:w-1/2 flex justify-center md:justify-start">
-                        <div className="relative w-full aspect-[16/10] bg-gray-50 rounded-2xl overflow-hidden shadow-xl border border-gray-100 group-hover:shadow-2xl transition-all duration-500">
+                        <div className="relative w-full aspect-16/10 bg-gray-50 rounded-2xl overflow-hidden shadow-xl border border-gray-100 group-hover:shadow-2xl transition-all duration-500">
                              {/* Placeholder for vector/illustration from prompt */}
                              <img 
                                 src={'/admin-illustration_LE_upscale.jpg'}
@@ -341,52 +341,146 @@ export const Landing: React.FC<LandingProps> = ({ onNavigate, isLoggedIn, langua
       </section>
 
        {/* Directory Section */}
-      <section id="directory" className="py-16 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-7xl">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-8">{t('landing.directory')}</h2>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {directoryItems.map((item, index) => (
-              <div 
-                key={item.title}
-                className="relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer group"
-                onClick={() => {
-                  if (item.link === 'CANDIDATES') {
-                    // Pass activeElectionId (null if no active election)
-                    onNavigate(item.link as PageView, activeElectionId || '');
-                  } else {
-                    onNavigate(item.link as PageView);
-                  }
-                }}
-              >
-                <img 
-                  src={item.image} 
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                />
-                {/* Green overlay */}
-                <div className="absolute inset-0 bg-coop-green/70 group-hover:bg-coop-green/50 transition-colors duration-300" />
-                
-                {/* Title */}
-                <div className="absolute inset-0 flex items-end p-6">
+      <section className="py-24 bg-white border-t border-gray-100">
+          <div className="container mx-auto px-6 max-w-7xl">
+              <div className="flex items-end justify-between mb-16">
                   <div>
-                    <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
-                      {item.title}
-                    </h3>
-                    <p className="text-sm text-white/80">{item.description}</p>
+                      <h2 className="text-4xl md:text-5xl font-black text-coop-darkGreen uppercase tracking-tighter leading-none">{t('landing.directory')}</h2>
+                      <p className="text-gray-500 mt-4 font-medium text-lg max-w-md">Quick access to cooperative registries, operational units, and leadership profiles.</p>
                   </div>
-                </div>
-                
-                {/* Hover effect */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                  <button className="px-4 py-2 bg-white text-coop-green font-bold rounded hover:bg-gray-100 pointer-events-auto">
-                    {t('landing.viewDirectory')}
-                  </button>
-                </div>
+                  <div className="hidden md:flex items-center gap-2">
+                      <div className="w-3 h-3 bg-coop-yellow rounded-full animate-pulse"></div>
+                      <span className="text-xs font-bold uppercase tracking-widest text-coop-darkGreen">System Online</span>
+                  </div>
               </div>
-            ))}
+
+              <div className="grid md:grid-cols-3 gap-6">
+                  {/* CARD 1: CANDIDATES */}
+                  <div 
+                    onClick={() => {
+                      onNavigate('CANDIDATES', activeElectionId || '');
+                    }}
+                    className="group relative h-[600px] rounded-[2rem] overflow-hidden cursor-pointer shadow-xl hover:shadow-2xl transition-all duration-700 border border-gray-100"
+                  >
+                      {/* Image Layer */}
+                      <div className="absolute inset-0 bg-gray-900">
+                          <img 
+                            src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80&w=1200" 
+                            className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000 ease-out"
+                            alt="Candidates"
+                          />
+                      </div>
+                      
+                      {/* Gradient Overlays */}
+                      <div className="absolute inset-0 bg-coop-darkGreen/90 mix-blend-multiply transition-all duration-700 group-hover:bg-coop-darkGreen/80"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-coop-darkGreen via-transparent to-transparent opacity-90"></div>
+
+                      {/* Content */}
+                      <div className="absolute inset-0 p-10 flex flex-col justify-between">
+                          <div className="flex justify-between items-start">
+                              <span className="text-6xl font-black text-white/10 group-hover:text-white/20 transition-colors font-mono tracking-tighter">01</span>
+                              <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:bg-coop-yellow group-hover:text-coop-darkGreen group-hover:border-coop-yellow transition-all duration-500">
+                                  <Users size={28} />
+                              </div>
+                          </div>
+
+                          <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                              <h3 className="text-3xl font-black text-white uppercase tracking-tight mb-3">Candidates</h3>
+                              <p className="text-white/70 font-medium text-sm leading-relaxed mb-8 max-w-[80%] border-l-2 border-coop-yellow/50 pl-4 group-hover:border-coop-yellow transition-colors">
+                                  Access verified profiles of members running for office in the upcoming election cycle.
+                              </p>
+                              
+                              <div className="inline-flex items-center gap-3 text-xs font-black uppercase tracking-widest text-white group-hover:text-coop-yellow transition-colors">
+                                  <span className="border-b border-transparent group-hover:border-coop-yellow pb-0.5">View Registry</span>
+                                  <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform duration-300" />
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* CARD 2: POSITIONS */}
+                  <div 
+                    onClick={() => onNavigate('ELECTIONS')}
+                    className="group relative h-[600px] rounded-[2rem] overflow-hidden cursor-pointer shadow-xl hover:shadow-2xl transition-all duration-700 border border-gray-100 mt-0 md:mt-12"
+                  >
+                       {/* Image Layer */}
+                       <div className="absolute inset-0 bg-gray-900">
+                          <img 
+                            src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=1200" 
+                            className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000 ease-out"
+                            alt="Positions"
+                          />
+                      </div>
+
+                      {/* Gradient Overlays */}
+                      <div className="absolute inset-0 bg-coop-darkGreen/90 mix-blend-multiply transition-all duration-700 group-hover:bg-coop-darkGreen/80"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-coop-darkGreen via-transparent to-transparent opacity-90"></div>
+
+                      {/* Content */}
+                      <div className="absolute inset-0 p-10 flex flex-col justify-between">
+                          <div className="flex justify-between items-start">
+                              <span className="text-6xl font-black text-white/10 group-hover:text-white/20 transition-colors font-mono tracking-tighter">02</span>
+                              <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:bg-coop-yellow group-hover:text-coop-darkGreen group-hover:border-coop-yellow transition-all duration-500">
+                                  <CheckSquare size={28} />
+                              </div>
+                          </div>
+
+                          <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                              <h3 className="text-3xl font-black text-white uppercase tracking-tight mb-3">Positions</h3>
+                              <p className="text-white/70 font-medium text-sm leading-relaxed mb-8 max-w-[80%] border-l-2 border-coop-yellow/50 pl-4 group-hover:border-coop-yellow transition-colors">
+                                  Review open leadership seats, roles, and governance responsibilities available.
+                              </p>
+                              
+                              <div className="inline-flex items-center gap-3 text-xs font-black uppercase tracking-widest text-white group-hover:text-coop-yellow transition-colors">
+                                  <span className="border-b border-transparent group-hover:border-coop-yellow pb-0.5">Check Openings</span>
+                                  <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform duration-300" />
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* CARD 3: BRANCHES */}
+                  <div 
+                    onClick={() => onNavigate('RESOURCES')}
+                    className="group relative h-[600px] rounded-[2rem] overflow-hidden cursor-pointer shadow-xl hover:shadow-2xl transition-all duration-700 border border-gray-100"
+                  >
+                       {/* Image Layer */}
+                       <div className="absolute inset-0 bg-gray-900">
+                          <img 
+                            src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200" 
+                            className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000 ease-out"
+                            alt="Branches"
+                          />
+                      </div>
+
+                      {/* Gradient Overlays */}
+                      <div className="absolute inset-0 bg-coop-darkGreen/90 mix-blend-multiply transition-all duration-700 group-hover:bg-coop-darkGreen/80"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-coop-darkGreen via-transparent to-transparent opacity-90"></div>
+
+                      {/* Content */}
+                      <div className="absolute inset-0 p-10 flex flex-col justify-between">
+                          <div className="flex justify-between items-start">
+                              <span className="text-6xl font-black text-white/10 group-hover:text-white/20 transition-colors font-mono tracking-tighter">03</span>
+                              <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:bg-coop-yellow group-hover:text-coop-darkGreen group-hover:border-coop-yellow transition-all duration-500">
+                                  <MapPin size={28} />
+                              </div>
+                          </div>
+
+                          <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                              <h3 className="text-3xl font-black text-white uppercase tracking-tight mb-3">Branches</h3>
+                              <p className="text-white/70 font-medium text-sm leading-relaxed mb-8 max-w-[80%] border-l-2 border-coop-yellow/50 pl-4 group-hover:border-coop-yellow transition-colors">
+                                  Locate regional cooperative units, satellite offices, and member service centers.
+                              </p>
+                              
+                              <div className="inline-flex items-center gap-3 text-xs font-black uppercase tracking-widest text-white group-hover:text-coop-yellow transition-colors">
+                                  <span className="border-b border-transparent group-hover:border-coop-yellow pb-0.5">Find Locations</span>
+                                  <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform duration-300" />
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
           </div>
-        </div>
       </section>
 
     </div>
