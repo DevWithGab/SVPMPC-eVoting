@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { PageView } from '../types.ts';
 import {
   Vote, BarChart2, ShieldCheck,
-  LockKeyhole, Network, Activity, Megaphone, ExternalLink, Users, Briefcase, ArrowRight, FileText
+  LockKeyhole, Network, Activity, Megaphone, ExternalLink, Users, Briefcase, ArrowRight, FileText,
+  CheckSquare, BarChart3, ArrowUpRight
 } from 'lucide-react';
 import { electionAPI } from '../services/api';
 
@@ -98,7 +99,7 @@ export const Landing: React.FC<LandingProps> = ({ onNavigate, isLoggedIn, langua
     <div className="flex flex-col min-h-screen bg-white selection:bg-coop-yellow selection:text-coop-green">
       
       {/* HERO SECTION - Redesigned for Impact */}
-      <section className="relative w-full min-h-svh sm:min-h-[90vh] flex items-center justify-center overflow-hidden bg-coop-darkGreen py-20 sm:py-0">
+      <section className="relative w-full h-svh sm:h-[100vh] flex items-center justify-center overflow-hidden bg-coop-darkGreen py-20 sm:py-0">
         
         {/* 1. Background Image Layer */}
         <div className="absolute inset-0 z-0">
@@ -132,13 +133,13 @@ export const Landing: React.FC<LandingProps> = ({ onNavigate, isLoggedIn, langua
             </div>
 
             {/* Main Headline - Resized */}
-            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-7xl font-black text-white uppercase tracking-tighter leading-[0.85] sm:leading-[0.9] mb-6 sm:mb-8 drop-shadow-2xl animate-slideUp px-2">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white uppercase tracking-tighter leading-[0.85] sm:leading-[0.9] mb-4 sm:mb-6 drop-shadow-2xl animate-slideUp px-2">
                 Your vote.<br/>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-coop-yellow via-white to-coop-yellow">Your Cooperative.</span>
             </h1>
 
             {/* Subheadline */}
-            <p className="text-base sm:text-lg md:text-xl text-gray-200 font-medium max-w-3xl mx-auto mb-10 sm:mb-14 leading-relaxed animate-slideUp pl-4 sm:pl-6 text-left md:text-center border-l-4 md:border-l-0 border-coop-yellow/50 md:pl-0 drop-shadow-md px-2" style={{animationDelay: '0.1s'}}>
+            <p className="text-sm sm:text-base md:text-lg text-gray-200 font-medium max-w-3xl mx-auto mb-6 sm:mb-10 leading-relaxed animate-slideUp pl-4 sm:pl-6 text-left md:text-center border-l-4 md:border-l-0 border-coop-yellow/50 md:pl-0 drop-shadow-md px-2" style={{animationDelay: '0.1s'}}>
                 {t('landing.heroSubtitle')}
             </p>
 
@@ -169,113 +170,174 @@ export const Landing: React.FC<LandingProps> = ({ onNavigate, isLoggedIn, langua
                 </button>
             </div>
 
-            {/* Live Data Ticker */}
-            <div className="mt-12 sm:mt-24 pt-6 sm:pt-8 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 text-left max-w-5xl mx-auto animate-fadeIn backdrop-blur-md bg-black/20 p-4 sm:p-6 md:p-8 rounded-lg sm:rounded-xl shadow-2xl" style={{animationDelay: '0.3s'}}>
-                 {[
-                    { label: 'Active Members', val: '18,442', icon: Users },
-                    { label: 'Voter Turnout', val: '68.4%', icon: Activity },
-                    { label: 'Positions Open', val: positionCount.toString(), icon: Briefcase },
-                    { label: 'Security Node', val: 'Stable', icon: ShieldCheck }
-                 ].map((stat, i) => (
-                    <div key={i} className="flex flex-col group pb-6">
-                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1 sm:mb-2 opacity-70 group-hover:opacity-100 transition-opacity">
-                            <stat.icon size={10} className="sm:w-3 sm:h-3 text-coop-yellow flex-shrink-0" />
-                            <span className="text-[8px] sm:text-[9px] font-black text-white uppercase tracking-wide sm:tracking-widest leading-tight">{stat.label}</span>
+            {/* Live Data Ticker - Stats Bar */}
+            <div className="w-full mt-8 sm:mt-10 lg:mt-16 xl:mt-20 animate-fadeIn" style={{animationDelay: '0.3s'}}>
+              <div className="w-full bg-coop-darkGreen border-t border-white/10">
+                <div className="w-full">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-0">
+                    {[
+                      { label: 'Active Members', value: '18,442', icon: Users, highlight: false },
+                      { label: 'Voter Turnout', value: '68.4%', icon: Activity, highlight: true },
+                      { label: 'Positions Open', value: positionCount.toString(), icon: Briefcase, highlight: false },
+                      { label: 'Security Node', value: 'Stable', icon: ShieldCheck, highlight: false }
+                    ].map((stat, index) => (
+                      <div
+                        key={stat.label}
+                        className={`py-4 sm:py-6 lg:py-8 px-3 sm:px-6 lg:px-12 xl:px-20 flex flex-col items-start ${
+                          index < 3 ? 'border-r border-white/10' : ''
+                        }`}
+                      >
+                        <div className={`text-lg sm:text-2xl lg:text-3xl font-bold mb-2 sm:mb-3 ${
+                          stat.highlight ? 'text-coop-yellow' : 'text-white'
+                        }`}>
+                          {stat.value}
                         </div>
-                        <span className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight drop-shadow-sm">{stat.val}</span>
-                    </div>
-                 ))}
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <stat.icon className="w-3 h-3 sm:w-4 sm:h-4 text-coop-yellow/70" />
+                          <span className="text-[10px] sm:text-xs text-white/50 font-medium tracking-wider uppercase">
+                            {stat.label}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
         </div>
       </section>
 
 
-      {/* Vote Now CTA */}
-      <section id="elections" className="pt-32 pb-32 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-7xl">
-          <div className="bg-white border-0 rounded-lg shadow-md overflow-hidden">
-            <div className="p-0">
-              <div className="flex flex-col lg:flex-row items-center">
-                <div className="hidden lg:block w-48 p-8">
-                  <img src={'/vote-illustration-left.png'} alt="Vote illustration" className="w-full h-auto" />
-                </div>
-                
-                <div className="flex-1 p-8 lg:p-12 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-4">
-                    <Megaphone className="h-6 w-6 text-coop-green" />
-                    <h2 className="text-2xl md:text-3xl font-bold text-coop-darkGreen">
-                      {t('landing.voiceMatters')}
-                    </h2>
+      {/* 3.5. REDESIGNED CTA SECTION: "Your Voice Matters" - FULL WIDTH */}
+      <section className="relative w-full py-24 bg-white border-b border-gray-100 overflow-hidden">
+          
+          {/* Decorative Background */}
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-coop-darkGreen via-coop-yellow to-coop-darkGreen"></div>
+          <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(#1B4332 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+          <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-coop-yellow/5 rounded-full blur-[100px]"></div>
+          
+          <div className="container mx-auto px-6 max-w-7xl relative z-10 flex flex-col md:flex-row items-center justify-between gap-16">
+              
+              {/* Left Visual: Voting Action */}
+              <div className="hidden md:block w-80 h-80 relative shrink-0">
+                  <div className="absolute inset-0 bg-coop-yellow/20 rounded-full blur-3xl transform -translate-x-6 translate-y-6"></div>
+                  <img 
+                      src={'/vote-illustration-left_LE_upscale.jpg'}
+                      className="relative z-10 w-full h-full object-cover rounded-2xl shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-700 border-4 border-white"
+                      alt="Casting Vote"
+                  />
+                  <div className="absolute -bottom-4 -left-4 bg-coop-darkGreen text-white p-3 rounded-xl shadow-lg z-20">
+                      <Vote size={24} />
+                  </div>
+              </div>
+
+              {/* Center Content */}
+              <div className="flex-1 text-center max-w-2xl mx-auto">
+                  <div className="inline-flex items-center gap-2 mb-6">
+                      <Megaphone size={20} className="text-coop-darkGreen animate-pulse" />
+                      <span className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">{t('landing.voiceMatters')}</span>
                   </div>
                   
-                  <p className="text-gray-600 mb-4 max-w-2xl mx-auto">
-                    {t('landing.voiceDescription')}
-                  </p>
-                  
-                  <p className="text-sm text-gray-600 mb-6">
-                    Remember: <span className="font-semibold text-coop-green">{t('landing.voteYourVoice')}</span>
-                  </p>
-                  
-                  <button 
-                    className="w-full max-w-md bg-coop-green text-white px-8 py-3 rounded-full font-bold hover:bg-coop-darkGreen transition-all active:scale-95"
-                    onClick={() => {
-                      if (isLoggedIn) {
-                        onNavigate('VOTING');
-                      } else {
-                        localStorage.setItem('redirectAfterLogin', 'ELECTIONS');
-                        onNavigate('LOGIN');
-                      }
-                    }}
-                  >
-                    {t('landing.voteNow')}
-                  </button>
-                </div>
-                
-                <div className="hidden lg:block w-48 p-8">
-                  <img src={'/vote-illustration-right.png'} alt="Vote illustration" className="w-full h-auto" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-     
-      {/* Administer Elections Section */}
-      <section className="pb-32 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-7xl">
-          <div className="bg-white border-0 rounded-lg shadow-md overflow-hidden">
-            <div className="p-0">
-              <div className="flex flex-col lg:flex-row items-center gap-8">
-                <div className="lg:w-1/2 p-8 flex justify-center">
-                  <img 
-                    src={'/admin-illustration.png'} 
-                    alt="Admin illustration" 
-                    className="max-w-md w-full h-auto"
-                  />
-                </div>
-                
-                <div className="lg:w-1/2 p-8 lg:pr-16">
-                  <h2 className="text-2xl md:text-3xl font-bold text-coop-darkGreen mb-4">
-                    {t('landing.adminTitle')}
+                  <h2 className="text-4xl md:text-6xl font-black text-coop-darkGreen uppercase tracking-tighter leading-none mb-6">
+                      {t('landing.voiceMatters')}!<br/>
                   </h2>
                   
-                  <p className="text-gray-600 mb-6">
-                    {t('landing.adminDescription')}
+                  <p className="text-xl text-gray-500 font-medium leading-relaxed mb-10">
+                      {t('landing.voiceDescription')}
                   </p>
-                  
+
+                  <p className="text-xs font-bold text-coop-darkGreen/80 uppercase tracking-widest mb-10">
+                      Remember: Your Vote, Your Voice, Your Future!
+                  </p>
+
                   <button 
-                    className="w-full bg-coop-green text-white px-8 py-3 rounded-full font-bold hover:bg-coop-darkGreen transition-all active:scale-95 flex items-center justify-center gap-2"
-                    onClick={() => onNavigate('LOGIN')}
+                      onClick={() => {
+                        if (isLoggedIn) {
+                          onNavigate('VOTING');
+                        } else {
+                          localStorage.setItem('redirectAfterLogin', 'VOTING');
+                          onNavigate('LOGIN');
+                        }
+                      }}
+                      className="px-14 py-6 bg-coop-darkGreen text-white rounded-full font-black text-sm uppercase tracking-widest hover:bg-coop-yellow hover:text-coop-darkGreen transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
                   >
-                    {t('landing.goToEMS')}
-                    <ExternalLink className="h-4 w-4" />
+                      {t('landing.voteNow')}
                   </button>
-                </div>
               </div>
-            </div>
+
+              {/* Right Visual: Empowered Member */}
+              <div className="hidden md:block w-80 h-80 relative shrink-0">
+                  <div className="absolute inset-0 bg-coop-darkGreen/10 rounded-full blur-3xl transform translate-x-6 -translate-y-6"></div>
+                  <img 
+                      src={'/vote-illustration-right_LE_upscale.jpg'}
+                      className="relative z-10 w-full h-full object-cover rounded-2xl shadow-2xl -rotate-3 hover:rotate-0 transition-transform duration-700 border-4 border-white"
+                      alt="Empowered Member"
+                  />
+                  <div className="absolute -top-4 -right-4 bg-coop-yellow text-coop-darkGreen p-3 rounded-xl shadow-lg z-20">
+                      <CheckSquare size={24} />
+                  </div>
+              </div>
+
           </div>
-        </div>
+      </section>
+
+      {/* 3.6. EMS / ADMIN CARD SECTION */}
+      <section className="py-24 bg-white relative">
+          <div className="container mx-auto px-6 max-w-7xl relative z-10">
+               <div className="bg-white rounded-[32px] p-8 md:p-14 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-gray-100 flex flex-col md:flex-row items-center gap-16 relative overflow-hidden group">
+                    
+                    {/* Background Accents */}
+                    <div className="absolute right-0 top-0 w-64 h-64 bg-coop-darkGreen/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2"></div>
+                    
+                    {/* Left: Illustration / Image */}
+                    <div className="w-full md:w-1/2 flex justify-center md:justify-start">
+                        <div className="relative w-full aspect-[16/10] bg-gray-50 rounded-2xl overflow-hidden shadow-xl border border-gray-100 group-hover:shadow-2xl transition-all duration-500">
+                             {/* Placeholder for vector/illustration from prompt */}
+                             <img 
+                                src={'/admin-illustration_LE_upscale.jpg'}
+                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                                alt="Cooperative Management Dashboard"
+                             />
+                             <div className="absolute inset-0 bg-coop-darkGreen/10 mix-blend-multiply"></div>
+                             
+                             {/* Floating UI Widget Simulation */}
+                             <div className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-lg border border-gray-100 flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                      <div className="p-2 bg-coop-green/10 rounded-lg text-coop-green">
+                                          <BarChart3 size={20} />
+                                      </div>
+                                      <div>
+                                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{t('landing.adminTitle')}</p>
+                                          <p className="text-xs font-black text-gray-900">EMS Console Active</p>
+                                      </div>
+                                  </div>
+                                  <div className="flex -space-x-2">
+                                      {[1,2,3].map(i => (
+                                          <div key={i} className="w-6 h-6 rounded-full bg-gray-200 border-2 border-white"></div>
+                                      ))}
+                                  </div>
+                             </div>
+                        </div>
+                    </div>
+
+                    {/* Right: Content */}
+                    <div className="w-full md:w-1/2 text-center md:text-left">
+                        <h2 className="text-3xl md:text-4xl font-black text-coop-darkGreen mb-6 leading-tight">
+                            {t('landing.adminTitle')}<br/>
+                        </h2>
+                        <p className="text-lg text-gray-500 font-medium leading-relaxed mb-10 max-w-lg mx-auto md:mx-0">
+                            This is your hub for overseeing and managing the cooperative elections. Remember, a well-managed election is the foundation of a successful cooperative governance.
+                        </p>
+                        <button 
+                            onClick={() => onNavigate('LOGIN')}
+                            className="inline-flex items-center gap-3 px-10 py-5 bg-coop-darkGreen text-white rounded-full font-black text-sm uppercase tracking-widest hover:bg-coop-yellow hover:text-coop-darkGreen transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
+                        >
+                            {t('landing.goToEMS')} <ArrowUpRight size={18} />
+                        </button>
+                    </div>
+
+               </div>
+          </div>
       </section>
 
        {/* Directory Section */}
