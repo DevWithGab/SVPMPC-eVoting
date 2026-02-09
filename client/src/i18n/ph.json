@@ -1,0 +1,102 @@
+{
+  "common": {
+    "homeButton": "TAHANAN",
+    "rulesButton": "BATAS",
+    "announcementsButton": "ANUNSYO",
+    "resourcesButton": "IMPORMASYON",
+    "resultsButton": "RESULTA",
+    "adminButton": "ADMIN",
+    "loginButton": "LOGON",
+    "logoutButton": "LUMABAS",
+    "profileButton": "PROFILE",
+    "backButton": "Bumalik sa Tahanan"
+  },
+  "landing": {
+    "heroSubtitle": "Ang definitibong platform ng pagboto para sa Saint Vincent Cooperative. Lumilikha ng komunidad sa pamamagitan ng secure at digital na pamamahala.",
+    "voteButton": "BUMOTO NGAYON",
+    "voteButtonLoggedIn": "MAGBOTO NA",
+    "authorizeVoting": "MAGPAHINTULOT NG PAGBOTO",
+    "readGuidelines": "Basahin ang Mga Gabay",
+    "resultsButton": "TINGNAN ANG RESULTA",
+    "learnMore": "Matuto Nang Higit Pa",
+    "voiceMatters": "Ang Iyong Tinig ay Mahalaga! Ipahayag Ito!",
+    "voiceDescription": "Gawing tagal ang ating tinig at bigyan-halaga ang ating mga boto. Dahil magkasama, tayo ay makakagawa ng pagbabago. Magkasama, tayo ay makakalikha ng kinabukasan.",
+    "voteYourVoice": "Ang Iyong Boto, Ang Iyong Tinig, Ang Iyong Kinabukasan!",
+    "voteNow": "Bumoto Na!",
+    "adminTitle": "Pangasiwaan ang Mga Halalan ng Cooperative Dito!",
+    "adminDescription": "Ito ang inyong hub para sa pag-oversee at pag-manage ng mga halalan ng cooperative. Tandaan: Ang isang mahusay na pinangasiwaang halalan ay ang batayan ng matagumpay na pamamahala ng cooperative.",
+    "goToEMS": "Pumunta sa EMS",
+    "directory": "DIREKTORYO",
+    "viewDirectory": "Tingnan ang Direktoryo",
+    "candidates": "Mga Kandidato",
+    "candidatesDesc": "Tingnan kung sino ang tumatakbo para sa opisyo",
+    "positions": "Mga Posisyon",
+    "positionsDesc": "Tingnan ang mga bukas na posisyon sa cooperative",
+    "branches": "Mga Sangay",
+    "branchesDesc": "Tuklasin ang mga yunit ng cooperative member"
+  },
+  "login": {
+    "title": "Pagpasok ng Miyembro",
+    "email": "Email Address",
+    "password": "Katungkulan",
+    "signIn": "Sumali",
+    "loginError": "Hindi valid ang email o password"
+  },
+  "voting": {
+    "title": "Ipalit ang Iyong Boto",
+    "noElections": "Walang aktibong halalan sa oras na ito",
+    "selectCandidate": "Pumili ng Kandidato",
+    "submitVote": "Ipadala ang Boto",
+    "voteConfirmed": "Matagumpay na isinumite ang boto"
+  },
+  "results": {
+    "title": "Resulta ng Halalan",
+    "noResults": "Ang mga resulta ay hindi available sa oras na ito",
+    "turnout": "Pagsali ng Botante",
+    "candidates": "Mga Kandidato",
+    "votes": "Mga Boto"
+  },
+  "candidates": {
+    "title": "Mga Dossier ng Kandidato",
+    "noActiveElection": "Walang aktibong halalan",
+    "noCandidates": "Walang kandidatong ipapakita"
+  },
+  "profile": {
+    "title": "Profile ng Miyembro",
+    "information": "Impormasyon sa Pagiging Miyembro",
+    "votingHistory": "Kasaysayan ng Pagboto",
+    "status": "Status",
+    "role": "Papel",
+    "username": "Pangalan ng Gumagamit",
+    "votingStatus": "Status ng Pagboto",
+    "voted": "Bumoto Na",
+    "pending": "Naghihintay"
+  },
+  "rules": {
+    "title": "Mga Panuntunan at Gabay",
+    "noRules": "Walang panuntunan na available"
+  },
+  "announcements": {
+    "title": "Mga Anunsyo",
+    "noAnnouncements": "Walang anunsyo sa oras na ito"
+  },
+  "resources": {
+    "title": "Mga Mapagkukunan",
+    "noResources": "Walang mapagkukunang available"
+  },
+  "admin": {
+    "title": "Admin Dashboard",
+    "overview": "Pangkalahatang Pananaw",
+    "candidates": "Mga Kandidato",
+    "positions": "Mga Posisyon",
+    "announcements": "Mga Anunsyo",
+    "rules": "Mga Panuntunan",
+    "settings": "Mga Ayos",
+    "users": "Mga Gumagamit",
+    "addCandidate": "Magdagdag ng Kandidato",
+    "addPosition": "Magdagdag ng Posisyon",
+    "addAnnouncement": "Magdagdag ng Anunsyo",
+    "addRule": "Magdagdag ng Panuntunan",
+    "deleteConfirm": "Sigurado ka na gusto mong tanggalin ito?"
+  }
+}

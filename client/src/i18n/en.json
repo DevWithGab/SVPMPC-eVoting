@@ -1,0 +1,102 @@
+{
+  "common": {
+    "homeButton": "HOME",
+    "rulesButton": "RULES",
+    "announcementsButton": "ANNOUNCEMENTS",
+    "resourcesButton": "RESOURCES",
+    "resultsButton": "RESULTS",
+    "adminButton": "ADMIN",
+    "loginButton": "LOGIN",
+    "logoutButton": "SIGN OUT",
+    "profileButton": "PROFILE",
+    "backButton": "Back to Home"
+  },
+  "landing": {
+    "heroSubtitle": "The definitive voting platform for Saint Vincent Cooperative. Building community through secure, digital governance.",
+    "voteButton": "VOTE NOW",
+    "voteButtonLoggedIn": "CAST YOUR VOTE",
+    "authorizeVoting": "AUTHORIZE VOTING",
+    "readGuidelines": "Read Guidelines",
+    "resultsButton": "VIEW RESULTS",
+    "learnMore": "Learn More",
+    "voiceMatters": "Your Voice Matters! Make It Heard!",
+    "voiceDescription": "Let's make our voices heard and our votes count. Because together, we can make a difference. Together, we can shape the future.",
+    "voteYourVoice": "Your Vote, Your Voice, Your Future!",
+    "voteNow": "Vote Now!",
+    "adminTitle": "Administer Cooperative Elections Here!",
+    "adminDescription": "This is your hub for overseeing and managing the cooperative elections. Remember, a well-managed election is the foundation of a successful cooperative governance.",
+    "goToEMS": "Go to EMS",
+    "directory": "DIRECTORY",
+    "viewDirectory": "View Directory",
+    "candidates": "Candidates",
+    "candidatesDesc": "See who's running for office",
+    "positions": "Positions",
+    "positionsDesc": "View open positions in the cooperative",
+    "branches": "Branches",
+    "branchesDesc": "Explore cooperative member units"
+  },
+  "login": {
+    "title": "Member Login",
+    "email": "Email Address",
+    "password": "Password",
+    "signIn": "Sign In",
+    "loginError": "Invalid email or password"
+  },
+  "voting": {
+    "title": "Cast Your Vote",
+    "noElections": "No active elections at this time",
+    "selectCandidate": "Select Candidate",
+    "submitVote": "Submit Vote",
+    "voteConfirmed": "Vote submitted successfully"
+  },
+  "results": {
+    "title": "Election Results",
+    "noResults": "Results are not available at this time",
+    "turnout": "Voter Turnout",
+    "candidates": "Candidates",
+    "votes": "Votes"
+  },
+  "candidates": {
+    "title": "Candidate Dossiers",
+    "noActiveElection": "No active election",
+    "noCandidates": "No candidate to show"
+  },
+  "profile": {
+    "title": "Member Profile",
+    "information": "Membership Information",
+    "votingHistory": "Voting History",
+    "status": "Status",
+    "role": "Role",
+    "username": "Username",
+    "votingStatus": "Voting Status",
+    "voted": "Voted",
+    "pending": "Pending"
+  },
+  "rules": {
+    "title": "Rules and Guidelines",
+    "noRules": "No rules available"
+  },
+  "announcements": {
+    "title": "Announcements",
+    "noAnnouncements": "No announcements at this time"
+  },
+  "resources": {
+    "title": "Resources",
+    "noResources": "No resources available"
+  },
+  "admin": {
+    "title": "Admin Dashboard",
+    "overview": "Overview",
+    "candidates": "Candidates",
+    "positions": "Positions",
+    "announcements": "Announcements",
+    "rules": "Rules",
+    "settings": "Settings",
+    "users": "Users",
+    "addCandidate": "Add Candidate",
+    "addPosition": "Add Position",
+    "addAnnouncement": "Add Announcement",
+    "addRule": "Add Rule",
+    "deleteConfirm": "Are you sure you want to delete this?"
+  }
+}
