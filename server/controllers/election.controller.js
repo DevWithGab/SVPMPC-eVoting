@@ -130,6 +130,11 @@ const createElection = async (req, res) => {
       },
     ];
 
+    // Handle background image
+    let backgroundImage = null;
+    if (req.file) {
+      backgroundImage = `/uploads/elections/${req.file.filename}`;
+    }
 
     const election = await Election.create({
       title,
@@ -139,6 +144,7 @@ const createElection = async (req, res) => {
       maxVotesPerMember: maxVotesPerMember || 1,
       status: initialStatus,
       timeline: defaultTimeline,
+      backgroundImage,
       createdBy: userId,
     });
 

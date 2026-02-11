@@ -91,7 +91,7 @@ const App: React.FC = () => {
         return <Login onLogin={handleLogin} />;
       case 'VOTING':
         if (!user) return <Login onLogin={handleLogin} />;
-        return <Voting />;
+        return <Voting onNavigate={handleNavigate} />;
       case 'RESULTS':
         // Results component handles its own access control
         return <Results user={user} />;

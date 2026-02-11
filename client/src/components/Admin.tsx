@@ -69,7 +69,9 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
   const [candidateModal, setCandidateModal] = useState<{ isOpen: boolean; positionId: string | null }>({ isOpen: false, positionId: null });
   
   // Election state
-  const [newElection, setNewElection] = useState<Partial<any>>({ title: '', description: '', startDate: '', endDate: '' });
+  const [newElection, setNewElection] = useState<Partial<any>>({ title: '', description: '', startDate: '', endDate: '', backgroundImage: null });
+  const [electionBackgroundImage, setElectionBackgroundImage] = useState<File | null>(null);
+  const [electionBackgroundPreview, setElectionBackgroundPreview] = useState<string>('');
   const [newPosition, setNewPosition] = useState<Partial<Position>>({ title: '', description: '', maxVotes: 1, type: 'OFFICER', order: 0 });
   const [newCandidate, setNewCandidate] = useState<Partial<Candidate>>({ name: '', description: '', imageUrl: '' });
   const [candidateImage, setCandidateImage] = useState<string>('');
@@ -911,6 +913,19 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
     }
   };
 
+  const handleElectionImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setElectionBackgroundImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const imageData = reader.result as string;
+        setElectionBackgroundPreview(imageData);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // ELECTION Tab Handlers
   const submitNewElection = async () => {
     try {
@@ -924,11 +939,14 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
         description: newElection.description,
         startDate: newElection.startDate,
         endDate: newElection.endDate,
+        backgroundImage: electionBackgroundImage || undefined,
       });
 
       await fetchAllData();
       setIsAddElectionOpen(false);
-      setNewElection({ title: '', description: '', startDate: '', endDate: '' });
+      setNewElection({ title: '', description: '', startDate: '', endDate: '', backgroundImage: null });
+      setElectionBackgroundImage(null);
+      setElectionBackgroundPreview('');
       
       Swal.fire('Success!', 'Election created successfully', 'success');
     } catch (error: any) {
@@ -1615,6 +1633,38 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                                     value={newElection.description || ''}
                                     onChange={e => setNewElection({...newElection, description: e.target.value})}
                                 />
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                    <Camera size={14} className="text-coop-green" /> Background Image
+                                </label>
+                                <div className="relative">
+                                    <input 
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        id="electionImageInput"
+                                        onChange={handleElectionImageChange}
+                                    />
+                                    <label 
+                                        htmlFor="electionImageInput"
+                                        className="block w-full px-5 py-4 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl text-sm font-bold text-gray-500 cursor-pointer hover:border-coop-green hover:bg-coop-green/5 transition-all"
+                                    >
+                                        {electionBackgroundPreview ? (
+                                            <div className="flex items-center gap-3">
+                                                <img src={electionBackgroundPreview} alt="Preview" className="w-12 h-12 object-cover rounded" />
+                                                <span>Image selected. Click to change</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-center gap-2">
+                                                <Upload size={16} />
+                                                <span>Click to upload or drag & drop</span>
+                                            </div>
+                                        )}
+                                    </label>
+                                </div>
+                                <p className="text-xs text-gray-400">PNG, JPG, GIF up to 5MB</p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 
-import type { Candidate, Position, VotingStatus } from '../types.ts';
+import type { Candidate, Position, VotingStatus, PageView } from '../types.ts';
 import { 
   Check, ArrowRight, ArrowLeft, Send, 
   CheckCircle2, 
@@ -12,9 +12,13 @@ import {
 import { electionAPI, candidateAPI, voteAPI } from '../services/api';
 import Swal from 'sweetalert2';
 
-export const Voting: React.FC = () => {
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
+export const Voting: React.FC<{ onNavigate?: (page: PageView) => void }> = ({ onNavigate }) => {
+  const [selections, setSelections] = useState<{ [key: string]: string[] }>({});
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [activeElectionId, setActiveElectionId] = useState<string>('');
   const [alreadyVoted, setAlreadyVoted] = useState(false);
   const [votingStatus, setVotingStatus] = useState<VotingStatus>('PAUSED');
   const [receiptHash, setReceiptHash] = useState<string | undefined>();
@@ -73,10 +77,6 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
   );
 };
 
-  const [selections, setSelections] = useState<{ [key: string]: string[] }>({});
-  const [currentStep, setCurrentStep] = useState(0);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -107,14 +107,26 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
         });
 
       // Map backend candidates to frontend candidates
-      const mappedCandidates: Candidate[] = candidatesData.map((candidate: any) => ({
-        id: candidate._id || candidate.id,
-        name: candidate.name,
-        description: candidate.description || '',
-        positionId: typeof candidate.electionId === 'string' ? candidate.electionId : (candidate.electionId?._id || candidate.electionId?.id),
-        votes: 0,
-        imageUrl: candidate.photoUrl || ''
-      }));
+      const mappedCandidates: Candidate[] = candidatesData.map((candidate: any) => {
+        // Extract positionId properly - it's populated so could be object with _id
+        let candidatePositionId = '';
+        if (typeof candidate.positionId === 'string') {
+          candidatePositionId = candidate.positionId;
+        } else if (candidate.positionId?._id) {
+          candidatePositionId = candidate.positionId._id;
+        } else if (candidate.positionId?.id) {
+          candidatePositionId = candidate.positionId.id;
+        }
+        
+        return {
+          id: candidate._id || candidate.id,
+          name: candidate.name,
+          description: candidate.description || '',
+          positionId: candidatePositionId,
+          votes: 0,
+          imageUrl: candidate.photoUrl || ''
+        };
+      });
 
       // Determine voting status and election end date
       const activeElections = electionsData.filter((e: any) => e.status === 'active' && e.isCategory !== false);
@@ -141,6 +153,11 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
       setAlreadyVoted(userHasVotedInActiveElection);
       setIsSubmitted(userHasVotedInActiveElection);
 
+      // Store the active election ID for vote submission
+      if (activeElections.length > 0) {
+        setActiveElectionId(activeElections[0]._id || activeElections[0].id);
+      }
+
       setPositions(mappedPositions);
       setCandidates(mappedCandidates);
     } catch (err) {
@@ -154,9 +171,27 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
   useEffect(() => {
     fetchData();
     
-    // Removed polling interval - was interfering with voting experience
-    // Users can manually refresh with the refresh button if needed
-  }, [fetchData]);
+    // Check election status every 10 seconds to catch when it's completed
+    const intervalId = setInterval(() => {
+      electionAPI.getElections().then((electionsData) => {
+        const activeElections = electionsData.filter((e: any) => e.status === 'active');
+        
+        if (activeElections.length === 0 && !alreadyVoted) {
+          setIsElectionOver(true);
+          setVotingStatus('PAUSED');
+        }
+      }).catch(err => console.error('Failed to check election status:', err));
+    }, 10000); // Every 10 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [fetchData, alreadyVoted]);
+
+  // Monitor state changes for debugging
+  useEffect(() => {
+    console.log('🔵 isSubmitted changed:', isSubmitted);
+    console.log('🔵 alreadyVoted changed:', alreadyVoted);
+    console.log('🔵 Should render ballot verified?', isSubmitted || alreadyVoted);
+  }, [isSubmitted, alreadyVoted]);
 
   const handleToggleCandidate = (positionId: string, candidateId: string, maxVotes: number) => {
     if (votingStatus === 'PAUSED' || isElectionOver) return;
@@ -188,49 +223,102 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
   };
 
   const handleSubmit = async () => {
+    console.log('handleSubmit called', { votingStatus, isElectionOver, isSubmitted, alreadyVoted });
+    console.log('Current selections:', selections);
+    console.log('activeElectionId:', activeElectionId);
+    
     if (votingStatus === 'PAUSED' || isElectionOver) {
-      alert("Voting session is unavailable.");
+      Swal.fire('Error', 'Voting session is unavailable.', 'error');
+      return;
+    }
+
+    // Check if there are any selections
+    const hasSelections = Object.values(selections).some((arr: any) => arr.length > 0);
+    if (!hasSelections) {
+      Swal.fire('Error', 'Please select at least one candidate before submitting.', 'error');
       return;
     }
 
     try {
       setSubmitting(true);
       setError(null);
+      console.log('Starting vote submission...');
+
+      // Refresh election data to ensure status is current
+      const electionsData = await electionAPI.getElections();
+      const activeElections = electionsData.filter((e: any) => e.status === 'active');
+      
+      if (activeElections.length === 0) {
+        console.log('No active elections found');
+        Swal.fire('Error', 'Voting period has ended. Election is no longer active.', 'error');
+        setIsElectionOver(true);
+        setVotingStatus('PAUSED');
+        setSubmitting(false);
+        return;
+      }
 
       // Submit votes for each selected candidate
       const votePromises: Promise<unknown>[] = [];
       
-      console.log('Submitting votes:', selections);
+      console.log('Submitting votes with electionId:', activeElectionId);
+      console.log('All selections object:', selections);
+      console.log('Object.entries(selections):', Object.entries(selections));
       
+      let voteCount = 0;
       for (const [positionId, candidateIds] of Object.entries(selections)) {
-        for (const candidateId of candidateIds) {
-          console.log(`Casting vote - candidate: ${candidateId}, election/position: ${positionId}`);
-          votePromises.push(voteAPI.castVote(candidateId, positionId));
+        console.log(`Position ${positionId} has candidates:`, candidateIds);
+        for (const candidateId of candidateIds as string[]) {
+          console.log(`Casting vote ${++voteCount} - candidate: ${candidateId}, electionId: ${activeElectionId}`);
+          votePromises.push(voteAPI.castVote(candidateId, activeElectionId));
         }
       }
 
-      await Promise.all(votePromises);
+      console.log(`Total votePromises.length before check: ${votePromises.length}`);
+      if (votePromises.length === 0) {
+        console.log('❌ No votes to submit - selections were empty!');
+        console.log('Current positions:', positions);
+        Swal.fire('Error', 'No candidates selected to vote for.', 'error');
+        setSubmitting(false);
+        return;
+      }
 
+      console.log(`Submitting ${votePromises.length} votes...`);
+      const results = await Promise.all(votePromises);
+      console.log('Votes submitted successfully:', results);
+      
       // Generate a simple receipt hash (in production, this would come from backend)
       const receipt = `SV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      console.log('Generated receipt:', receipt);
       setReceiptHash(receipt);
+      
+      console.log('Setting isSubmitted to true...');
       setIsSubmitted(true);
       setAlreadyVoted(true);
       
-      Swal.fire({
-        title: 'Ballot Verified',
-        text: 'Your vote has been successfully recorded!',
-        icon: 'success',
-        confirmButtonText: 'OK',
-        confirmButtonColor: '#2D7A3E'
-      });
+      console.log('State updated - isSubmitted and alreadyVoted set to true');
+      console.log('Render should show ballot verified screen now...');
+      console.log('Current component render check:', { isSubmitted: true, alreadyVoted: true });
       
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Scroll to top to show the ballot verified screen
+      setTimeout(() => {
+        console.log('Scrolling to top...');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
     } catch (err) {
-      console.error('Failed to submit votes:', err);
+      console.error('🔴 FAILED TO SUBMIT VOTES:', err);
+      console.error('Error type:', err instanceof Error ? err.constructor.name : typeof err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to submit votes. Please try again.';
       setError(errorMessage);
-      alert(errorMessage);
+      console.error('Error message:', errorMessage);
+      console.error('Full error object:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Vote Submission Failed',
+        text: errorMessage,
+        confirmButtonColor: '#2D7A3E'
+      });
+      setSubmitting(false);
+      return;
     } finally {
       setSubmitting(false);
     }
@@ -257,6 +345,23 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
               <div className="h-10 w-px bg-gray-100 hidden md:block"></div>
               <CountdownTimer targetDate={electionEndDate} />
           </div>
+      </div>
+    );
+  };
+
+  const renderFlowProgress = () => {
+    return (
+      <div className="mb-16">
+        <div className="flex justify-between items-center mb-4 px-2">
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em]">Current Protocol Stage</span>
+            <span className="text-[10px] font-black text-coop-green uppercase tracking-[0.4em]">{Math.round((currentStep / (positions.length + 1)) * 100)}% Complete</span>
+        </div>
+        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden flex gap-1">
+            <div 
+                className="h-full bg-coop-green transition-all duration-700 ease-out rounded-full" 
+                style={{ width: `${(currentStep / (positions.length + 1)) * 100}%` }}
+            ></div>
+        </div>
       </div>
     );
   };
@@ -334,16 +439,18 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
 
   if (isSubmitted || alreadyVoted) {
     return (
-      <div className="max-w-3xl mx-auto py-20 px-4 text-center animate-fadeIn pt-24 md:pt-32">
-        <div className="bg-white rounded-xl shadow-2xl border border-gray-100 p-12 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-2 bg-coop-green"></div>
-          <div className="w-24 h-24 bg-green-50 rounded-xl flex items-center justify-center mx-auto mb-8 text-coop-green border border-green-100">
+      <div className="max-w-4xl mx-auto py-16 px-4 animate-fadeIn pt-24 md:pt-32 pb-32">
+        {renderTerminationPanel()}
+        {renderFlowProgress()}
+        <div className="bg-white rounded-none shadow-2xl border border-gray-100 p-12 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-coop-green"></div>
+          <div className="w-20 h-20 bg-coop-green/10 rounded-none flex items-center justify-center mx-auto mb-8 text-coop-green">
             <CheckCircle2 size={48} />
           </div>
-          <h2 className="text-4xl font-black text-gray-900 mb-2 tracking-tighter">Ballot Verified</h2>
+          <h2 className="text-4xl font-black text-gray-900 mb-2 tracking-tighter uppercase">Ballot Verified</h2>
           <p className="text-gray-400 font-black uppercase tracking-[0.3em] text-[10px] mb-8">Transaction ID: {receiptHash || 'SV-TERMINAL-OFFLINE'}</p>
           
-          <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 mb-10 text-left">
+          <div className="bg-gray-50 p-6 rounded-none border border-gray-100 mb-10 text-left">
             <div className="flex items-center gap-3 mb-4 text-coop-green">
                 <ShieldCheck size={20} />
                 <span className="text-[10px] font-black uppercase tracking-widest">Security confirmation</span>
@@ -353,30 +460,26 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
             </p>
           </div>
 
-          <button onClick={() => window.location.reload()} className="bg-coop-darkGreen text-white px-12 py-5 rounded-xl font-black text-lg hover:scale-105 transition-all shadow-xl active:scale-95">
-            Exit Secure Session
+          <button 
+            onClick={(e) => {
+              console.log('Exit button clicked!', { onNavigate, isSubmitted, alreadyVoted });
+              e.preventDefault();
+              if (onNavigate) {
+                console.log('Calling onNavigate(ELECTIONS)');
+                onNavigate('ELECTIONS');
+              } else {
+                console.log('No onNavigate, reloading');
+                window.location.reload();
+              }
+            }} 
+            className="w-full bg-coop-darkGreen text-white py-6 px-8 rounded-none font-black text-lg hover:bg-coop-green hover:scale-105 shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 cursor-pointer">
+            Exit & Secure Ballot
+            <ArrowRight size={24} />
           </button>
         </div>
       </div>
     );
   }
-
-  const renderFlowProgress = () => {
-    return (
-      <div className="mb-16">
-        <div className="flex justify-between items-center mb-4 px-2">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em]">Current Protocol Stage</span>
-            <span className="text-[10px] font-black text-coop-green uppercase tracking-[0.4em]">{Math.round((currentStep / (positions.length + 1)) * 100)}% Complete</span>
-        </div>
-        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden flex gap-1">
-            <div 
-                className="h-full bg-coop-green transition-all duration-700 ease-out rounded-full" 
-                style={{ width: `${(currentStep / (positions.length + 1)) * 100}%` }}
-            ></div>
-        </div>
-      </div>
-    );
-  };
 
   if (currentStep === 0) {
     return (
@@ -432,7 +535,8 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
         <div className="space-y-6 mb-12">
           {positions.map(pos => {
             const selIds = selections[pos.id] || [];
-            const selCandidates = candidates.filter(c => selIds.includes(c.id));
+            const posCandidatesForReview = candidates.filter(c => c.positionId === pos.id);
+            const selCandidates = posCandidatesForReview.filter(c => selIds.includes(c.id));
             return (
               <div key={pos.id} className="bg-white rounded-none border border-gray-100 overflow-hidden shadow-sm hover:border-coop-green transition-colors">
                 <div className="bg-gray-50 px-8 py-4 border-b border-gray-100 flex justify-between items-center">
@@ -466,7 +570,7 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
            <button 
              onClick={handleSubmit} 
              disabled={submitting}
-             className="flex-2 py-5 bg-coop-green text-white rounded-none font-black text-xl hover:bg-coop-darkGreen shadow-2xl flex items-center justify-center gap-3 transition-all active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed"
+             className="flex-1 py-5 bg-coop-green text-white rounded-none font-black text-xl hover:bg-coop-darkGreen shadow-2xl flex items-center justify-center gap-3 transition-all active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed"
            >
              {submitting ? (
                <>

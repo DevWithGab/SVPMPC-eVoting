@@ -134,8 +134,21 @@ export const electionAPI = {
     startDate: string;
     endDate: string;
     maxVotesPerMember?: number;
+    backgroundImage?: File;
   }) => {
-    const response = await api.post('/elections', data);
+    const formData = new FormData();
+    formData.append('title', data.title);
+    if (data.description) formData.append('description', data.description);
+    formData.append('startDate', data.startDate);
+    formData.append('endDate', data.endDate);
+    if (data.maxVotesPerMember) formData.append('maxVotesPerMember', data.maxVotesPerMember.toString());
+    if (data.backgroundImage) formData.append('backgroundImage', data.backgroundImage);
+    
+    const response = await api.post('/elections', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
   

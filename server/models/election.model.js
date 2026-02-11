@@ -46,6 +46,10 @@ const electionSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    backgroundImage: {
+      type: String,
+      default: null,
+    },
     timeline: [
       {
         title: String,
