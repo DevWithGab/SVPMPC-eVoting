@@ -8,6 +8,7 @@ import {
   CheckSquare, BarChart3, ArrowUpRight, MapPin
 } from 'lucide-react';
 import { electionAPI } from '../services/api';
+import { useDarkMode } from '../context/DarkModeContext';
 
 interface LandingProps {
   onNavigate: (page: PageView) => void;
@@ -17,6 +18,7 @@ interface LandingProps {
 
 export const Landing: React.FC<LandingProps> = ({ onNavigate, isLoggedIn, language }) => {
   const { t } = useTranslation();
+  const { isDarkMode } = useDarkMode();
   const [positionCount, setPositionCount] = useState<number>(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [activeElectionId, setActiveElectionId] = useState<string | null>(null);
@@ -96,7 +98,7 @@ export const Landing: React.FC<LandingProps> = ({ onNavigate, isLoggedIn, langua
   }, [activeElectionId]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-white selection:bg-coop-yellow selection:text-coop-green">
+    <div className={`flex flex-col min-h-screen selection:bg-coop-yellow selection:text-coop-green transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
       
       {/* HERO SECTION - Redesigned for Impact */}
       <section className="relative w-full h-svh sm:h-[100vh] flex items-center justify-center overflow-hidden bg-coop-darkGreen py-20 sm:py-0">
@@ -209,7 +211,7 @@ export const Landing: React.FC<LandingProps> = ({ onNavigate, isLoggedIn, langua
 
 
       {/* 3.5. REDESIGNED CTA SECTION: "Your Voice Matters" - FULL WIDTH */}
-      <section className="relative w-full py-24 bg-white border-b border-gray-100 overflow-hidden">
+      <section className={`relative w-full py-24 border-b transition-colors duration-300 overflow-hidden ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
           
           {/* Decorative Background */}
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-coop-darkGreen via-coop-yellow to-coop-darkGreen"></div>
@@ -234,19 +236,19 @@ export const Landing: React.FC<LandingProps> = ({ onNavigate, isLoggedIn, langua
               {/* Center Content */}
               <div className="flex-1 text-center max-w-2xl mx-auto">
                   <div className="inline-flex items-center gap-2 mb-6">
-                      <Megaphone size={20} className="text-coop-darkGreen animate-pulse" />
-                      <span className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">{t('landing.voiceMatters')}</span>
+                      <Megaphone size={20} className={`animate-pulse ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`} />
+                      <span className={`text-xs font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-coop-yellow' : 'text-gray-400'}`}>{t('landing.voiceMatters')}</span>
                   </div>
                   
-                  <h2 className="text-4xl md:text-6xl font-black text-coop-darkGreen uppercase tracking-tighter leading-none mb-6">
+                  <h2 className={`text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-6 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>
                       {t('landing.voiceMatters')}!<br/>
                   </h2>
                   
-                  <p className="text-xl text-gray-500 font-medium leading-relaxed mb-10">
+                  <p className={`text-xl font-medium leading-relaxed mb-10 ${isDarkMode ? 'text-slate-200' : 'text-gray-500'}`}>
                       {t('landing.voiceDescription')}
                   </p>
 
-                  <p className="text-xs font-bold text-coop-darkGreen/80 uppercase tracking-widest mb-10">
+                  <p className={`text-xs font-bold uppercase tracking-widest mb-10 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen/80'}`}>
                       Remember: Your Vote, Your Voice, Your Future!
                   </p>
 
@@ -259,7 +261,7 @@ export const Landing: React.FC<LandingProps> = ({ onNavigate, isLoggedIn, langua
                           onNavigate('LOGIN');
                         }
                       }}
-                      className="px-14 py-6 bg-coop-darkGreen text-white rounded-full font-black text-sm uppercase tracking-widest hover:bg-coop-yellow hover:text-coop-darkGreen transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
+                      className={`px-14 py-6 rounded-full font-black text-sm uppercase tracking-widest hover:shadow-2xl hover:-translate-y-1 transition-all ${isDarkMode ? 'bg-coop-yellow text-coop-darkGreen' : 'bg-coop-darkGreen text-white hover:bg-coop-yellow hover:text-coop-darkGreen'}`}
                   >
                       {t('landing.voteNow')}
                   </button>
@@ -282,9 +284,9 @@ export const Landing: React.FC<LandingProps> = ({ onNavigate, isLoggedIn, langua
       </section>
 
       {/* 3.6. EMS / ADMIN CARD SECTION */}
-      <section className="py-24 bg-white relative">
+      <section className={`py-24 relative transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
           <div className="container mx-auto px-6 max-w-7xl relative z-10">
-               <div className="bg-white rounded-[32px] p-8 md:p-14 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-gray-100 flex flex-col md:flex-row items-center gap-16 relative overflow-hidden group">
+               <div className={`rounded-[32px] p-8 md:p-14 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border flex flex-col md:flex-row items-center gap-16 relative overflow-hidden group transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
                     
                     {/* Background Accents */}
                     <div className="absolute right-0 top-0 w-64 h-64 bg-coop-darkGreen/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2"></div>
@@ -322,10 +324,10 @@ export const Landing: React.FC<LandingProps> = ({ onNavigate, isLoggedIn, langua
 
                     {/* Right: Content */}
                     <div className="w-full md:w-1/2 text-center md:text-left">
-                        <h2 className="text-3xl md:text-4xl font-black text-coop-darkGreen mb-6 leading-tight">
+                        <h2 className={`text-3xl md:text-4xl font-black mb-6 leading-tight ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>
                             {t('landing.adminTitle')}<br/>
                         </h2>
-                        <p className="text-lg text-gray-500 font-medium leading-relaxed mb-10 max-w-lg mx-auto md:mx-0">
+                        <p className={`text-lg font-medium leading-relaxed mb-10 max-w-lg mx-auto md:mx-0 ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>
                             This is your hub for overseeing and managing the cooperative elections. Remember, a well-managed election is the foundation of a successful cooperative governance.
                         </p>
                         <button 
@@ -341,12 +343,12 @@ export const Landing: React.FC<LandingProps> = ({ onNavigate, isLoggedIn, langua
       </section>
 
        {/* Directory Section */}
-      <section className="py-24 bg-white border-t border-gray-100">
+      <section className={`py-24 border-t transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-100'}`}>
           <div className="container mx-auto px-6 max-w-7xl">
               <div className="flex items-end justify-between mb-16">
                   <div>
-                      <h2 className="text-4xl md:text-5xl font-black text-coop-darkGreen uppercase tracking-tighter leading-none">{t('landing.directory')}</h2>
-                      <p className="text-gray-500 mt-4 font-medium text-lg max-w-md">Quick access to cooperative registries, operational units, and leadership profiles.</p>
+                      <h2 className={`text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>{t('landing.directory')}</h2>
+                      <p className={`mt-4 font-medium text-lg max-w-md ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>Quick access to cooperative registries, operational units, and leadership profiles.</p>
                   </div>
                   <div className="hidden md:flex items-center gap-2">
                       <div className="w-3 h-3 bg-coop-yellow rounded-full animate-pulse"></div>

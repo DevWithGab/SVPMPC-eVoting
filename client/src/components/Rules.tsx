@@ -8,8 +8,10 @@ import {
   FileText, ArrowUpRight, Loader2, X
 } from 'lucide-react';
 import { ruleAPI } from '../services/api';
+import { useDarkMode } from '../context/DarkModeContext';
 
 export const Rules: React.FC = () => {
+  const { isDarkMode } = useDarkMode();
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,10 +45,10 @@ export const Rules: React.FC = () => {
   const closeRuleModal = () => setSelectedRule(null);
   if (loading) {
     return (
-      <div className="min-h-screen pt-32 pb-32 px-4 bg-[#f8fafc] flex items-center justify-center">
+      <div className={`min-h-screen pt-32 pb-32 px-4 flex items-center justify-center transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-[#f8fafc]'}`}>
         <div className="text-center">
           <Loader2 size={48} className="animate-spin text-coop-green mx-auto mb-4" />
-          <p className="text-gray-500 font-medium">Loading governance rules...</p>
+          <p className={`font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>Loading governance rules...</p>
         </div>
       </div>
     );
@@ -54,7 +56,7 @@ export const Rules: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen pt-32 pb-32 px-4 bg-[#f8fafc] flex items-center justify-center">
+      <div className={`min-h-screen pt-32 pb-32 px-4 flex items-center justify-center transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-[#f8fafc]'}`}>
         <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center max-w-md">
           <p className="text-red-600 font-medium mb-4">{error}</p>
           <button
@@ -69,7 +71,7 @@ export const Rules: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen pt-20 sm:pt-32 pb-20 sm:pb-32 px-3 sm:px-6 lg:px-8 bg-[#f8fafc]">
+    <div className={`min-h-screen pt-20 sm:pt-32 pb-20 sm:pb-32 px-3 sm:px-6 lg:px-8 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-[#f8fafc]'}`}>
       <div className="container mx-auto max-w-7xl">
         {/* Architectural Header Module */}
         <header className="relative mb-16 sm:mb-24 animate-slideUp">
@@ -80,29 +82,29 @@ export const Rules: React.FC = () => {
             <div className="w-full lg:max-w-3xl">
               <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                 <img src="/SVMPC_LOGO.png" alt="SVMPC Logo" className="h-6 sm:h-8 w-auto" />
-                <span className="text-[8px] sm:text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] sm:tracking-[0.5em]">Governance Protocol Matrix</span>
+                <span className={`text-[8px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.5em] ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Governance Protocol Matrix</span>
               </div>
-              <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-8xl font-black text-coop-darkGreen tracking-tighter leading-[0.85] uppercase mb-4 sm:mb-8">
+              <h1 className={`text-3xl sm:text-5xl md:text-6xl lg:text-8xl font-black tracking-tighter leading-[0.85] uppercase mb-4 sm:mb-8 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>
                 The Rules of<br/>
                 <span className="text-coop-green">Cooperation</span>
               </h1>
-              <p className="text-sm sm:text-base md:text-xl text-gray-500 font-medium leading-relaxed max-w-2xl border-l-4 border-coop-green/10 pl-3 sm:pl-8">
+              <p className={`text-sm sm:text-base md:text-xl font-medium leading-relaxed max-w-2xl border-l-4 pl-3 sm:pl-8 ${isDarkMode ? 'text-slate-300 border-coop-yellow/30' : 'text-gray-500 border-coop-green/10'}`}>
                 Establishing the digital and legal framework for a transparent, member-led cooperative ecosystem. Every protocol is cryptographically enforced and assembly-verified.
               </p>
             </div>
 
             <div className="flex lg:flex-col items-center lg:items-end gap-3 sm:gap-6 w-full lg:w-auto">
-              <div className="bg-white p-4 sm:p-6 rounded-none border border-gray-100 shadow-xl flex items-center gap-3 sm:gap-6 w-full lg:w-auto">
+              <div className={`p-4 sm:p-6 rounded-none border shadow-xl flex items-center gap-3 sm:gap-6 w-full lg:w-auto transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
                 <div className="text-left lg:text-right">
-                  <p className="text-[8px] sm:text-[9px] font-black text-gray-300 uppercase tracking-widest mb-0.5 sm:mb-1">Active Protocols</p>
+                  <p className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Active Protocols</p>
                   <p className="text-2xl sm:text-3xl font-black text-coop-green leading-none">{rules.length}</p>
                 </div>
-                <div className="w-px h-8 sm:h-10 bg-gray-100"></div>
+                <div className={`w-px h-8 sm:h-10 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}></div>
                 <div className="text-left lg:text-right">
-                  <p className="text-[8px] sm:text-[9px] font-black text-gray-300 uppercase tracking-widest mb-0.5 sm:mb-1">Status</p>
+                  <p className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Status</p>
                   <div className="flex items-center gap-1 sm:gap-2 lg:justify-end">
                     <div className="w-1.5 sm:w-2 h-1.5 sm:h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]"></div>
-                    <span className="text-[7px] sm:text-xs font-black text-coop-darkGreen uppercase">Synchronized</span>
+                    <span className={`text-[7px] sm:text-xs font-black uppercase ${isDarkMode ? 'text-slate-300' : 'text-coop-darkGreen'}`}>Synchronized</span>
                   </div>
                 </div>
               </div>
@@ -132,7 +134,7 @@ export const Rules: React.FC = () => {
             rules.sort((a, b) => a.order - b.order).map((rule, idx) => (
               <motion.div 
                 key={rule.id} 
-                className="group relative bg-white border border-gray-100 p-4 sm:p-6 md:p-10 rounded-none shadow-sm hover:shadow-[0_40px_80px_-20px_rgba(45,122,62,0.15)] hover:border-coop-green hover:-translate-y-2 transition-all duration-700 overflow-hidden flex flex-col"
+                className={`group relative border p-4 sm:p-6 md:p-10 rounded-none shadow-sm hover:shadow-[0_40px_80px_-20px_rgba(45,122,62,0.15)] hover:border-coop-green hover:-translate-y-2 transition-all duration-700 overflow-hidden flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 + (idx * 0.1) }}
@@ -144,22 +146,22 @@ export const Rules: React.FC = () => {
                 </div>
 
                 {/* Status Bar */}
-                <div className="absolute top-0 left-0 w-full h-1 bg-gray-50 group-hover:bg-coop-green transition-colors"></div>
+                <div className={`absolute top-0 left-0 w-full h-1 transition-colors ${isDarkMode ? 'bg-slate-700 group-hover:bg-coop-green' : 'bg-gray-50 group-hover:bg-coop-green'}`}></div>
 
                 <div className="relative z-10 grow">
                   <div className="flex justify-between items-start mb-6 sm:mb-8 md:mb-12 gap-2">
-                    <div className="w-10 sm:w-12 h-10 sm:h-12 bg-gray-50 text-gray-400 group-hover:bg-coop-green group-hover:text-white flex items-center justify-center font-black text-base sm:text-lg transition-all shadow-inner flex-shrink-0">
+                    <div className={`w-10 sm:w-12 h-10 sm:h-12 text-gray-400 group-hover:bg-coop-green group-hover:text-white flex items-center justify-center font-black text-base sm:text-lg transition-all shadow-inner flex-shrink-0 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-50'}`}>
                       {idx + 1}
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2">
                       <Lock size={10} className="sm:block hidden text-coop-yellow" />
                       <Lock size={9} className="sm:hidden block text-coop-yellow" />
-                      <span className="text-[7px] sm:text-[8px] font-mono text-gray-300 uppercase tracking-widest">Hash: P-{(rule.id || '0000').slice(-4).toUpperCase()}</span>
+                      <span className={`text-[7px] sm:text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Hash: P-{(rule.id || '0000').slice(-4).toUpperCase()}</span>
                     </div>
                   </div>
 
                   <motion.h3 
-                    className="text-lg sm:text-xl md:text-2xl font-black text-coop-darkGreen uppercase tracking-tighter leading-tight mb-3 sm:mb-4 md:mb-6 group-hover:text-coop-green transition-colors"
+                    className={`text-lg sm:text-xl md:text-2xl font-black uppercase tracking-tighter leading-tight mb-3 sm:mb-4 md:mb-6 group-hover:text-coop-green transition-colors ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.5, delay: 0.2 + (idx * 0.1) }}
@@ -167,16 +169,16 @@ export const Rules: React.FC = () => {
                     {rule.title}
                   </motion.h3>
                   
-                  <p className="text-xs sm:text-sm text-gray-500 font-medium leading-relaxed mb-6 sm:mb-8 md:mb-10 line-clamp-4">
+                  <p className={`text-xs sm:text-sm font-medium leading-relaxed mb-6 sm:mb-8 md:mb-10 line-clamp-4 ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>
                     {rule.content}
                   </p>
                 </div>
 
-                <div className="relative z-10 mt-auto pt-4 sm:pt-6 md:pt-8 border-t border-gray-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+                <div className={`relative z-10 mt-auto pt-4 sm:pt-6 md:pt-8 border-t flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 transition-colors ${isDarkMode ? 'border-slate-700' : 'border-gray-50'}`}>
                   <div className="flex items-center gap-2 sm:gap-3">
                     <Activity size={12} className="sm:block hidden text-coop-green" />
                     <Activity size={10} className="sm:hidden block text-coop-green" />
-                    <span className="text-[7px] sm:text-[9px] font-black text-gray-300 uppercase tracking-[0.15em] sm:tracking-[0.2em]">Enforced via SV-Node</span>
+                    <span className={`text-[7px] sm:text-[9px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Enforced via SV-Node</span>
                   </div>
                   <button onClick={() => setSelectedRule(rule)} className="text-[7px] sm:text-[9px] font-black text-coop-green uppercase tracking-widest flex items-center gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all">
                     Full <span className="hidden sm:inline">Text</span> <ArrowUpRight size={12} className="hidden sm:block" />
@@ -188,7 +190,7 @@ export const Rules: React.FC = () => {
         </motion.div>
 
         {/* Global Registry Footer Information */}
-        <section className="bg-coop-darkGreen text-white p-6 sm:p-12 md:p-16 lg:p-24 relative overflow-hidden shadow-2xl">
+        <section className={`text-white p-6 sm:p-12 md:p-16 lg:p-24 relative overflow-hidden shadow-2xl transition-colors duration-300 ${isDarkMode ? 'bg-coop-darkGreen' : 'bg-coop-darkGreen'}`}>
           {/* Background Textures */}
           <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
           <div className="absolute top-0 right-0 p-6 sm:p-8 md:p-12 opacity-10 hidden sm:block">
@@ -244,10 +246,10 @@ export const Rules: React.FC = () => {
 
         {/* Dynamic Disclaimer Section */}
         <div className="mt-24 flex flex-col items-center">
-          <div className="w-12 h-px bg-gray-200 mb-8"></div>
-          <div className="flex items-center gap-4 px-6 py-2 bg-white border border-gray-100 shadow-sm rounded-none">
+          <div className={`w-12 h-px mb-8 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'}`}></div>
+          <div className={`flex items-center gap-4 px-6 py-2 rounded-none border shadow-sm transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
             <Info size={14} className="text-coop-green" />
-            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">
+            <p className={`text-[9px] font-black uppercase tracking-widest leading-none ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
               Governance data synchronized: {new Date().toLocaleDateString()} • System v4.2.1-Registry
             </p>
           </div>
@@ -256,9 +258,9 @@ export const Rules: React.FC = () => {
         {/* Protocol Detail Modal */}
         {selectedRule && (
           <div className="fixed top-20 sm:top-24 left-0 right-0 bottom-0 z-[9999] flex items-center justify-center p-6 animate-fadeIn pointer-events-auto">
-            <div className="absolute inset-0 bg-coop-darkGreen/80 backdrop-blur-2xl pointer-events-auto" onClick={closeRuleModal}></div>
+            <div className={`absolute inset-0 backdrop-blur-2xl pointer-events-auto transition-colors duration-300 ${isDarkMode ? 'bg-slate-900/80' : 'bg-coop-darkGreen/80'}`} onClick={closeRuleModal}></div>
             
-            <div className="relative z-[10000] w-full max-w-2xl bg-white rounded-none shadow-[0_80px_150px_-30px_rgba(0,0,0,0.5)] border border-white/20 animate-scaleIn overflow-hidden flex flex-col max-h-[80vh] pointer-events-auto">
+            <div className={`relative z-[10000] w-full max-w-2xl rounded-none shadow-[0_80px_150px_-30px_rgba(0,0,0,0.5)] border animate-scaleIn overflow-hidden flex flex-col max-h-[80vh] pointer-events-auto transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-white/20'}`}>
               
               <div className="h-2 w-full bg-coop-yellow"></div>
 
@@ -267,35 +269,35 @@ export const Rules: React.FC = () => {
                   <div className="w-12 h-12 bg-coop-green text-white flex items-center justify-center font-black text-xl">
                     {selectedRule.order}
                   </div>
-                  <div className="h-px w-8 bg-gray-100"></div>
-                  <span className="text-[10px] font-mono text-gray-300 uppercase tracking-widest">Protocol-Ref#{selectedRule.id.toUpperCase()}</span>
+                  <div className={`h-px w-8 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}></div>
+                  <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Protocol-Ref#{selectedRule.id.toUpperCase()}</span>
                   <button 
                     onClick={closeRuleModal}
-                    className="ml-auto p-4 bg-gray-50 hover:bg-gray-100 transition-colors text-gray-400 hover:text-coop-darkGreen"
+                    className={`ml-auto p-4 transition-colors ${isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-slate-100' : 'bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-coop-darkGreen'}`}
                   >
                     <X size={24} />
                   </button>
                 </div>
 
-                <h2 className="text-4xl md:text-5xl font-black text-coop-darkGreen uppercase tracking-tighter leading-none mb-10">
+                <h2 className={`text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none mb-10 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>
                   {selectedRule.title}
                 </h2>
 
                 <div className="prose prose-lg max-w-none">
-                  <p className="text-xl text-gray-600 leading-relaxed font-medium whitespace-pre-wrap">
+                  <p className={`text-xl leading-relaxed font-medium whitespace-pre-wrap ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
                     {selectedRule.content}
                   </p>
                 </div>
 
-                <div className="mt-20 p-10 bg-coop-green/5 border-l-4 border-coop-green flex items-start gap-6">
+                <div className={`mt-20 p-10 border-l-4 border-coop-green flex items-start gap-6 transition-colors duration-300 ${isDarkMode ? 'bg-coop-green/10' : 'bg-coop-green/5'}`}>
                   <ShieldCheck size={24} className="text-coop-green shrink-0 mt-1" />
-                  <p className="text-sm text-coop-darkGreen font-semibold leading-relaxed italic">
+                  <p className={`text-sm font-semibold leading-relaxed italic ${isDarkMode ? 'text-slate-200' : 'text-coop-darkGreen'}`}>
                     This governance protocol is officially recorded in the Saint Vincent Cooperative Bylaws. Compliance is mandatory for all active registry participants.
                   </p>
                 </div>
               </div>
 
-              <div className="p-10 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <div className={`p-10 border-t flex justify-end transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-100'}`}>
                 <button 
                   onClick={closeRuleModal}
                   className="px-12 py-4 bg-coop-darkGreen text-white text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl active:scale-95"

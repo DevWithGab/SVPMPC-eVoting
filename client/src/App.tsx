@@ -17,6 +17,7 @@ import { Candidates } from './components/Candidates';
 import { CandidatesDirectory } from './components/CandidatesDirectory';
 import { AccessibilityWidget } from './components/AccessibilityWidget';
 import { SplashScreen } from './components/SplashScreen';
+import { useDarkMode } from './context/DarkModeContext';
 import type { PageView, User } from './types';
 
 const App: React.FC = () => {
@@ -25,11 +26,11 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageView>('LOGIN');
   const [user, setUser] = useState<User | null>(null);
   const [language, setLanguage] = useState<'EN' | 'PH'>('EN');
-  const [darkMode, setDarkMode] = useState(false);
   const [fontSize, setFontSize] = useState<'normal' | 'large'>('normal');
   const [selectedElectionId, setSelectedElectionId] = useState<string>(() => {
     return localStorage.getItem('selectedElectionId') || '';
   });
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
 
   // Scroll to top and navigate
   const handleNavigate = useCallback((page: PageView, electionId?: string) => {
@@ -135,13 +136,13 @@ const App: React.FC = () => {
             setIsAuthenticated(true);
           }} />
         </main>
-        <AccessibilityWidget highContrast={darkMode} toggleHighContrast={() => setDarkMode(!darkMode)} fontSize={fontSize} setFontSize={setFontSize} />
+        <AccessibilityWidget highContrast={isDarkMode} toggleHighContrast={toggleDarkMode} fontSize={fontSize} setFontSize={setFontSize} />
       </div>
     );
   }
 
   return (
-    <div className={`flex flex-col min-h-screen transition-all duration-300 ${darkMode ? 'dark bg-slate-950 text-slate-50' : 'bg-gray-50 text-gray-900'} ${fontSize === 'large' ? 'text-lg' : ''}`}>
+    <div className={`flex flex-col min-h-screen transition-all duration-300 ${isDarkMode ? 'dark bg-slate-900 text-slate-50' : 'bg-gray-50 text-gray-900'} ${fontSize === 'large' ? 'text-lg' : ''}`}>
       {!isAdminView && (
         <Header currentPage={currentPage} setCurrentPage={handleNavigate} onLogout={handleLogout} language={language} setLanguage={setLanguage} user={user} />
       )}
@@ -149,7 +150,7 @@ const App: React.FC = () => {
         {renderContent()}
       </main>
       {!isAdminView && <Footer />}
-      <AccessibilityWidget highContrast={darkMode} toggleHighContrast={() => setDarkMode(!darkMode)} fontSize={fontSize} setFontSize={setFontSize} />
+      <AccessibilityWidget highContrast={isDarkMode} toggleHighContrast={toggleDarkMode} fontSize={fontSize} setFontSize={setFontSize} />
     </div>
   );
 };

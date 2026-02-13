@@ -10,9 +10,11 @@ import {
   Hash, ClipboardCheck, ZapOff, Timer, Loader2
 } from 'lucide-react';
 import { electionAPI, candidateAPI, voteAPI, positionAPI } from '../services/api';
+import { useDarkMode } from '../context/DarkModeContext';
 import Swal from 'sweetalert2';
 
 export const Voting: React.FC<{ onNavigate?: (page: PageView) => void }> = ({ onNavigate }) => {
+  const { isDarkMode } = useDarkMode();
   const [selections, setSelections] = useState<{ [key: string]: string[] }>({});
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -29,6 +31,7 @@ export const Voting: React.FC<{ onNavigate?: (page: PageView) => void }> = ({ on
   const [submitting, setSubmitting] = useState(false);
 
 const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
+  const { isDarkMode } = useDarkMode();
   const [timeLeft, setTimeLeft] = useState<{ d: number; h: number; m: number; s: number } | null>(null);
 
   useEffect(() => {
@@ -51,7 +54,7 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
   }, [targetDate]);
 
   if (!timeLeft) return (
-    <div className="flex items-center gap-2 text-red-600 font-black text-xs uppercase tracking-widest">
+    <div className={`flex items-center gap-2 font-black text-xs uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
       <ZapOff size={16} /> Session Concluded
     </div>
   );
@@ -65,12 +68,12 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
         { val: timeLeft.s, label: 'S' }
       ].map((unit, i) => (
         <div key={i} className="flex flex-col items-center">
-          <div className="bg-coop-darkGreen/5 border border-coop-darkGreen/10 w-10 h-10 flex items-center justify-center rounded-none shadow-sm">
-            <span className="text-sm font-mono font-black text-coop-darkGreen">
+          <div className={`w-10 h-10 flex items-center justify-center rounded-none shadow-sm border transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-coop-darkGreen/5 border-coop-darkGreen/10'}`}>
+            <span className={`text-sm font-mono font-black transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>
               {unit.val.toString().padStart(2, '0')}
             </span>
           </div>
-          <span className="text-[6px] font-black text-coop-darkGreen/40 mt-1 tracking-widest">{unit.label}</span>
+          <span className={`text-[6px] font-black mt-1 tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-coop-darkGreen/40'}`}>{unit.label}</span>
         </div>
       ))}
     </div>
@@ -292,21 +295,21 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
     if (!electionEndDate) return null;
     
     return (
-      <div className="mb-10 bg-white border border-coop-darkGreen/10 p-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
+      <div className={`mb-10 border p-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-coop-darkGreen/10'}`}>
           <div className="absolute top-0 left-0 w-1 h-full bg-coop-yellow"></div>
           <div className="flex items-center gap-5">
-              <div className="w-12 h-12 bg-coop-darkGreen text-coop-yellow flex items-center justify-center">
+              <div className={`w-12 h-12 flex items-center justify-center transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 text-coop-yellow' : 'bg-coop-darkGreen text-coop-yellow'}`}>
                   <Timer size={24} />
               </div>
               <div>
-                  <h4 className="text-[10px] font-black text-coop-darkGreen uppercase tracking-[0.4em] mb-1">Termination Sequence</h4>
-                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
-                      Registry closure programmed for: <span className="text-coop-darkGreen">{new Date(electionEndDate).toLocaleString()}</span>
+                  <h4 className={`text-[10px] font-black uppercase tracking-[0.4em] mb-1 transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>Termination Sequence</h4>
+                  <p className={`text-xs font-bold uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
+                      Registry closure programmed for: <span className={`transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>{new Date(electionEndDate).toLocaleString()}</span>
                   </p>
               </div>
           </div>
           <div className="flex items-center gap-6">
-              <div className="h-10 w-px bg-gray-100 hidden md:block"></div>
+              <div className={`h-10 w-px hidden md:block transition-colors duration-300 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}></div>
               <CountdownTimer targetDate={electionEndDate} />
           </div>
       </div>
@@ -317,10 +320,10 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
     return (
       <div className="mb-16">
         <div className="flex justify-between items-center mb-4 px-2">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em]">Current Protocol Stage</span>
-            <span className="text-[10px] font-black text-coop-green uppercase tracking-[0.4em]">{Math.round((currentStep / (positions.length + 1)) * 100)}% Complete</span>
+            <span className={`text-[10px] font-black uppercase tracking-[0.4em] transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Current Protocol Stage</span>
+            <span className={`text-[10px] font-black uppercase tracking-[0.4em] transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-green'}`}>{Math.round((currentStep / (positions.length + 1)) * 100)}% Complete</span>
         </div>
-        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden flex gap-1">
+        <div className={`h-1.5 w-full rounded-full overflow-hidden flex gap-1 transition-colors duration-300 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}>
             <div 
                 className="h-full bg-coop-green transition-all duration-700 ease-out rounded-full" 
                 style={{ width: `${(currentStep / (positions.length + 1)) * 100}%` }}
@@ -332,10 +335,10 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-32 pb-32 px-4 bg-[#f8fafc] flex items-center justify-center">
+      <div className={`min-h-screen pt-32 pb-32 px-4 flex items-center justify-center transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-[#f8fafc]'}`}>
         <div className="text-center">
           <Loader2 size={48} className="animate-spin text-coop-green mx-auto mb-4" />
-          <p className="text-gray-500 font-medium">Loading voting interface...</p>
+          <p className={`font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>Loading voting interface...</p>
         </div>
       </div>
     );
@@ -343,9 +346,9 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
 
   if (error && !positions.length) {
     return (
-      <div className="min-h-screen pt-32 pb-32 px-4 bg-[#f8fafc] flex items-center justify-center">
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center max-w-md">
-          <p className="text-red-600 font-medium mb-4">{error}</p>
+      <div className={`min-h-screen pt-32 pb-32 px-4 flex items-center justify-center transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-[#f8fafc]'}`}>
+        <div className={`border rounded-2xl p-8 text-center max-w-md transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-red-900/30' : 'bg-red-50 border-red-200'}`}>
+          <p className={`font-medium mb-4 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{error}</p>
           <button
             onClick={fetchData}
             className="bg-coop-green text-white px-6 py-3 rounded-lg font-medium hover:bg-coop-darkGreen transition-all"
@@ -359,22 +362,22 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
 
   if (isElectionOver && !alreadyVoted && !isSubmitted) {
     return (
-      <div className="max-w-4xl mx-auto py-20 px-4 text-center pt-24 md:pt-32">
-        <div className="bg-white rounded-none shadow-2xl border border-red-100 p-12 relative overflow-hidden">
+      <div className={`max-w-4xl mx-auto py-20 px-4 text-center pt-24 md:pt-32 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : ''}`}>
+        <div className={`rounded-none shadow-2xl border p-12 relative overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-red-900/30' : 'bg-white border-red-100'}`}>
           <div className="absolute top-0 right-0 p-8 opacity-5">
             <ZapOff size={200} />
           </div>
-          <div className="w-24 h-24 bg-red-50 rounded-none flex items-center justify-center mx-auto mb-8 text-red-600 border border-red-100">
+          <div className={`w-24 h-24 rounded-none flex items-center justify-center mx-auto mb-8 border transition-colors duration-300 ${isDarkMode ? 'bg-red-900/20 text-red-400 border-red-900/30' : 'bg-red-50 text-red-600 border-red-100'}`}>
             <Lock size={48} />
           </div>
-          <h2 className="text-4xl font-black text-coop-darkGreen mb-4 tracking-tighter uppercase">Ballot Period Concluded</h2>
-          <p className="text-gray-500 text-lg mb-8 max-w-xl mx-auto leading-relaxed">
+          <h2 className={`text-4xl font-black mb-4 tracking-tighter uppercase ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>Ballot Period Concluded</h2>
+          <p className={`text-lg mb-8 max-w-xl mx-auto leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>
             The cryptographic window for the current election cycle has closed. No further ballots can be appended to the cooperative registry.
           </p>
           <div className="flex justify-center gap-6">
-            <div className="flex items-center gap-3 px-6 py-3 bg-gray-50 border border-gray-100">
+            <div className={`flex items-center gap-3 px-6 py-3 border transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-100'}`}>
               <ShieldCheck size={16} className="text-coop-green" />
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Audit Phase: Initiated</span>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Audit Phase: Initiated</span>
             </div>
           </div>
         </div>
@@ -384,16 +387,16 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
 
   if (votingStatus === 'PAUSED' && !alreadyVoted && !isSubmitted) {
     return (
-      <div className="max-w-4xl mx-auto py-20 px-4 text-center pt-24 md:pt-32">
-        <div className="bg-white rounded-xl shadow-2xl border border-red-100 p-12">
-          <div className="w-24 h-24 bg-red-50 rounded-xl flex items-center justify-center mx-auto mb-8 text-red-600 animate-pulse border border-red-100">
+      <div className={`max-w-4xl mx-auto py-20 px-4 text-center pt-24 md:pt-32 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : ''}`}>
+        <div className={`rounded-xl shadow-2xl border p-12 transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-red-900/30' : 'bg-white border-red-100'}`}>
+          <div className={`w-24 h-24 rounded-xl flex items-center justify-center mx-auto mb-8 animate-pulse border transition-colors duration-300 ${isDarkMode ? 'bg-red-900/20 text-red-400 border-red-900/30' : 'bg-red-50 text-red-600 border-red-100'}`}>
             <PauseCircle size={48} />
           </div>
-          <h2 className="text-4xl font-black text-gray-900 mb-4 tracking-tighter">System Lock Engaged</h2>
-          <p className="text-gray-500 text-lg mb-8 max-w-xl mx-auto leading-relaxed">
+          <h2 className={`text-4xl font-black mb-4 tracking-tighter ${isDarkMode ? 'text-coop-yellow' : 'text-gray-900'}`}>System Lock Engaged</h2>
+          <p className={`text-lg mb-8 max-w-xl mx-auto leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>
             The administrator has suspended the current terminal session. All local selections are preserved but submission is restricted.
           </p>
-          <button onClick={() => window.location.reload()} className="bg-gray-100 text-gray-600 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-gray-200 transition-all">
+          <button onClick={() => window.location.reload()} className={`px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all ${isDarkMode ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             Refresh Node Status
           </button>
         </div>
@@ -403,22 +406,22 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
 
   if (isSubmitted || alreadyVoted) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 py-16 bg-[#f8fafc]">
+      <div className={`min-h-screen flex items-center justify-center px-4 py-16 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-[#f8fafc]'}`}>
         <div className="max-w-2xl w-full">
-          <div className="bg-white rounded-none shadow-2xl border border-gray-100 p-12 relative overflow-hidden">
+          <div className={`rounded-none shadow-2xl border p-12 relative overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
             <div className="absolute top-0 left-0 w-full h-1.5 bg-coop-green"></div>
-            <div className="w-20 h-20 bg-coop-green/10 rounded-none flex items-center justify-center mx-auto mb-8 text-coop-green">
+            <div className={`w-20 h-20 rounded-none flex items-center justify-center mx-auto mb-8 text-coop-green transition-colors duration-300 ${isDarkMode ? 'bg-coop-green/20' : 'bg-coop-green/10'}`}>
               <CheckCircle2 size={48} />
             </div>
-            <h2 className="text-4xl font-black text-gray-900 mb-2 tracking-tighter uppercase text-center">Ballot Verified</h2>
-            <p className="text-gray-400 font-black uppercase tracking-[0.3em] text-[10px] mb-8 text-center">Transaction ID: {receiptHash || 'SV-TERMINAL-OFFLINE'}</p>
+            <h2 className={`text-4xl font-black mb-2 tracking-tighter uppercase text-center ${isDarkMode ? 'text-coop-yellow' : 'text-gray-900'}`}>Ballot Verified</h2>
+            <p className={`font-black uppercase tracking-[0.3em] text-[10px] mb-8 text-center ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Transaction ID: {receiptHash || 'SV-TERMINAL-OFFLINE'}</p>
             
-            <div className="bg-gray-50 p-6 rounded-none border border-gray-100 mb-10 text-left">
+            <div className={`p-6 rounded-none border mb-10 text-left transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-100'}`}>
               <div className="flex items-center gap-3 mb-4 text-coop-green">
                   <ShieldCheck size={20} />
                   <span className="text-[10px] font-black uppercase tracking-widest">Security confirmation</span>
               </div>
-              <p className="text-gray-600 text-sm leading-relaxed">
+              <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
                   Your selections have been cryptographically hashed and appended to the Saint Vincent Cooperative ledger. A physical copy of this receipt is being synced with your member profile.
               </p>
             </div>
@@ -444,9 +447,9 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
 
   if (currentStep === 0) {
     return (
-      <div className="max-w-4xl mx-auto py-16 px-4 animate-fadeIn pt-24 md:pt-32">
+      <div className={`max-w-4xl mx-auto py-16 px-4 animate-fadeIn pt-24 md:pt-32 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : ''}`}>
         {renderTerminationPanel()}
-        <div className="bg-white rounded-none shadow-2xl border border-gray-100 overflow-hidden">
+        <div className={`rounded-none shadow-2xl border overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
           <div className="bg-coop-darkGreen p-12 text-white relative isolate">
             <div className="absolute top-0 right-0 p-12 opacity-10">
                 <Fingerprint size={120} />
@@ -460,15 +463,15 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
                 <p className="text-green-100/60 max-w-md font-medium">Please review the terminal instructions carefully before initiating the digital ballot sequence.</p>
             </div>
           </div>
-          <div className="p-12">
+          <div className={`p-12 transition-colors duration-300 ${isDarkMode ? 'bg-slate-800' : 'bg-white'}`}>
             <div className="grid md:grid-cols-2 gap-8 mb-12">
-                <div className="bg-gray-50 p-6 rounded-none border border-gray-100">
-                    <h4 className="font-black text-coop-darkGreen uppercase tracking-widest text-[10px] mb-3">Integrity Notice</h4>
-                    <p className="text-gray-500 text-xs leading-relaxed font-medium">Votes are unique and tied to your member identity. Once committed, they cannot be retracted from the ledger.</p>
+                <div className={`p-6 rounded-none border transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-100'}`}>
+                    <h4 className={`font-black uppercase tracking-widest text-[10px] mb-3 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>Integrity Notice</h4>
+                    <p className={`text-xs leading-relaxed font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>Votes are unique and tied to your member identity. Once committed, they cannot be retracted from the ledger.</p>
                 </div>
-                <div className="bg-gray-50 p-6 rounded-none border border-gray-100">
-                    <h4 className="font-black text-coop-darkGreen uppercase tracking-widest text-[10px] mb-3">Quota System</h4>
-                    <p className="text-gray-500 text-xs leading-relaxed font-medium">Each seat category has a maximum selection quota. You may abstain from any section by selecting zero candidates.</p>
+                <div className={`p-6 rounded-none border transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-100'}`}>
+                    <h4 className={`font-black uppercase tracking-widest text-[10px] mb-3 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>Quota System</h4>
+                    <p className={`text-xs leading-relaxed font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>Each seat category has a maximum selection quota. You may abstain from any section by selecting zero candidates.</p>
                 </div>
             </div>
             <button onClick={handleNext} className="w-full bg-coop-yellow text-coop-green px-12 py-6 rounded-none font-black text-xl hover:scale-[1.02] transition-all shadow-xl flex items-center justify-center gap-4 active:scale-95">
@@ -482,15 +485,15 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
 
   if (currentStep === positions.length + 1) {
     return (
-      <div className="max-w-4xl mx-auto py-16 px-4 animate-fadeIn pt-24 md:pt-32">
+      <div className={`max-w-4xl mx-auto py-16 px-4 animate-fadeIn pt-24 md:pt-32 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : ''}`}>
         {renderTerminationPanel()}
         {renderFlowProgress()}
-        <header className="mb-12">
+        <header className={`mb-12 transition-colors duration-300 ${isDarkMode ? '' : ''}`}>
             <div className="flex items-center gap-3 mb-2">
                 <ClipboardCheck className="text-coop-green" size={24} />
-                <h2 className="text-4xl font-black text-gray-900 tracking-tighter uppercase">Review Summary</h2>
+                <h2 className={`text-4xl font-black tracking-tighter uppercase transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-gray-900'}`}>Review Summary</h2>
             </div>
-            <p className="text-gray-500 font-medium">Verify your final selections before committing to the secure ledger.</p>
+            <p className={`font-medium transition-colors duration-300 ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>Verify your final selections before committing to the secure ledger.</p>
         </header>
 
         <div className="space-y-6 mb-12">
@@ -499,23 +502,23 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
             const posCandidatesForReview = candidates.filter(c => c.positionId === pos.id);
             const selCandidates = posCandidatesForReview.filter(c => selIds.includes(c.id));
             return (
-              <div key={pos.id} className="bg-white rounded-none border border-gray-100 overflow-hidden shadow-sm hover:border-coop-green transition-colors">
-                <div className="bg-gray-50 px-8 py-4 border-b border-gray-100 flex justify-between items-center">
-                  <h3 className="font-black text-gray-500 uppercase tracking-widest text-[9px]">{pos.title}</h3>
-                  <span className="text-[9px] font-black text-coop-green uppercase">{selCandidates.length} Selected</span>
+              <div key={pos.id} className={`rounded-none border overflow-hidden shadow-sm hover:border-coop-green transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
+                <div className={`px-8 py-4 border-b flex justify-between items-center transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-100'}`}>
+                  <h3 className={`font-black uppercase tracking-widest text-[9px] transition-colors duration-300 ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>{pos.title}</h3>
+                  <span className={`text-[9px] font-black uppercase transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-green'}`}>{selCandidates.length} Selected</span>
                 </div>
-                <div className="p-8">
+                <div className={`p-8 transition-colors duration-300 ${isDarkMode ? 'bg-slate-800' : ''}`}>
                   {selCandidates.length > 0 ? (
                     <div className="flex flex-wrap gap-4">
                       {selCandidates.map(c => (
-                        <div key={c.id} className="flex items-center gap-3 bg-white px-5 py-3 rounded-none border-2 border-coop-green/10 shadow-sm">
-                          <div className="w-2 h-2 bg-coop-green rounded-full"></div>
-                          <span className="font-black text-coop-darkGreen text-sm tracking-tight uppercase">{c.name}</span>
+                        <div key={c.id} className={`flex items-center gap-3 px-5 py-3 rounded-none border-2 shadow-sm transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-coop-yellow/30' : 'bg-white border-coop-green/10'}`}>
+                          <div className={`w-2 h-2 rounded-full transition-colors duration-300 ${isDarkMode ? 'bg-coop-yellow' : 'bg-coop-green'}`}></div>
+                          <span className={`font-black text-sm tracking-tight uppercase transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>{c.name}</span>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 text-gray-300 italic">
+                    <div className={`flex items-center gap-3 italic transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>
                         <AlertCircle size={16} />
                         <span className="text-sm font-medium">Abstained from this category</span>
                     </div>
@@ -527,11 +530,11 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
-           <button onClick={handleBack} className="flex-1 py-5 border border-gray-200 rounded-none font-black text-gray-400 uppercase tracking-widest text-[10px] hover:bg-gray-50 transition-all">Back to Ballot</button>
+           <button onClick={handleBack} className={`flex-1 py-5 rounded-none font-black uppercase tracking-widest text-[10px] transition-all duration-300 ${isDarkMode ? 'bg-slate-700 border border-slate-600 text-slate-300 hover:bg-slate-600' : 'border border-gray-200 text-gray-400 hover:bg-gray-50'}`}>Back to Ballot</button>
            <button 
              onClick={handleSubmit} 
              disabled={submitting}
-             className="flex-1 py-5 bg-coop-green text-white rounded-none font-black text-xl hover:bg-coop-darkGreen shadow-2xl flex items-center justify-center gap-3 transition-all active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed"
+             className={`flex-1 py-5 rounded-none font-black text-xl flex items-center justify-center gap-3 transition-all active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed ${isDarkMode ? 'bg-coop-yellow text-slate-900 hover:bg-coop-yellow/90 shadow-lg' : 'bg-coop-green text-white hover:bg-coop-darkGreen shadow-2xl'}`}
            >
              {submitting ? (
                <>
@@ -555,34 +558,34 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
   const currentSelections = selections[currentPosition.id] || [];
 
   return (
-    <div className="max-w-6xl mx-auto py-16 px-4 animate-fadeIn pt-24 md:pt-32">
+    <div className={`max-w-6xl mx-auto py-16 px-4 animate-fadeIn pt-24 md:pt-32 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : ''}`}>
       {renderTerminationPanel()}
       {renderFlowProgress()}
       
-      <div className="mb-16 border-b border-gray-100 pb-12">
+      <div className={`mb-16 pb-12 transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'} border-b`}>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
             <div>
                 <div className="flex items-center gap-3 mb-4">
-                    <span className={`px-4 py-1.5 rounded-none text-[9px] font-black uppercase tracking-widest text-white shadow-md ${currentPosition.type === 'PROPOSAL' ? 'bg-blue-600' : 'bg-coop-green'}`}>
+                    <span className={`px-4 py-1.5 rounded-none text-[9px] font-black uppercase tracking-widest text-white shadow-md transition-colors duration-300 ${currentPosition.type === 'PROPOSAL' ? 'bg-blue-600' : 'bg-coop-green'}`}>
                         {currentPosition.type === 'PROPOSAL' ? 'Resolution Ballot' : 'Candidate Ballot'}
                     </span>
-                    <div className="h-px w-8 bg-gray-200"></div>
-                    <span className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Terminal Section {currentStep} of {positions.length}</span>
+                    <div className={`h-px w-8 transition-colors duration-300 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'}`}></div>
+                    <span className={`text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Terminal Section {currentStep} of {positions.length}</span>
                 </div>
-                <h2 className="text-5xl font-black text-coop-darkGreen tracking-tighter leading-none mb-4 uppercase">{currentPosition.title}</h2>
-                <p className="text-gray-500 text-lg font-medium max-w-2xl leading-relaxed italic border-l-4 border-coop-yellow pl-6 py-1">
+                <h2 className={`text-5xl font-black tracking-tighter leading-none mb-4 uppercase transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>{currentPosition.title}</h2>
+                <p className={`text-lg font-medium max-w-2xl leading-relaxed italic py-1 pl-6 border-l-4 border-coop-yellow transition-colors duration-300 ${isDarkMode ? 'text-slate-300 border-coop-yellow' : 'text-gray-500 border-coop-yellow'}`}>
                     "{currentPosition.description}"
                 </p>
             </div>
             <div className="flex flex-col items-end gap-2 shrink-0">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em]">Selection Status</span>
-                <div className="bg-white border border-gray-100 px-6 py-3 rounded-none shadow-sm flex items-center gap-4">
+                <span className={`text-[9px] font-black uppercase tracking-[0.3em] transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Selection Status</span>
+                <div className={`px-6 py-3 rounded-none shadow-sm flex items-center gap-4 border transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
                     <div className="flex gap-1.5">
                         {Array.from({ length: currentPosition.maxVotes }).map((_, i) => (
-                            <div key={i} className={`w-3 h-3 rounded-full transition-all duration-300 ${i < currentSelections.length ? 'bg-coop-green shadow-[0_0_8px_rgba(45,122,62,0.5)]' : 'bg-gray-100'}`}></div>
+                            <div key={i} className={`w-3 h-3 rounded-full transition-all duration-300 ${i < currentSelections.length ? 'bg-coop-green shadow-[0_0_8px_rgba(45,122,62,0.5)]' : isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}></div>
                         ))}
                     </div>
-                    <span className="text-xs font-black text-coop-darkGreen">{currentSelections.length} / {currentPosition.maxVotes} Selected</span>
+                    <span className={`text-xs font-black transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>{currentSelections.length} / {currentPosition.maxVotes} Selected</span>
                 </div>
             </div>
         </div>
@@ -602,20 +605,20 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
                 className={`w-full group relative overflow-hidden flex items-center justify-between p-8 rounded-none border-2 transition-all duration-300 shadow-sm ${
                     isSelected 
                     ? (isApprove ? 'bg-green-600 border-green-600 text-white shadow-green-200 shadow-xl scale-[1.02]' : isReject ? 'bg-red-600 border-red-600 text-white shadow-red-200 shadow-xl scale-[1.02]' : 'bg-gray-800 border-gray-800 text-white shadow-xl scale-[1.02]')
-                    : 'bg-white border-gray-100 text-gray-900 hover:border-coop-green/30 hover:bg-gray-50'
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100 hover:border-coop-yellow/30 hover:bg-slate-700' : 'bg-white border-gray-100 text-gray-900 hover:border-coop-green/30 hover:bg-gray-50'
                 }`}
               >
                 <div className="flex items-center gap-6">
-                    <div className={`p-4 rounded-none transition-colors ${isSelected ? 'bg-white/20' : 'bg-gray-100 text-gray-400 group-hover:bg-coop-green/10 group-hover:text-coop-green'}`}>
+                    <div className={`p-4 rounded-none transition-colors duration-300 ${isSelected ? 'bg-white/20' : isDarkMode ? 'bg-slate-700 text-slate-400 group-hover:bg-coop-yellow/10 group-hover:text-coop-yellow' : 'bg-gray-100 text-gray-400 group-hover:bg-coop-green/10 group-hover:text-coop-green'}`}>
                         {isApprove ? <ThumbsUp size={32} /> : isReject ? <ThumbsDown size={32} /> : <HelpCircle size={32} />}
                     </div>
                     <div className="text-left">
                         <span className="text-3xl font-black uppercase tracking-tighter leading-none block mb-1">{c.name}</span>
-                        <p className={`text-[10px] font-bold uppercase tracking-widest ${isSelected ? 'text-white/60' : 'text-gray-400'}`}>Select as primary preference</p>
+                        <p className={`text-[10px] font-bold uppercase tracking-widest transition-colors duration-300 ${isSelected ? 'text-white/60' : isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Select as primary preference</p>
                     </div>
                 </div>
-                <div className={`w-12 h-12 rounded-none border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-white text-gray-900 border-white' : 'border-gray-200 opacity-0 group-hover:opacity-100'}`}>
-                    {isSelected ? <Check size={24} strokeWidth={4} /> : <div className="w-2 h-2 bg-gray-200 rounded-none"></div>}
+                <div className={`w-12 h-12 rounded-none border-2 flex items-center justify-center transition-all duration-300 ${isSelected ? 'bg-white text-gray-900 border-white' : isDarkMode ? 'border-slate-600 opacity-0 group-hover:opacity-100' : 'border-gray-200 opacity-0 group-hover:opacity-100'}`}>
+                    {isSelected ? <Check size={24} strokeWidth={4} /> : <div className={`w-2 h-2 rounded-none transition-colors duration-300 ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'}`}></div>}
                 </div>
               </button>
             );
@@ -629,17 +632,19 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
               <div 
                 key={c.id}
                 onClick={() => handleToggleCandidate(currentPosition.id, c.id, currentPosition.maxVotes)}
-                className={`group relative bg-white rounded-none border-2 cursor-pointer transition-all duration-500 flex flex-col overflow-hidden stagger-item ${
-                    isSelected ? 'border-coop-green bg-green-50 shadow-2xl scale-[1.01]' : 'border-gray-100 shadow-sm hover:border-coop-green/30 hover:shadow-xl'
+                className={`group relative rounded-none border-2 cursor-pointer transition-all duration-500 flex flex-col overflow-hidden stagger-item ${
+                    isSelected 
+                    ? isDarkMode ? 'border-coop-yellow bg-slate-700 shadow-2xl scale-[1.01]' : 'border-coop-green bg-green-50 shadow-2xl scale-[1.01]'
+                    : isDarkMode ? 'bg-slate-800 border-slate-700 shadow-sm hover:border-coop-yellow/30 hover:shadow-xl' : 'bg-white border-gray-100 shadow-sm hover:border-coop-green/30 hover:shadow-xl'
                 }`}
               >
                 {/* Visual Accent */}
-                <div className={`absolute top-0 left-0 w-full h-1.5 transition-colors ${isSelected ? 'bg-coop-green' : 'bg-transparent'}`}></div>
+                <div className={`absolute top-0 left-0 w-full h-1.5 transition-colors duration-300 ${isSelected ? isDarkMode ? 'bg-coop-yellow' : 'bg-coop-green' : 'bg-transparent'}`}></div>
 
                 <div className="p-8 pb-0">
                     <div className="flex justify-between items-start mb-6">
                         <div className="relative isolate">
-                            <div className="w-24 h-24 rounded-none overflow-hidden border-2 border-white shadow-xl relative z-10">
+                            <div className={`w-24 h-24 rounded-none overflow-hidden border-2 shadow-xl relative z-10 transition-colors duration-300 ${isDarkMode ? 'border-slate-600' : 'border-white'}`}>
                                 {c.imageUrl ? (
                                     <img 
                                         src={c.imageUrl} 
@@ -647,33 +652,33 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
                                         alt={c.name}
                                     />
                                 ) : (
-                                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                                        <span className="text-gray-400 text-xs font-bold">No Image</span>
+                                    <div className={`w-full h-full flex items-center justify-center transition-colors duration-300 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>
+                                        <span className={`text-xs font-bold transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>No Image</span>
                                     </div>
                                 )}
                             </div>
-                            <div className="absolute -top-3 -left-3 w-10 h-10 bg-coop-yellow/20 rounded-none -z-10 blur-xl"></div>
+                            <div className={`absolute -top-3 -left-3 w-10 h-10 rounded-none -z-10 blur-xl transition-colors duration-300 ${isDarkMode ? 'bg-coop-yellow/10' : 'bg-coop-yellow/20'}`}></div>
                         </div>
-                        <div className={`w-12 h-12 rounded-none border-2 flex items-center justify-center transition-all shadow-sm ${isSelected ? 'bg-coop-green border-coop-green text-white shadow-green-500/30' : 'bg-gray-50 border-gray-100 text-gray-200 group-hover:border-coop-green group-hover:text-coop-green'}`}>
-                            {isSelected ? <Check size={24} strokeWidth={4} /> : <div className="w-2 h-2 bg-gray-300 rounded-full"></div>}
+                        <div className={`w-12 h-12 rounded-none border-2 flex items-center justify-center transition-all shadow-sm duration-300 ${isSelected ? isDarkMode ? 'bg-coop-yellow border-coop-yellow text-slate-900 shadow-yellow-500/30' : 'bg-coop-green border-coop-green text-white shadow-green-500/30' : isDarkMode ? 'bg-slate-700 border-slate-600 text-slate-400 group-hover:border-coop-yellow group-hover:text-coop-yellow' : 'bg-gray-50 border-gray-100 text-gray-200 group-hover:border-coop-green group-hover:text-coop-green'}`}>
+                            {isSelected ? <Check size={24} strokeWidth={4} /> : <div className={`w-2 h-2 rounded-full transition-colors duration-300 ${isDarkMode ? 'bg-slate-600' : 'bg-gray-300'}`}></div>}
                         </div>
                     </div>
                     
                     <div className="mb-6">
-                        <h3 className={`text-2xl font-black tracking-tighter leading-none mb-1 transition-colors uppercase ${isSelected ? 'text-coop-green' : 'text-gray-900'}`}>{c.name}</h3>
+                        <h3 className={`text-2xl font-black tracking-tighter leading-none mb-1 transition-colors uppercase duration-300 ${isSelected ? isDarkMode ? 'text-coop-yellow' : 'text-coop-green' : isDarkMode ? 'text-slate-100' : 'text-gray-900'}`}>{c.name}</h3>
                         <div className="flex items-center gap-2">
-                            <Hash size={10} className="text-gray-300" />
-                            <span className="text-[9px] font-mono font-bold text-gray-400 uppercase tracking-widest">SV24-REG-{c.id}</span>
+                            <Hash size={10} className={`transition-colors duration-300 ${isDarkMode ? 'text-slate-600' : 'text-gray-300'}`} />
+                            <span className={`text-[9px] font-mono font-bold uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>SV24-REG-{c.id}</span>
                         </div>
                     </div>
                     
-                    <p className={`text-xs leading-relaxed italic mb-8 font-medium transition-colors ${isSelected ? 'text-coop-green/70' : 'text-gray-500'}`}>
+                    <p className={`text-xs leading-relaxed italic mb-8 font-medium transition-colors duration-300 ${isSelected ? isDarkMode ? 'text-coop-yellow/70' : 'text-coop-green/70' : isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                         "{c.description}"
                     </p>
                 </div>
 
-                <div className={`mt-auto p-4 flex items-center justify-center border-t transition-colors ${isSelected ? 'bg-coop-green/10 border-coop-green/10' : 'bg-gray-50 border-gray-100 group-hover:bg-gray-100'}`}>
-                    <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${isSelected ? 'text-coop-green' : 'text-gray-400 group-hover:text-gray-600'}`}>
+                <div className={`mt-auto p-4 flex items-center justify-center border-t transition-colors duration-300 ${isSelected ? isDarkMode ? 'bg-coop-yellow/10 border-coop-yellow/10' : 'bg-coop-green/10 border-coop-green/10' : isDarkMode ? 'bg-slate-700 border-slate-600 group-hover:bg-slate-600' : 'bg-gray-50 border-gray-100 group-hover:bg-gray-100'}`}>
+                    <span className={`text-[9px] font-black uppercase tracking-[0.3em] transition-colors duration-300 ${isSelected ? isDarkMode ? 'text-coop-yellow' : 'text-coop-green' : isDarkMode ? 'text-slate-400 group-hover:text-slate-300' : 'text-gray-400 group-hover:text-gray-600'}`}>
                         {isSelected ? 'CANDIDATE SELECTED' : 'TAP TO SELECT'}
                     </span>
                 </div>
@@ -684,21 +689,21 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
       )}
 
       {/* Terminal Footer Controls */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 p-6 z-40">
+      <div className={`fixed bottom-0 left-0 right-0 backdrop-blur-xl border-t p-6 z-40 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900/95 border-slate-700' : 'bg-white/95 border-gray-100'}`}>
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-            <button onClick={handleBack} className="flex items-center gap-3 px-6 py-3 font-black text-gray-400 hover:text-coop-darkGreen transition-colors text-xs uppercase tracking-[0.2em]">
+            <button onClick={handleBack} className={`flex items-center gap-3 px-6 py-3 font-black text-xs uppercase tracking-[0.2em] transition-colors duration-300 ${isDarkMode ? 'text-slate-400 hover:text-coop-yellow' : 'text-gray-400 hover:text-coop-darkGreen'}`}>
                 <ArrowLeft size={20}/> Back
             </button>
             <div className="flex items-center gap-8">
-                <div className="hidden lg:flex items-center gap-3 bg-gray-50 px-5 py-2.5 rounded-none border border-gray-100">
+                <div className={`hidden lg:flex items-center gap-3 px-5 py-2.5 rounded-none border transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-100'}`}>
                     <AlertCircle size={14} className="text-coop-yellow" />
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">
+                    <span className={`text-[9px] font-black uppercase tracking-widest leading-none transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
                         {currentPosition.maxVotes > 1 ? `Quota: Choose up to ${currentPosition.maxVotes}` : 'Quota: Select Exactly 1 Preference'}
                     </span>
                 </div>
                 <button 
                     onClick={handleNext} 
-                    className="bg-coop-yellow text-coop-green px-12 py-5 rounded-none font-black text-lg hover:scale-[1.02] shadow-xl flex items-center gap-4 transition-all active:scale-95 group border border-coop-yellow/50"
+                    className={`px-12 py-5 rounded-none font-black text-lg flex items-center gap-4 transition-all active:scale-95 group border shadow-xl ${isDarkMode ? 'bg-coop-yellow text-slate-900 hover:scale-[1.02] border-coop-yellow/50' : 'bg-coop-yellow text-coop-green hover:scale-[1.02] border-coop-yellow/50'}`}
                 >
                     {currentStep === positions.length ? 'Final Summary' : 'Next Protocol'} 
                     <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform" />

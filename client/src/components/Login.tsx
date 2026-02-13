@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { User, UserRole } from '../types.ts';
@@ -11,6 +10,7 @@ import {
   Vote
 } from 'lucide-react';
 import { authAPI, voteAPI } from '../services/api';
+import { useDarkMode } from '../context/DarkModeContext';
 import Swal from 'sweetalert2';
 import Logo from '../assets/SVMPC_LOGO-NOBG.png';
 
@@ -30,6 +30,26 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [tempUser, setTempUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { isDarkMode } = useDarkMode();
+
+  // Add autofill styling override
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover,
+      input:-webkit-autofill:focus,
+      input:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 30px ${isDarkMode ? '#1e293b' : '#ffffff'} inset !important;
+        box-shadow: 0 0 0 30px ${isDarkMode ? '#1e293b' : '#ffffff'} inset !important;
+      }
+      input:-webkit-autofill {
+        -webkit-text-fill-color: ${isDarkMode ? '#e2e8f0' : '#111827'} !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, [isDarkMode]);
 
   const portals = [
     { id: 'admin', title: 'Administrator', code: 'LVL-01', icon: Shield, desc: 'System & Governance' },
@@ -136,7 +156,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#f8fafc] flex relative overflow-hidden font-sans">
+    <div className={`min-h-screen w-full flex relative overflow-hidden font-sans transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-[#f8fafc]'}`}>
 
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-[55%] bg-coop-green p-12 flex-col justify-between relative overflow-hidden" style={{ backgroundImage: 'url(/hero-pattern.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
@@ -224,7 +244,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       </div>
 
       {/* Right Panel - Login Form */}
-      <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden pt-16">
+      <div className={`flex-1 flex flex-col items-center justify-center relative overflow-hidden pt-16 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
         {/* Subtle Architectural Pattern */}
         <div className="absolute inset-0 z-0 opacity-[0.02] pointer-events-none master-grid"></div>
 
@@ -283,7 +303,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <motion.button
                   key={portal.id}
                   onClick={() => handlePortalSelect(portal.id)}
-                  className="w-full group relative flex items-center gap-6 p-1 bg-white border border-gray-100 rounded-xl shadow-sm hover:border-coop-green hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
+                  className={`w-full group relative flex items-center gap-6 p-1 border rounded-xl shadow-sm hover:border-coop-green hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}
                   initial={{ opacity: 0, x: -30 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: 0.5 + (idx * 0.08) }}
@@ -293,23 +313,23 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <div className="w-16 h-14 bg-gray-50 flex items-center justify-center group-hover:bg-coop-green group-hover:text-white transition-colors duration-300 rounded-lg ml-1">
+                  <div className={`w-16 h-14 flex items-center justify-center group-hover:bg-coop-green group-hover:text-white transition-colors duration-300 rounded-lg ml-1 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-50'}`}>
                     <portal.icon size={22} strokeWidth={1.5} />
                   </div>
                   
                   <div className="flex-grow text-left">
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-gray-900 uppercase tracking-tight group-hover:text-coop-green transition-colors">
+                      <span className={`text-xs font-black uppercase tracking-tight group-hover:text-coop-green transition-colors ${isDarkMode ? 'text-slate-100' : 'text-gray-900'}`}>
                         {portal.title}
                       </span>
                     </div>
-                    <p className="text-[10px] text-gray-400 font-medium uppercase tracking-widest mt-0.5 group-hover:text-gray-500 transition-colors">
+                    <p className={`text-[10px] font-medium uppercase tracking-widest mt-0.5 group-hover:text-gray-500 transition-colors ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
                       {portal.desc}
                     </p>
                   </div>
 
                   <div className="pr-6 flex items-center gap-4">
-                    <span className="text-[9px] font-mono font-bold text-gray-200 group-hover:text-coop-green/30 transition-colors">
+                    <span className={`text-[9px] font-mono font-bold transition-colors ${isDarkMode ? 'text-slate-500 group-hover:text-coop-green/30' : 'text-gray-200 group-hover:text-coop-green/30'}`}>
                       {portal.code}
                     </span>
                     <ChevronRight size={16} className="text-gray-200 group-hover:text-coop-green group-hover:translate-x-1 transition-all" />
@@ -355,7 +375,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 setShowPassword(false);
                 setError('');
               }}
-              className="mb-10 flex items-center gap-2 text-gray-400 hover:text-coop-darkGreen transition-colors font-black text-[9px] uppercase tracking-[0.2em] group"
+              className={`mb-10 flex items-center gap-2 hover:text-coop-darkGreen transition-colors font-black text-[9px] uppercase tracking-[0.2em] group ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}
               whileHover={{ x: -4 }}
             >
               <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> 
@@ -376,7 +396,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 {step === 'CREDENTIALS' ? <Fingerprint size={36} strokeWidth={1.5} /> : <Key size={36} strokeWidth={1.5} />}
               </motion.div>
               <motion.h2 
-                className="text-2xl font-black text-gray-900 tracking-tight uppercase"
+                className={`text-2xl font-black tracking-tight uppercase ${isDarkMode ? 'text-slate-100' : 'text-gray-900'}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
@@ -384,7 +404,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 {step === 'CREDENTIALS' ? 'Authorize Identity' : 'Verify Session'}
               </motion.h2>
               <motion.p 
-                className="text-gray-400 text-[10px] font-mono font-bold uppercase tracking-widest mt-2"
+                className={`text-[10px] font-mono font-bold uppercase tracking-widest mt-2 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
@@ -395,7 +415,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
             {error && (
               <motion.div 
-                className="mb-8 bg-red-50 border border-red-100 p-4 rounded-xl flex items-center gap-3"
+                className={`mb-8 border p-4 rounded-xl flex items-center gap-3 ${isDarkMode ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-100'}`}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -420,14 +440,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   transition={{ duration: 0.5, delay: 0.3 }}
                 >
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-gray-300">
+                    <div className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>
                       <Mail size={16} />
                     </div>
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-12 pr-6 py-4 bg-white border border-gray-100 rounded-xl outline-none focus:border-coop-green focus:ring-4 focus:ring-coop-green/5 font-bold text-sm text-gray-900 transition-all placeholder:text-gray-300 shadow-sm"
+                      className={`w-full pl-12 pr-6 py-4 rounded-xl outline-none focus:border-coop-green focus:ring-4 font-bold text-sm transition-all shadow-sm ${isDarkMode ? 'bg-slate-800 border border-slate-700 text-slate-100 placeholder:text-slate-500 focus:ring-coop-yellow/20' : 'bg-white border border-gray-100 text-gray-900 placeholder:text-gray-300 focus:ring-coop-green/5'}`}
                       placeholder="Enter Email"
                       required
                       disabled={isLoading}
@@ -442,14 +462,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   transition={{ duration: 0.5, delay: 0.4 }}
                 >
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-gray-300">
+                    <div className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>
                       <Lock size={16} />
                     </div>
                     <input
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-12 pr-12 py-4 bg-white border border-gray-100 rounded-xl outline-none focus:border-coop-green focus:ring-4 focus:ring-coop-green/5 font-bold text-sm text-gray-900 transition-all placeholder:text-gray-300 shadow-sm"
+                      className={`w-full pl-12 pr-12 py-4 rounded-xl outline-none focus:border-coop-green focus:ring-4 font-bold text-sm transition-all shadow-sm ${isDarkMode ? 'bg-slate-800 border border-slate-700 text-slate-100 placeholder:text-slate-500 focus:ring-coop-yellow/20' : 'bg-white border border-gray-100 text-gray-900 placeholder:text-gray-300 focus:ring-coop-green/5'}`}
                       placeholder="Password"
                       required
                       disabled={isLoading}
@@ -457,7 +477,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-5 flex items-center text-gray-300 hover:text-coop-green transition-colors cursor-pointer"
+                      className={`absolute inset-y-0 right-0 pr-5 flex items-center hover:text-coop-green transition-colors cursor-pointer ${isDarkMode ? 'text-slate-500 hover:text-coop-yellow' : 'text-gray-300'}`}
                       disabled={isLoading}
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -491,17 +511,17 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
                 <motion.div 
-                  className="p-10 text-center bg-white rounded-2xl border border-gray-100 shadow-xl"
+                  className={`p-10 text-center rounded-2xl border shadow-xl ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.5, delay: 0.3 }}
                 >
-                  <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.4em] mb-6">6-Digit Access Token</p>
+                  <p className={`text-[10px] font-black uppercase tracking-[0.4em] mb-6 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>6-Digit Access Token</p>
                   <input
                     type="text"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full bg-transparent text-center text-4xl tracking-[0.4em] font-black text-coop-darkGreen outline-none placeholder:text-gray-100"
+                    className={`w-full bg-transparent text-center text-4xl tracking-[0.4em] font-black outline-none ${isDarkMode ? 'text-coop-yellow placeholder:text-slate-600' : 'text-coop-darkGreen placeholder:text-gray-100'}`}
                     placeholder="000000"
                     required
                     maxLength={6}
@@ -534,7 +554,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         {/* Terminal Footer Info */}
         <div className="mt-auto pb-12 w-full flex flex-col items-center">
-          <div className="flex items-center gap-4 text-gray-300">
+          <div className={`flex items-center gap-4 ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>
             <Database size={14} />
             <span className="text-[10px] font-mono font-bold tracking-widest uppercase">Saint Vincent Registry Authority Database</span>
           </div>

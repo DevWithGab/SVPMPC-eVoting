@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Accessibility, Type, Sun, Moon, X, Palette } from 'lucide-react';
 import { userAPI } from '../services/api';
+import { useDarkMode } from '../context/DarkModeContext';
 
 interface AccessibilityWidgetProps {
   highContrast?: boolean;
@@ -16,13 +17,13 @@ export const AccessibilityWidget: React.FC<AccessibilityWidgetProps> = ({
   setFontSize: propSetFontSize 
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [fontSize, setFontSize] = useState<'normal' | 'large'>('normal');
   const [loading, setLoading] = useState(false);
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
 
-  // Use props if provided (for backward compatibility), otherwise use internal state
+  // Use props if provided (for backward compatibility), otherwise use context
   const useProps = propHighContrast !== undefined && propToggleHighContrast !== undefined;
-  const currentDarkMode = useProps ? propHighContrast : darkMode;
+  const currentDarkMode = useProps ? propHighContrast : isDarkMode;
   const currentFontSize = useProps ? (propFontSize || 'normal') : fontSize;
 
   // Fetch user preferences from backend on mount
@@ -77,7 +78,7 @@ export const AccessibilityWidget: React.FC<AccessibilityWidgetProps> = ({
     if (useProps && propToggleHighContrast) {
       propToggleHighContrast();
     } else {
-      setDarkMode(newDarkMode);
+      toggleDarkMode();
     }
     
     await savePreferences(newDarkMode, currentFontSize);

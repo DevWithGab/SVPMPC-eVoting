@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Activity, Briefcase, Vote, ArrowRight, Timer, Check, RefreshCw, Users } from 'lucide-react';
 import { electionAPI } from '../services/api';
+import { useDarkMode } from '../context/DarkModeContext';
 import type { PageView } from '../types';
 
 interface ElectionsProps {
@@ -8,6 +9,7 @@ interface ElectionsProps {
 }
 
 export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
+  const { isDarkMode } = useDarkMode();
   const [elections, setElections] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,17 +61,17 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-32 pb-32 px-4 bg-[#fcfcfd] flex items-center justify-center">
+      <div className={`min-h-screen pt-32 pb-32 px-4 flex items-center justify-center transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-[#fcfcfd]'}`}>
         <div className="text-center">
           <Activity size={48} className="animate-spin text-coop-green mx-auto mb-4" />
-          <p className="text-coop-darkGreen font-black">Loading elections...</p>
+          <p className={`font-black ${isDarkMode ? 'text-slate-100' : 'text-coop-darkGreen'}`}>Loading elections...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pt-32 pb-32 px-4 bg-[#fcfcfd]">
+    <div className={`min-h-screen pt-32 pb-32 px-4 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-[#fcfcfd]'}`}>
       <div className="container mx-auto max-w-7xl">
         {/* Architectural Header */}
         <header className="mb-12 sm:mb-20 animate-slideUp">
@@ -79,13 +81,13 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
             <div className="max-w-4xl">
               <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                 <div className="w-1 sm:w-1.5 h-6 sm:h-8 bg-coop-yellow shadow-[0_0_15px_rgba(242,228,22,0.6)]"></div>
-                <span className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] sm:tracking-[0.5em]">Active Registry Cycles</span>
+                <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.5em] ${isDarkMode ? 'text-coop-yellow' : 'text-gray-400'}`}>Active Registry Cycles</span>
               </div>
-              <h1 className="text-3xl sm:text-5xl md:text-7xl font-black text-coop-darkGreen tracking-tighter leading-[0.85] uppercase mb-4 sm:mb-8">
+              <h1 className={`text-3xl sm:text-5xl md:text-7xl font-black tracking-tighter leading-[0.85] uppercase mb-4 sm:mb-8 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>
                 Election<br/>
-                <span className="text-coop-green">Dashboard</span>
+                <span className={isDarkMode ? 'text-coop-yellow' : 'text-coop-green'}>Dashboard</span>
               </h1>
-              <p className="text-sm sm:text-2xl text-gray-500 font-medium leading-relaxed max-w-2xl border-l-4 border-coop-green/10 pl-4 sm:pl-8">
+              <p className={`text-sm sm:text-2xl font-medium leading-relaxed max-w-2xl border-l-4 pl-4 sm:pl-8 ${isDarkMode ? 'text-slate-300 border-coop-yellow/30' : 'text-gray-500 border-coop-green/10'}`}>
                 Monitor upcoming and active democratic processes. Review timelines, candidate rosters, and partylist affiliations.
               </p>
             </div>
@@ -177,18 +179,18 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                 </div>
 
                 {/* === EXPANDED CONTENT (DETAILS) === */}
-                <div className={`transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] bg-white overflow-hidden ${
+                <div className={`transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden ${
                   expanded === election.id ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
-                }`}>
-                  <div className="p-8 md:p-14 grid lg:grid-cols-12 gap-12 md:gap-20 border-t border-gray-100">
+                } ${isDarkMode ? 'bg-slate-800' : 'bg-white'}`}>
+                  <div className={`p-8 md:p-14 grid lg:grid-cols-12 gap-12 md:gap-20 border-t transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
                     
                     {/* Left Column: Timeline */}
                     <div className="lg:col-span-8">
-                      <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-10 flex items-center gap-2">
+                      <h4 className={`text-xs font-black uppercase tracking-widest mb-10 flex items-center gap-2 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
                         <Timer size={14} /> Execution Timeline
                       </h4>
                       <div className="relative pl-4">
-                        <div className="absolute left-[21px] top-2 bottom-6 w-0.5 bg-gray-100"></div>
+                        <div className={`absolute left-[21px] top-2 bottom-6 w-0.5 transition-colors duration-300 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}></div>
                         <div className="space-y-8">
                           {(() => {
                             let timeline = election.timeline || [];
@@ -230,16 +232,16 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                                 return (
                                   <div key={i} className="relative flex items-center gap-8 group/timeline">
                                     <div className={`relative z-10 w-11 h-11 rounded-full border-[3px] flex items-center justify-center shrink-0 transition-all shadow-sm ${
-                                      isEventActive ? 'bg-white border-coop-green text-coop-green scale-110 shadow-coop-green/20' : 
-                                      isCompleted ? 'bg-coop-green border-coop-green text-white' : 'bg-gray-50 border-gray-200 text-gray-300'
+                                      isEventActive ? isDarkMode ? 'bg-slate-700 border-coop-yellow text-coop-yellow scale-110 shadow-yellow-500/20' : 'bg-white border-coop-green text-coop-green scale-110 shadow-coop-green/20' : 
+                                      isCompleted ? 'bg-coop-green border-coop-green text-white' : isDarkMode ? 'bg-slate-700 border-slate-600 text-slate-500' : 'bg-gray-50 border-gray-200 text-gray-300'
                                     }`}>
-                                      {isCompleted ? <Check size={20} strokeWidth={3} /> : <div className={`w-2.5 h-2.5 rounded-full ${isEventActive ? 'bg-coop-green animate-pulse' : 'bg-gray-300'}`} />}
+                                      {isCompleted ? <Check size={20} strokeWidth={3} /> : <div className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${isEventActive ? isDarkMode ? 'bg-coop-yellow animate-pulse' : 'bg-coop-green animate-pulse' : isDarkMode ? 'bg-slate-600' : 'bg-gray-300'}`} />}
                                     </div>
                                     <div className={`transition-opacity duration-300 ${isEventActive ? 'opacity-100' : 'opacity-60 group-hover/timeline:opacity-100'}`}>
-                                      <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${isEventActive ? 'text-coop-green' : 'text-gray-400'}`}>
+                                      <p className={`text-[10px] font-black uppercase tracking-widest mb-1 transition-colors duration-300 ${isEventActive ? isDarkMode ? 'text-coop-yellow' : 'text-coop-green' : isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
                                         {event.title}
                                       </p>
-                                      <p className={`text-base font-bold ${isEventActive ? 'text-gray-900' : 'text-gray-600'}`}>
+                                      <p className={`text-base font-bold transition-colors duration-300 ${isEventActive ? isDarkMode ? 'text-slate-100' : 'text-gray-900' : isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
                                         {event.start} - {event.end}
                                       </p>
                                     </div>
@@ -247,8 +249,8 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                                 );
                               })
                             ) : (
-                              <div className="p-4 md:p-8 bg-white border border-gray-100 text-center">
-                                <p className="text-gray-500 font-medium">No timeline events available</p>
+                              <div className={`p-4 md:p-8 rounded-none border text-center transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-100'}`}>
+                                <p className={`font-medium transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>No timeline events available</p>
                               </div>
                             );
                           })()}
@@ -258,54 +260,54 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
 
                     {/* Right Column: Actions Sidebar */}
                     <div className="lg:col-span-4 flex flex-col gap-4">
-                      <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100 mb-2">
-                        <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <div className={`p-6 rounded-2xl border mb-2 transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-100'}`}>
+                        <h4 className={`text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2 transition-colors duration-300 ${isDarkMode ? 'text-slate-300' : 'text-gray-400'}`}>
                           <Briefcase size={14} /> Operations
                         </h4>
-                        <p className="text-sm text-gray-500 leading-relaxed mb-6">
+                        <p className={`text-sm leading-relaxed mb-6 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                           Review the official list of candidates, partylists, and positions before entering the voting booth.
                         </p>
                         
                         <button 
                           onClick={() => onNavigate('POSITIONS', election.id)}
-                          className="w-full bg-white border border-gray-200 p-4 rounded-xl flex items-center justify-between hover:border-coop-green/50 hover:shadow-lg hover:-translate-y-0.5 transition-all group/btn text-left mb-3"
+                          className={`w-full p-4 rounded-xl flex items-center justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all group/btn text-left mb-3 border ${isDarkMode ? 'bg-slate-800 border-slate-600 hover:border-coop-yellow/50' : 'bg-white border-gray-200 hover:border-coop-green/50'}`}
                         >
                           <div className="flex items-center gap-3">
-                            <Users size={18} className="text-gray-400 group-hover/btn:text-coop-green" />
-                            <span className="text-xs font-black text-gray-700 uppercase tracking-widest group-hover/btn:text-coop-green">View Candidates</span>
+                            <Users size={18} className={`transition-colors duration-300 ${isDarkMode ? 'text-slate-500 group-hover/btn:text-coop-yellow' : 'text-gray-400 group-hover/btn:text-coop-green'}`} />
+                            <span className={`text-xs font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-300 group-hover/btn:text-coop-yellow' : 'text-gray-700 group-hover/btn:text-coop-green'}`}>View Candidates</span>
                           </div>
-                          <ArrowRight size={14} className="text-gray-300 group-hover/btn:text-coop-green" />
+                          <ArrowRight size={14} className={`transition-colors duration-300 ${isDarkMode ? 'text-slate-600 group-hover/btn:text-coop-yellow' : 'text-gray-300 group-hover/btn:text-coop-green'}`} />
                         </button>
 
                         <button 
                           onClick={() => onNavigate('POSITIONS', election.id)}
-                          className="w-full bg-white border border-gray-200 p-4 rounded-xl flex items-center justify-between hover:border-coop-green/50 hover:shadow-lg hover:-translate-y-0.5 transition-all group/btn text-left"
+                          className={`w-full p-4 rounded-xl flex items-center justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all group/btn text-left border ${isDarkMode ? 'bg-slate-800 border-slate-600 hover:border-coop-yellow/50' : 'bg-white border-gray-200 hover:border-coop-green/50'}`}
                         >
                           <div className="flex items-center gap-3">
-                            <Briefcase size={18} className="text-gray-400 group-hover/btn:text-coop-green" />
-                            <span className="text-xs font-black text-gray-700 uppercase tracking-widest group-hover/btn:text-coop-green">Positions</span>
+                            <Briefcase size={18} className={`transition-colors duration-300 ${isDarkMode ? 'text-slate-500 group-hover/btn:text-coop-yellow' : 'text-gray-400 group-hover/btn:text-coop-green'}`} />
+                            <span className={`text-xs font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-300 group-hover/btn:text-coop-yellow' : 'text-gray-700 group-hover/btn:text-coop-green'}`}>Positions</span>
                           </div>
-                          <ArrowRight size={14} className="text-gray-300 group-hover/btn:text-coop-green" />
+                          <ArrowRight size={14} className={`transition-colors duration-300 ${isDarkMode ? 'text-slate-600 group-hover/btn:text-coop-yellow' : 'text-gray-300 group-hover/btn:text-coop-green'}`} />
                         </button>
                       </div>
 
                       {election.status?.toUpperCase() === 'ACTIVE' ? (
                         <button 
                           onClick={() => onNavigate('VOTING')}
-                          className="w-full bg-coop-green text-white p-5 rounded-2xl flex items-center justify-between shadow-xl shadow-coop-green/20 hover:bg-coop-darkGreen hover:shadow-2xl hover:-translate-y-1 transition-all group/vote mt-auto overflow-hidden relative"
+                          className={`w-full p-5 rounded-2xl flex items-center justify-between shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all group/vote mt-auto overflow-hidden relative ${isDarkMode ? 'bg-coop-yellow text-slate-900 shadow-yellow-500/20 hover:bg-coop-yellow/90' : 'bg-coop-green text-white shadow-coop-green/20 hover:bg-coop-darkGreen'}`}
                         >
                           <div className="relative z-10">
                             <p className="text-lg font-black uppercase tracking-tight">Vote Now</p>
-                            <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">Secure Ballot Access</p>
+                            <p className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-300 ${isDarkMode ? 'text-slate-700/70' : 'text-white/70'}`}>Secure Ballot Access</p>
                           </div>
-                          <div className="relative z-10 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white group-hover/vote:bg-coop-yellow group-hover/vote:text-coop-green transition-all">
+                          <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center transition-all ${isDarkMode ? 'bg-slate-900/20 text-slate-900 group-hover/vote:bg-slate-900 group-hover/vote:text-coop-yellow' : 'bg-white/10 text-white group-hover/vote:bg-coop-yellow group-hover/vote:text-coop-green'}`}>
                             <Vote size={24} />
                           </div>
                         </button>
                       ) : (
-                        <div className="mt-auto p-5 bg-gray-100 rounded-2xl border border-gray-200 text-center opacity-70">
-                          <Activity size={24} className="mx-auto text-gray-400 mb-2" />
-                          <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Ballot Access {election.status?.toUpperCase() === 'UPCOMING' ? 'Not Started' : 'Closed'}</p>
+                        <div className={`mt-auto p-5 rounded-2xl border text-center opacity-70 transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-200'}`}>
+                          <Activity size={24} className={`mx-auto mb-2 transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`} />
+                          <p className={`text-xs font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Ballot Access {election.status?.toUpperCase() === 'UPCOMING' ? 'Not Started' : 'Closed'}</p>
                         </div>
                       )}
                     </div>

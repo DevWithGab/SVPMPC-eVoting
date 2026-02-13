@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { ruleAPI } from '../services/api';
 import { Map, MapMarker, MarkerContent, MarkerPopup, MapControls } from './ui/map';
+import { useDarkMode } from '../context/DarkModeContext';
 import Swal from 'sweetalert2';
 
 interface ResourcesProps {
@@ -17,6 +18,7 @@ interface ResourcesProps {
 }
 
 export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
+  const { isDarkMode } = useDarkMode();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -136,7 +138,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="min-h-screen pt-20 sm:pt-32 pb-20 sm:pb-32 px-3 sm:px-6 lg:px-8 bg-[#f8fafc]">
+    <div className={`min-h-screen pt-20 sm:pt-32 pb-20 sm:pb-32 px-3 sm:px-6 lg:px-8 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-[#f8fafc]'}`}>
       <div className="container mx-auto max-w-7xl">
         
         {/* Architectural Header */}
@@ -164,16 +166,16 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                 e.preventDefault();
                 e.stopPropagation();
                 handleHelpDeskClick();
-              }} className="bg-white p-3 sm:p-6 rounded-none border border-gray-100 shadow-xl flex items-center gap-2 sm:gap-4 group cursor-pointer hover:border-coop-green transition-all w-full lg:w-auto">
-                <div className="w-8 sm:w-12 h-8 sm:h-12 bg-coop-green/10 text-coop-green flex items-center justify-center flex-shrink-0">
+              }} className={`p-3 sm:p-6 rounded-none border shadow-xl flex items-center gap-2 sm:gap-4 group cursor-pointer hover:border-coop-green transition-all w-full lg:w-auto transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
+                <div className={`w-8 sm:w-12 h-8 sm:h-12 text-coop-green flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${isDarkMode ? 'bg-coop-green/20' : 'bg-coop-green/10'}`}>
                   <LifeBuoy size={16} className="sm:block hidden" />
                   <LifeBuoy size={14} className="sm:hidden block" />
                 </div>
                 <div className="flex-1 lg:flex-none">
-                  <p className="text-[7px] sm:text-[9px] font-black text-gray-300 uppercase tracking-widest mb-0.5 sm:mb-1">Status</p>
-                  <p className="text-[8px] sm:text-sm font-black text-coop-darkGreen uppercase">Help Desk Online</p>
+                  <p className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Status</p>
+                  <p className={`text-[8px] sm:text-sm font-black uppercase ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>Help Desk Online</p>
                 </div>
-                <ArrowUpRight size={14} className="text-gray-200 group-hover:text-coop-green transition-all flex-shrink-0 hidden sm:block" />
+                <ArrowUpRight size={14} className={`transition-all flex-shrink-0 hidden sm:block ${isDarkMode ? 'text-slate-400 group-hover:text-coop-green' : 'text-gray-200 group-hover:text-coop-green'}`} />
               </div>
             </div>
           </div>
@@ -181,19 +183,19 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
 
         {/* Intelligence Modules (Quick Actions) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-16 sm:mb-24">
-          <div className="group relative bg-white border border-gray-100 p-6 sm:p-8 md:p-12 rounded-none shadow-sm hover:shadow-[0_40px_80px_-20px_rgba(45,122,62,0.15)] hover:border-coop-green transition-all duration-700 overflow-hidden flex flex-col">
+          <div className={`group relative border p-6 sm:p-8 md:p-12 rounded-none shadow-sm hover:shadow-[0_40px_80px_-20px_rgba(45,122,62,0.15)] hover:border-coop-green transition-all duration-700 overflow-hidden flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
             <div className="absolute top-0 right-0 p-4 sm:p-6 md:p-8 opacity-[0.03] select-none pointer-events-none group-hover:opacity-[0.06] transition-opacity">
               <FileText size={100} className="hidden sm:block" />
               <FileText size={80} className="sm:hidden block" />
             </div>
-            <div className="w-12 sm:w-16 h-12 sm:h-16 bg-gray-50 text-gray-400 group-hover:bg-coop-green group-hover:text-white flex items-center justify-center transition-all mb-6 sm:mb-10 shadow-inner">
+            <div className={`w-12 sm:w-16 h-12 sm:h-16 text-gray-400 group-hover:bg-coop-green group-hover:text-white flex items-center justify-center transition-all mb-6 sm:mb-10 shadow-inner ${isDarkMode ? 'bg-slate-700' : 'bg-gray-50'}`}>
               <FileText size={20} className="hidden sm:block" />
               <FileText size={16} className="sm:hidden block" />
             </div>
-            <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-coop-darkGreen uppercase tracking-tighter leading-none mb-3 sm:mb-4 group-hover:text-coop-green transition-colors">
+            <h3 className={`text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none mb-3 sm:mb-4 group-hover:text-coop-green transition-colors ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>
               Election Guidelines
             </h3>
-            <p className="text-xs sm:text-base md:text-lg text-gray-500 font-medium leading-relaxed mb-6 sm:mb-12 max-w-sm">
+            <p className={`text-xs sm:text-base md:text-lg font-medium leading-relaxed mb-6 sm:mb-12 max-w-sm ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>
               The formal digital packet regarding candidate eligibility, voting schedules, and regulations.
             </p>
             {loading ? (
@@ -208,14 +210,14 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
               </div>
             ) : rules.length > 0 ? (
               <div className="mt-auto space-y-2">
-                <p className="text-[7px] sm:text-xs text-gray-400 font-medium mb-3 sm:mb-4">
+                <p className={`text-[7px] sm:text-xs font-medium mb-3 sm:mb-4 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
                   {rules.length} guideline{rules.length !== 1 ? 's' : ''} available
                 </p>
                 <div className="max-h-40 sm:max-h-48 overflow-y-auto space-y-2">
                   {rules.slice(0, 5).map((rule) => (
-                    <div key={rule.id} className="bg-gray-50 p-2 sm:p-3 rounded-lg border border-gray-100">
-                      <p className="text-[7px] sm:text-xs font-bold text-coop-darkGreen mb-0.5 sm:mb-1">{rule.title}</p>
-                      <p className="text-[6px] sm:text-[10px] text-gray-500 line-clamp-2">{rule.content}</p>
+                    <div key={rule.id} className={`p-2 sm:p-3 rounded-lg border transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-100'}`}>
+                      <p className={`text-[7px] sm:text-xs font-bold mb-0.5 sm:mb-1 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>{rule.title}</p>
+                      <p className={`text-[6px] sm:text-[10px] line-clamp-2 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>{rule.content}</p>
                     </div>
                   ))}
                 </div>
@@ -227,13 +229,13 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
             )}
           </div>
 
-          <div className="group relative bg-coop-darkGreen text-white p-6 sm:p-8 md:p-12 rounded-none shadow-2xl hover:shadow-coop-green/20 transition-all duration-700 overflow-hidden flex flex-col">
+          <div className={`group relative text-white p-6 sm:p-8 md:p-12 rounded-none shadow-2xl hover:shadow-coop-green/20 transition-all duration-700 overflow-hidden flex flex-col ${isDarkMode ? 'bg-coop-darkGreen' : 'bg-coop-darkGreen'}`}>
             <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
             <div className="absolute top-0 right-0 p-4 sm:p-6 md:p-8 opacity-5 -translate-y-1/2 translate-x-1/2">
               <Phone size={160} className="hidden sm:block" />
               <Phone size={120} className="sm:hidden block" />
             </div>
-            <div className="w-12 sm:w-16 h-12 sm:h-16 bg-white/10 text-coop-yellow flex items-center justify-center transition-all mb-6 sm:mb-10 shadow-inner border border-white/10 backdrop-blur-md">
+            <div className={`w-12 sm:w-16 h-12 sm:h-16 text-coop-yellow flex items-center justify-center transition-all mb-6 sm:mb-10 shadow-inner border border-white/10 backdrop-blur-md ${isDarkMode ? 'bg-white/10' : 'bg-white/10'}`}>
               <Phone size={20} className="hidden sm:block" />
               <Phone size={16} className="sm:hidden block" />
             </div>
@@ -256,10 +258,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
           <div className="flex items-center gap-2 sm:gap-4 mb-6 sm:mb-10">
             <PlayCircle size={14} className="sm:block hidden text-coop-green" />
             <PlayCircle size={12} className="sm:hidden block text-coop-green" />
-            <span className="text-[8px] sm:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] sm:tracking-[0.4em]">Integrated Visual Tutorial</span>
+            <span className={`text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] sm:tracking-[0.4em] ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Integrated Visual Tutorial</span>
           </div>
           
-          <div className="bg-white border border-gray-100 rounded-none shadow-2xl overflow-hidden grid lg:grid-cols-12 min-h-[300px] sm:min-h-[400px] md:min-h-[500px]">
+          <div className={`border rounded-none shadow-2xl overflow-hidden grid lg:grid-cols-12 min-h-[300px] sm:min-h-[400px] md:min-h-[500px] transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
             <div className="lg:col-span-7 relative group overflow-hidden bg-black order-2 lg:order-1">
               <iframe
                 width="100%"
@@ -278,27 +280,27 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
               </div>
             </div>
             
-            <div className="lg:col-span-5 p-4 sm:p-8 md:p-12 lg:p-16 flex flex-col justify-center bg-gray-50 border-b lg:border-b-0 lg:border-l border-gray-100 order-1 lg:order-2">
-              <h3 className="text-lg sm:text-2xl md:text-3xl font-black text-coop-darkGreen uppercase tracking-tighter leading-tight mb-4 sm:mb-8">
+            <div className={`lg:col-span-5 p-4 sm:p-8 md:p-12 lg:p-16 flex flex-col justify-center border-b lg:border-b-0 lg:border-l order-1 lg:order-2 transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-100'}`}>
+              <h3 className={`text-lg sm:text-2xl md:text-3xl font-black uppercase tracking-tighter leading-tight mb-4 sm:mb-8 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>
                 System Interface Guide
               </h3>
               <div className="space-y-4 sm:space-y-8">
                 {tutorialSteps.map((step, i) => (
                   <div key={i} className="flex gap-3 sm:gap-6 group">
-                    <div className="text-base sm:text-2xl font-black text-coop-green/20 group-hover:text-coop-green transition-colors font-mono flex-shrink-0">
+                    <div className={`text-base sm:text-2xl font-black group-hover:text-coop-green transition-colors font-mono flex-shrink-0 ${isDarkMode ? 'text-coop-green/40' : 'text-coop-green/20'}`}>
                       0{i + 1}
                     </div>
                     <div>
-                      <h4 className="text-[7px] sm:text-sm font-black text-coop-darkGreen uppercase tracking-tight mb-1 sm:mb-2">{step.title}</h4>
-                      <p className="text-[6px] sm:text-xs text-gray-500 leading-relaxed font-medium">{step.desc}</p>
+                      <h4 className={`text-[7px] sm:text-sm font-black uppercase tracking-tight mb-1 sm:mb-2 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>{step.title}</h4>
+                      <p className={`text-[6px] sm:text-xs leading-relaxed font-medium ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>{step.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="mt-8 sm:mt-12 pt-4 sm:pt-8 border-t border-gray-200 flex items-center gap-2 sm:gap-3">
+              <div className={`mt-8 sm:mt-12 pt-4 sm:pt-8 border-t flex items-center gap-2 sm:gap-3 transition-colors duration-300 ${isDarkMode ? 'border-slate-600' : 'border-gray-200'}`}>
                 <ShieldCheck size={16} className="hidden sm:block text-coop-green" />
                 <ShieldCheck size={12} className="sm:hidden block text-coop-green" />
-                <span className="text-[7px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">Digital Audit Integrity Verified</span>
+                <span className={`text-[7px] sm:text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Digital Audit Integrity Verified</span>
               </div>
             </div>
           </div>
@@ -309,23 +311,23 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
           <div className="flex items-center gap-2 sm:gap-4 mb-6 sm:mb-10">
             <MapIcon size={14} className="sm:block hidden text-coop-green" />
             <MapIcon size={12} className="sm:hidden block text-coop-green" />
-            <span className="text-[8px] sm:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] sm:tracking-[0.4em]">Location Navigator</span>
+            <span className={`text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] sm:tracking-[0.4em] ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Location Navigator</span>
           </div>
           
-          <div className="bg-white border border-gray-100 rounded-none shadow-2xl overflow-hidden">
-            <div className="p-4 sm:p-8 md:p-12 border-b border-gray-100">
-              <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-coop-darkGreen uppercase tracking-tighter mb-2 sm:mb-4">
+          <div className={`border rounded-none shadow-2xl overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
+            <div className={`p-4 sm:p-8 md:p-12 border-b transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
+              <h3 className={`text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-tighter mb-2 sm:mb-4 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>
                 Voting Locations
               </h3>
-              <p className="text-xs sm:text-base text-gray-500 font-medium mb-4">
+              <p className={`text-xs sm:text-base font-medium mb-4 ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>
                 Find your nearest polling station and access location-based resources
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
                 {votingLocations.map((location) => (
-                  <div key={location.id} className="bg-gray-50 p-3 sm:p-4 border border-gray-100 hover:border-coop-green transition-all group cursor-pointer">
-                    <p className="text-[7px] sm:text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Location {location.id}</p>
-                    <p className="text-sm sm:text-base font-black text-coop-darkGreen group-hover:text-coop-green transition-colors">{location.name}</p>
-                    <p className="text-[10px] sm:text-xs text-gray-500 mt-2">Lat: {location.lat.toFixed(4)}, Lng: {location.lng.toFixed(4)}</p>
+                  <div key={location.id} className={`p-3 sm:p-4 border hover:border-coop-green transition-all group cursor-pointer transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-100'}`}>
+                    <p className={`text-[7px] sm:text-xs font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Location {location.id}</p>
+                    <p className={`text-sm sm:text-base font-black group-hover:text-coop-green transition-colors ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>{location.name}</p>
+                    <p className={`text-[10px] sm:text-xs mt-2 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Lat: {location.lat.toFixed(4)}, Lng: {location.lng.toFixed(4)}</p>
                   </div>
                 ))}
               </div>
@@ -375,20 +377,20 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
         </section>
 
         {/* FAQ Protocol Matrix */}
-        <section className="bg-white border border-gray-100 p-6 sm:p-10 md:p-12 lg:p-20 rounded-none shadow-sm animate-fadeIn">
+        <section className={`border p-6 sm:p-10 md:p-12 lg:p-20 rounded-none shadow-sm animate-fadeIn transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-8 md:gap-10 mb-8 sm:mb-12 md:mb-16">
             <div>
               <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
                 <HelpCircle className="text-coop-yellow hidden sm:block" size={16} />
                 <HelpCircle className="text-coop-yellow sm:hidden block" size={14} />
-                <span className="text-[8px] sm:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] sm:tracking-[0.4em]">Query Terminal</span>
+                <span className={`text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] sm:tracking-[0.4em] ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Query Terminal</span>
               </div>
-              <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-coop-darkGreen uppercase tracking-tighter">Frequently Asked</h3>
+              <h3 className={`text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-tighter ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>Frequently Asked</h3>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-1.5 sm:py-2 bg-gray-50 border border-gray-200">
+            <div className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-1.5 sm:py-2 border transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-200'}`}>
               <Activity size={12} className="sm:block hidden text-coop-green" />
               <Activity size={10} className="sm:hidden block text-coop-green" />
-              <span className="text-[7px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest">Real-time Node Telemetry</span>
+              <span className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Real-time Node Telemetry</span>
             </div>
           </div>
 
@@ -396,20 +398,20 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
             {faqs.map((faq, index) => (
               <div 
                 key={index} 
-                className={`transition-all duration-500 border-b border-gray-100 ${
+                className={`transition-all duration-500 border-b ${
                   openFaq === index ? 'pb-10 pt-4' : 'py-4'
-                }`}
+                } ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}
               >
                 <button 
                   onClick={() => setOpenFaq(openFaq === index ? null : index)}
                   className="w-full flex justify-between items-start gap-3 sm:items-center text-left group py-3 sm:py-4"
                 >
                   <span className={`text-sm sm:text-lg md:text-xl font-black tracking-tight transition-all uppercase ${
-                    openFaq === index ? 'text-coop-green' : 'text-coop-darkGreen group-hover:text-coop-green'
+                    openFaq === index ? 'text-coop-green' : isDarkMode ? 'text-coop-yellow group-hover:text-coop-green' : 'text-coop-darkGreen group-hover:text-coop-green'
                   }`}>
                     {faq.question}
                   </span>
-                  <div className={`transition-transform duration-500 flex-shrink-0 ${openFaq === index ? 'rotate-180 text-coop-green' : 'text-gray-300'}`}>
+                  <div className={`transition-transform duration-500 flex-shrink-0 ${openFaq === index ? 'rotate-180 text-coop-green' : isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>
                     <ChevronDown size={18} className="hidden sm:block" />
                     <ChevronDown size={16} className="sm:hidden block" />
                   </div>
@@ -418,7 +420,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                   <div className="mt-4 sm:mt-6 md:mt-8 animate-fadeIn">
                     <div className="flex gap-3 sm:gap-6 items-start">
                       <div className="w-0.5 sm:w-1 h-16 sm:h-20 bg-coop-yellow"></div>
-                      <p className="text-xs sm:text-base md:text-lg text-gray-500 font-medium leading-relaxed max-w-3xl">
+                      <p className={`text-xs sm:text-base md:text-lg font-medium leading-relaxed max-w-3xl ${isDarkMode ? 'text-slate-300' : 'text-gray-500'}`}>
                         {faq.answer}
                       </p>
                     </div>
@@ -428,7 +430,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
             ))}
           </div>
 
-          <div className="mt-12 sm:mt-16 md:mt-20 p-6 sm:p-10 md:p-12 bg-coop-darkGreen text-white rounded-none relative overflow-hidden group">
+          <div className={`mt-12 sm:mt-16 md:mt-20 p-6 sm:p-10 md:p-12 text-white rounded-none relative overflow-hidden group transition-colors duration-300 ${isDarkMode ? 'bg-coop-darkGreen' : 'bg-coop-darkGreen'}`}>
             <div className="absolute top-0 right-0 p-6 sm:p-8 md:p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-1000 hidden sm:block">
               <MessageSquare size={120} className="hidden md:block" />
               <MessageSquare size={80} className="md:hidden block" />
@@ -449,11 +451,11 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
 
         {/* System Disclaimer Footer */}
         <div className="mt-16 sm:mt-20 md:mt-24 flex flex-col items-center">
-          <div className="w-8 sm:w-10 md:w-12 h-px bg-gray-200 mb-4 sm:mb-6 md:mb-8"></div>
-          <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 py-1.5 sm:py-2 bg-white border border-gray-100 shadow-sm rounded-none">
+          <div className={`w-8 sm:w-10 md:w-12 h-px mb-4 sm:mb-6 md:mb-8 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'}`}></div>
+          <div className={`flex items-center gap-2 sm:gap-4 px-3 sm:px-6 py-1.5 sm:py-2 border shadow-sm rounded-none transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
             <Info size={12} className="sm:block hidden text-coop-green" />
             <Info size={10} className="sm:hidden block text-coop-green" />
-            <p className="text-[7px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">
+            <p className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest leading-none ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
               Documentation Node v4.2.1 • Registry Ref: K-NODE-SV-2024
             </p>
           </div>
