@@ -29,7 +29,7 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
         candidateCount: election.candidateCount || 0,
         positionCount: election.positionCount || 0,
         partylistCount: election.partylistCount || 0,
-        backgroundImage: election.backgroundImage ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${election.backgroundImage}` : null,
+        backgroundImage: election.backgroundImage ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000'}${election.backgroundImage}` : null,
       }));
       
       setElections(processedElections);
@@ -149,7 +149,7 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                       </span>
 
                       <div className={`w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 group-hover:bg-coop-yellow group-hover:text-coop-darkGreen group-hover:border-coop-yellow transition-all duration-500 ${expanded === election.id ? 'bg-coop-yellow text-coop-darkGreen border-coop-yellow rotate-180' : ''}`}>
-                        {expanded === election.id ? <ChevronDown size={28} /> : (election.status === 'ACTIVE' ? <Activity size={28} /> : <Activity size={28} />)}
+                        {expanded === election.id ? <ChevronDown size={28} /> : <Activity size={28} />}
                       </div>
                     </div>
 

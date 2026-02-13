@@ -43,6 +43,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setSelectedRole(portalId);
     setStep('CREDENTIALS');
     setError('');
+    setEmail('');
+    setPassword('');
+    setShowPassword(false);
   };
 
   const handleCredentialsSubmit = async (e: React.FormEvent) => {
@@ -55,6 +58,22 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       
       if (!response || !response.user || !response.token) {
         setError('Invalid credentials. Please check your email and password.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate that selected role matches user's actual role
+      const userRole = response.user.role;
+      const roleMap: Record<string, string> = {
+        'admin': 'admin',
+        'staff': 'officer',
+        'member': 'member',
+        'auditor': 'auditor',
+        'admission': 'member'
+      };
+
+      if (roleMap[selectedRole] !== userRole) {
+        setError(`Access Denied. This portal is for ${selectedRole}s only. Your account is a ${userRole}.`);
         setIsLoading(false);
         return;
       }
@@ -329,7 +348,13 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           >
             {/* Professional Form Layout */}
             <motion.button 
-              onClick={() => setStep('ROLE_SELECTION')}
+              onClick={() => {
+                setStep('ROLE_SELECTION');
+                setEmail('');
+                setPassword('');
+                setShowPassword(false);
+                setError('');
+              }}
               className="mb-10 flex items-center gap-2 text-gray-400 hover:text-coop-darkGreen transition-colors font-black text-[9px] uppercase tracking-[0.2em] group"
               whileHover={{ x: -4 }}
             >
