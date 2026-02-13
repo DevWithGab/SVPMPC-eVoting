@@ -15,12 +15,16 @@ const voteSchema = new mongoose.Schema(
     candidateId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Candidate',
-      required: true,
+      default: null,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    isAbstain: {
+      type: Boolean,
+      default: false,
     },
   },
   {

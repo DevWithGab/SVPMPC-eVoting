@@ -161,17 +161,12 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
       }
 
       // Check access control FIRST - before filtering by status
-      // If any election has resultsPublic = false and user is not admin, show restriction
-      const anyRestrictedResults = (electionsData as ElectionData[]).some(e => (e as any).resultsPublic === false);
+      // Find the active election to check its resultsPublic setting
+      const activeElection = (electionsData as ElectionData[]).find(e => e.status === 'active' || e.status === 'ongoing');
       const isAdmin = user?.role === 'admin' || user?.role === 'staff';
+      const isResultsPublic = activeElection?.resultsPublic !== false; // Default to true if not set
       
-      console.log('=== Access Control Check ===');
-      console.log('Any election with resultsPublic=false:', anyRestrictedResults);
-      console.log('isAdmin:', isAdmin);
-      console.log('Showing restriction:', anyRestrictedResults && !isAdmin);
-      
-      if (anyRestrictedResults && !isAdmin) {
-        console.log('Setting resultsPublic to FALSE - access restricted');
+      if (!isResultsPublic && !isAdmin) {
         setResultsPublic(false);
         if (isRefresh) {
           setRefreshing(false);
@@ -183,12 +178,9 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
 
       // Filter to only ACTIVE elections
       const activeElections = (electionsData as ElectionData[]).filter(e => e.status === 'active' || e.status === 'ongoing');
-      console.log('All elections statuses:', electionsData.map(e => ({ title: (e as any).title, status: (e as any).status })));
-      console.log('Active elections after filter:', activeElections);
 
       // If no active elections, reset the results
       if (activeElections.length === 0) {
-        console.log('No active elections, returning empty state');
         setPositions([]);
         setCandidates([]);
         setCandidateVotes({});

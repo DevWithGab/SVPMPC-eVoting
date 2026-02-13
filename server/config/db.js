@@ -8,10 +8,8 @@ const connectDB = async () => {
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     
-    // Enables logging queries to the console in development
-    if (process.env.NODE_ENV === 'development') {
-      mongoose.set('debug', true);
-    }
+    // Disable Mongoose debug logging
+    mongoose.set('debug', false);
   } catch (error) {
     console.error(`Error: ${error.message}`);
     process.exit(1);

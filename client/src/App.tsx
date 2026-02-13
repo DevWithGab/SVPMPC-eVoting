@@ -14,6 +14,7 @@ import { Rules } from './components/Rules';
 import { Announcements } from './components/Announcements';
 import { Elections } from './components/Elections';
 import { Candidates } from './components/Candidates';
+import { CandidatesDirectory } from './components/CandidatesDirectory';
 import { AccessibilityWidget } from './components/AccessibilityWidget';
 import { SplashScreen } from './components/SplashScreen';
 import type { PageView, User } from './types';
@@ -81,6 +82,8 @@ const App: React.FC = () => {
       case 'ELECTIONS':
         return <Elections onNavigate={handleNavigate} />;
       case 'CANDIDATES':
+        return <CandidatesDirectory onNavigate={handleNavigate} />;
+      case 'POSITIONS':
         const elecId = selectedElectionId || localStorage.getItem('selectedElectionId') || '';
         return <Candidates electionId={elecId} onNavigate={handleNavigate} />;
       case 'ANNOUNCEMENTS':

@@ -50,6 +50,55 @@ const castVote = async (req, res) => {
   }
 };
 
+const castAbstainVote = async (req, res) => {
+  try {
+    const { electionId, positionId } = req.body;
+
+    const user = await User.findById(req.user._id);
+    const election = await Election.findById(electionId);
+
+    if (!user || !election) {
+      throw new Error('Invalid vote data');
+    }
+
+    if (election.status !== 'active') {
+      throw new Error('Election is not active');
+    }
+
+    const existingVote = await Vote.findOne({
+      userId: user._id,
+      electionId,
+    });
+
+    if (existingVote) {
+      throw new Error('You have already voted in this election');
+    }
+
+    const vote = await Vote.create({
+      userId: user._id,
+      candidateId: null,
+      electionId,
+      isAbstain: true,
+    });
+
+    // Log abstain activity
+    await logActivity(
+      user._id,
+      'ABSTAIN',
+      `User ${user.username} abstained from voting in ${election.title}`,
+      { electionId, positionId, electionTitle: election.title },
+      req
+    );
+
+    res.status(201).json({
+      message: 'Abstain vote recorded successfully',
+      vote,
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 const getUserVotes = async (req, res) => {
   try {
     const votes = await Vote.find({ userId: req.user._id })
@@ -152,6 +201,7 @@ const getElectionResults = async (req, res) => {
 
 module.exports = {
   castVote,
+  castAbstainVote,
   getUserVotes,
   getAllVotes,
   getElectionVotes,

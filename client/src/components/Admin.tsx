@@ -125,24 +125,15 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
   const fetchAllData = useCallback(async () => {
     try {
       setLoading(true);
-      const [usersData, electionsData, positionsData, candidatesData, rulesData, announcementsData, votesData, activitiesData]: [
-        Array<{ id: string; fullName?: string; username: string; email: string; role: string; isActive?: boolean; address?: string }>,
-        Array<{ id: string; title: string; description?: string; maxVotesPerMember?: number; status: string; endDate?: string }>,
-        Array<{ id: string; title: string; description?: string; electionId: string; order?: number }>,
-        Array<{ id: string; name: string; description?: string; electionId: string; positionId: string; photoUrl?: string }>,
-        Array<{ id: string; title: string; content: string; order: number }>,
-        Array<{ id: string; title: string; content: string; priority: string; date: string; author: string }>,
-        Array<{ userId: string; candidateId: string }>,
-        Array<any>
-      ] = await Promise.all([
-        userAPI.getUsers().catch((err) => { console.error('Error fetching users:', err); return []; }),
-        electionAPI.getElections().catch((err) => { console.error('Error fetching elections:', err); return []; }),
-        positionAPI.getPositions().catch((err) => { console.error('Error fetching positions:', err); return []; }),
-        candidateAPI.getCandidates().catch((err) => { console.error('Error fetching candidates:', err); return []; }),
-        ruleAPI.getRules().catch((err) => { console.error('Error fetching rules:', err); return []; }),
-        announcementAPI.getAnnouncements().catch((err) => { console.error('Error fetching announcements:', err); return []; }),
-        voteAPI.getAllVotes().catch((err) => { console.error('Error fetching votes:', err); return []; }),
-        activityAPI.getActivities().catch((err) => { console.error('Error fetching activities:', err); return []; })
+      const [usersData, electionsData, positionsData, candidatesData, rulesData, announcementsData, votesData, activitiesData] = await Promise.all([
+        userAPI.getUsers().catch(() => []),
+        electionAPI.getElections().catch(() => []),
+        positionAPI.getPositions().catch(() => []),
+        candidateAPI.getCandidates().catch(() => []),
+        ruleAPI.getRules().catch(() => []),
+        announcementAPI.getAnnouncements().catch(() => []),
+        voteAPI.getAllVotes().catch(() => []),
+        activityAPI.getActivities().catch(() => [])
       ]);
 
       // Map backend data to frontend types
@@ -152,11 +143,9 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
 
       const mappedUsers: User[] = usersData.map((u: any) => {
         const userId = u._id || u.id;
-        // Only count votes for the current/active election
-        // If no active election exists, no one has voted in current election
         const hasVoted = activeElectionId ? votesData.some((v: any) => {
-          const voteUserId = typeof v.userId === 'string' ? v.userId : (v.userId?._id || v.userId?.id);
-          const voteElectionId = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
+          const voteUserId = v.userId?._id || v.userId?.id || v.userId;
+          const voteElectionId = v.electionId?._id || v.electionId?.id || v.electionId;
           return voteUserId === userId && voteElectionId === activeElectionId;
         }) : false;
         
@@ -164,7 +153,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
           id: userId,
           name: u.fullName || u.username,
           email: u.email,
-          role: u.role as any,
+          role: u.role,
           hasVoted,
           username: u.username,
           fullName: u.fullName,
@@ -174,12 +163,10 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
       });
 
       const mappedPositions: Position[] = positionsData
-        .sort((a: any, b: any) => {
-          return (a.order || 0) - (b.order || 0);
-        })
+        .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
         .map((p: any) => ({
           id: p._id || p.id,
-          electionId: typeof p.electionId === 'string' ? p.electionId : (p.electionId?._id || p.electionId?.id),
+          electionId: p.electionId?._id || p.electionId?.id || p.electionId,
           title: p.title,
           description: p.description || '',
           maxVotes: 1,
@@ -198,7 +185,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
         id: c._id || c.id,
         name: c.name,
         description: c.description || '',
-        positionId: typeof c.positionId === 'string' ? c.positionId : (c.positionId?._id || c.positionId?.id),
+        positionId: c.positionId?._id || c.positionId?.id || c.positionId,
         votes: voteCounts[c._id || c.id] || 0,
         imageUrl: c.photoUrl,
         photoUrl: c.photoUrl
@@ -225,12 +212,11 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
         content: r.content,
         order: r.order
       })));
-      // Cast announcements priority to correct type
       setAnnouncements(announcementsData.map((ann: any) => ({
         id: ann._id || ann.id,
         title: ann.title,
         content: ann.content,
-        priority: ann.priority as 'LOW' | 'MEDIUM' | 'HIGH',
+        priority: ann.priority,
         date: ann.date,
         author: ann.author
       })));
@@ -285,7 +271,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
       // Initialize resultsPublic state from first election (or active election)
       // NOTE: Now reading directly from elections data in the toggle render, no need to set state
 
-      // Map activities to audit logs format
       const mappedLogs = activitiesData.map((activity: any) => ({
         id: activity._id || activity.id,
         timestamp: new Date(activity.createdAt).toLocaleString('en-US', { 
@@ -743,14 +728,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
       );
       setElections(updatedElections);
       
-      const updateResponse = await electionAPI.updateElection(electionId, { resultsPublic: newValue });
-      
-      // Refetch elections to get updated data and sync with server
-      const electionsResponse = await electionAPI.getElections();
-      
-      if (electionsResponse && electionsResponse.length > 0) {
-        setElections(electionsResponse);
-      }
+      await electionAPI.updateElection(electionId, { resultsPublic: newValue });
       
       Swal.fire({
         icon: 'success',
@@ -761,7 +739,12 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
         showConfirmButton: false
       });
     } catch (error: any) {
-      console.error('Failed to toggle results visibility:', error);
+      // Revert UI on error
+      const revertedElections = elections.map((el, idx) => 
+        idx === 0 ? { ...el, resultsPublic: !newValue } : el
+      );
+      setElections(revertedElections);
+      
       Swal.fire('Error', error.response?.data?.message || 'Failed to update results visibility', 'error');
     }
   };

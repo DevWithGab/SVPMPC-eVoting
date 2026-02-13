@@ -31,8 +31,9 @@ const schemas = {
     maxVotesPerMember: Joi.number().integer().min(1).optional(),
     status: Joi.string().valid('active', 'upcoming', 'completed').optional(),
     resultsPublic: Joi.boolean().optional(),
+    backgroundImage: Joi.any().optional(),
     role: Joi.string().valid('admin', 'officer').optional()
-  }),
+  }).unknown(true),
   position: Joi.object({
     title: Joi.string().min(2).max(100).required(),
     description: Joi.string().optional(),

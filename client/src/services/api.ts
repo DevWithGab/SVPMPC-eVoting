@@ -144,11 +144,7 @@ export const electionAPI = {
     if (data.maxVotesPerMember) formData.append('maxVotesPerMember', data.maxVotesPerMember.toString());
     if (data.backgroundImage) formData.append('backgroundImage', data.backgroundImage);
     
-    const response = await api.post('/elections', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await api.post('/elections', formData);
     return response.data;
   },
   
@@ -359,6 +355,11 @@ export const ruleAPI = {
 export const voteAPI = {
   castVote: async (candidateId: string, electionId: string) => {
     const response = await api.post('/votes', { candidateId, electionId });
+    return response.data;
+  },
+  
+  castAbstainVote: async (electionId: string, positionId: string) => {
+    const response = await api.post('/votes/abstain', { electionId, positionId });
     return response.data;
   },
   

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   castVote,
+  castAbstainVote,
   getUserVotes,
   getAllVotes,
   getElectionVotes,
@@ -20,6 +21,12 @@ router.post(
   authenticate,
   validate(schemas.vote),
   castVote
+);
+
+router.post(
+  '/abstain',
+  authenticate,
+  castAbstainVote
 );
 
 router.get('/user', authenticate, getUserVotes);

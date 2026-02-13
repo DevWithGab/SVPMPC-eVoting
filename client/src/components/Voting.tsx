@@ -9,7 +9,7 @@ import {
   ShieldCheck, Fingerprint, Lock, AlertCircle,
   Hash, ClipboardCheck, ZapOff, Timer, Loader2
 } from 'lucide-react';
-import { electionAPI, candidateAPI, voteAPI } from '../services/api';
+import { electionAPI, candidateAPI, voteAPI, positionAPI } from '../services/api';
 import Swal from 'sweetalert2';
 
 export const Voting: React.FC<{ onNavigate?: (page: PageView) => void }> = ({ onNavigate }) => {
@@ -84,52 +84,58 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
 
       // Fetch elections (positions) and candidates
       const electionsData = await electionAPI.getElections();
+      const positionsData = await positionAPI.getPositions();
       const candidatesData = await candidateAPI.getCandidates();
       const userVotes = await voteAPI.getUserVotes();
 
-      // Map backend elections to frontend positions
-      const mappedPositions: Position[] = electionsData
-        .filter((election: any) => election.status === 'active' && election.isCategory !== false)
-        .map((election: any) => ({
-          id: election._id || election.id,
-          title: election.title,
-          description: election.description || '',
-          maxVotes: election.maxVotesPerMember || 1,
-          order: 0,
+      // Get active election
+      const activeElections = electionsData.filter((e: any) => e.status === 'active');
+      const activeElectionId = activeElections.length > 0 ? (activeElections[0]._id || activeElections[0].id) : '';
+
+      // Map backend positions to frontend positions (filtered by active election)
+      const mappedPositions: Position[] = positionsData
+        .filter((position: any) => {
+          const posElectionId = position.electionId?._id || position.electionId;
+          return posElectionId === activeElectionId;
+        })
+        .map((position: any) => ({
+          id: position._id || position.id,
+          title: position.title,
+          description: position.description || '',
+          maxVotes: 1,
+          order: position.order || 0,
           type: 'OFFICER',
-          createdAt: election.createdAt
+          electionId: activeElectionId
         }))
-        .sort((a: any, b: any) => {
-          // Sort by creation date ascending (oldest first)
-          const dateA = new Date(a.createdAt || 0).getTime();
-          const dateB = new Date(b.createdAt || 0).getTime();
-          return dateA - dateB;
+        .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+
+      // Map backend candidates to frontend candidates (filtered by active election)
+      const mappedCandidates: Candidate[] = candidatesData
+        .filter((candidate: any) => {
+          const candElectionId = candidate.electionId?._id || candidate.electionId;
+          return candElectionId === activeElectionId;
+        })
+        .map((candidate: any) => {
+          let candidatePositionId = '';
+          if (typeof candidate.positionId === 'string') {
+            candidatePositionId = candidate.positionId;
+          } else if (candidate.positionId?._id) {
+            candidatePositionId = candidate.positionId._id;
+          } else if (candidate.positionId?.id) {
+            candidatePositionId = candidate.positionId.id;
+          }
+          
+          return {
+            id: candidate._id || candidate.id,
+            name: candidate.name,
+            description: candidate.description || '',
+            positionId: candidatePositionId,
+            votes: 0,
+            imageUrl: candidate.photoUrl || ''
+          };
         });
 
-      // Map backend candidates to frontend candidates
-      const mappedCandidates: Candidate[] = candidatesData.map((candidate: any) => {
-        // Extract positionId properly - it's populated so could be object with _id
-        let candidatePositionId = '';
-        if (typeof candidate.positionId === 'string') {
-          candidatePositionId = candidate.positionId;
-        } else if (candidate.positionId?._id) {
-          candidatePositionId = candidate.positionId._id;
-        } else if (candidate.positionId?.id) {
-          candidatePositionId = candidate.positionId.id;
-        }
-        
-        return {
-          id: candidate._id || candidate.id,
-          name: candidate.name,
-          description: candidate.description || '',
-          positionId: candidatePositionId,
-          votes: 0,
-          imageUrl: candidate.photoUrl || ''
-        };
-      });
-
       // Determine voting status and election end date
-      const activeElections = electionsData.filter((e: any) => e.status === 'active' && e.isCategory !== false);
       if (activeElections.length > 0) {
         interface ElectionWithDate {
           endDate: string;
@@ -154,14 +160,11 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
       setIsSubmitted(userHasVotedInActiveElection);
 
       // Store the active election ID for vote submission
-      if (activeElections.length > 0) {
-        setActiveElectionId(activeElections[0]._id || activeElections[0].id);
-      }
+      setActiveElectionId(activeElectionId);
 
       setPositions(mappedPositions);
       setCandidates(mappedCandidates);
     } catch (err) {
-      console.error('Failed to fetch voting data:', err);
       setError('Failed to load voting data. Please try again later.');
     } finally {
       setLoading(false);
@@ -180,18 +183,13 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
           setIsElectionOver(true);
           setVotingStatus('PAUSED');
         }
-      }).catch(err => console.error('Failed to check election status:', err));
+      }).catch(err => {});
     }, 10000); // Every 10 seconds
     
     return () => clearInterval(intervalId);
   }, [fetchData, alreadyVoted]);
 
-  // Monitor state changes for debugging
-  useEffect(() => {
-    console.log('🔵 isSubmitted changed:', isSubmitted);
-    console.log('🔵 alreadyVoted changed:', alreadyVoted);
-    console.log('🔵 Should render ballot verified?', isSubmitted || alreadyVoted);
-  }, [isSubmitted, alreadyVoted]);
+
 
   const handleToggleCandidate = (positionId: string, candidateId: string, maxVotes: number) => {
     if (votingStatus === 'PAUSED' || isElectionOver) return;
@@ -223,33 +221,20 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
   };
 
   const handleSubmit = async () => {
-    console.log('handleSubmit called', { votingStatus, isElectionOver, isSubmitted, alreadyVoted });
-    console.log('Current selections:', selections);
-    console.log('activeElectionId:', activeElectionId);
-    
     if (votingStatus === 'PAUSED' || isElectionOver) {
       Swal.fire('Error', 'Voting session is unavailable.', 'error');
-      return;
-    }
-
-    // Check if there are any selections
-    const hasSelections = Object.values(selections).some((arr: any) => arr.length > 0);
-    if (!hasSelections) {
-      Swal.fire('Error', 'Please select at least one candidate before submitting.', 'error');
       return;
     }
 
     try {
       setSubmitting(true);
       setError(null);
-      console.log('Starting vote submission...');
 
       // Refresh election data to ensure status is current
       const electionsData = await electionAPI.getElections();
       const activeElections = electionsData.filter((e: any) => e.status === 'active');
       
       if (activeElections.length === 0) {
-        console.log('No active elections found');
         Swal.fire('Error', 'Voting period has ended. Election is no longer active.', 'error');
         setIsElectionOver(true);
         setVotingStatus('PAUSED');
@@ -257,60 +242,39 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
         return;
       }
 
-      // Submit votes for each selected candidate
+      // Submit votes for each position (including abstentions)
       const votePromises: Promise<unknown>[] = [];
       
-      console.log('Submitting votes with electionId:', activeElectionId);
-      console.log('All selections object:', selections);
-      console.log('Object.entries(selections):', Object.entries(selections));
-      
-      let voteCount = 0;
-      for (const [positionId, candidateIds] of Object.entries(selections)) {
-        console.log(`Position ${positionId} has candidates:`, candidateIds);
-        for (const candidateId of candidateIds as string[]) {
-          console.log(`Casting vote ${++voteCount} - candidate: ${candidateId}, electionId: ${activeElectionId}`);
-          votePromises.push(voteAPI.castVote(candidateId, activeElectionId));
+      for (const position of positions) {
+        const candidateIds = selections[position.id] || [];
+        
+        if (candidateIds.length > 0) {
+          // Submit votes for selected candidates
+          for (const candidateId of candidateIds) {
+            votePromises.push(voteAPI.castVote(candidateId, activeElectionId));
+          }
+        } else {
+          // Submit abstain vote for this position
+          votePromises.push(voteAPI.castAbstainVote(activeElectionId, position.id));
         }
       }
 
-      console.log(`Total votePromises.length before check: ${votePromises.length}`);
-      if (votePromises.length === 0) {
-        console.log('❌ No votes to submit - selections were empty!');
-        console.log('Current positions:', positions);
-        Swal.fire('Error', 'No candidates selected to vote for.', 'error');
-        setSubmitting(false);
-        return;
-      }
-
-      console.log(`Submitting ${votePromises.length} votes...`);
       const results = await Promise.all(votePromises);
-      console.log('Votes submitted successfully:', results);
       
       // Generate a simple receipt hash (in production, this would come from backend)
       const receipt = `SV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-      console.log('Generated receipt:', receipt);
       setReceiptHash(receipt);
       
-      console.log('Setting isSubmitted to true...');
       setIsSubmitted(true);
       setAlreadyVoted(true);
       
-      console.log('State updated - isSubmitted and alreadyVoted set to true');
-      console.log('Render should show ballot verified screen now...');
-      console.log('Current component render check:', { isSubmitted: true, alreadyVoted: true });
-      
       // Scroll to top to show the ballot verified screen
       setTimeout(() => {
-        console.log('Scrolling to top...');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 100);
     } catch (err) {
-      console.error('🔴 FAILED TO SUBMIT VOTES:', err);
-      console.error('Error type:', err instanceof Error ? err.constructor.name : typeof err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to submit votes. Please try again.';
       setError(errorMessage);
-      console.error('Error message:', errorMessage);
-      console.error('Full error object:', err);
       Swal.fire({
         icon: 'error',
         title: 'Vote Submission Failed',
@@ -439,43 +403,40 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
 
   if (isSubmitted || alreadyVoted) {
     return (
-      <div className="max-w-4xl mx-auto py-16 px-4 animate-fadeIn pt-24 md:pt-32 pb-32">
-        {renderTerminationPanel()}
-        {renderFlowProgress()}
-        <div className="bg-white rounded-none shadow-2xl border border-gray-100 p-12 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-coop-green"></div>
-          <div className="w-20 h-20 bg-coop-green/10 rounded-none flex items-center justify-center mx-auto mb-8 text-coop-green">
-            <CheckCircle2 size={48} />
-          </div>
-          <h2 className="text-4xl font-black text-gray-900 mb-2 tracking-tighter uppercase">Ballot Verified</h2>
-          <p className="text-gray-400 font-black uppercase tracking-[0.3em] text-[10px] mb-8">Transaction ID: {receiptHash || 'SV-TERMINAL-OFFLINE'}</p>
-          
-          <div className="bg-gray-50 p-6 rounded-none border border-gray-100 mb-10 text-left">
-            <div className="flex items-center gap-3 mb-4 text-coop-green">
-                <ShieldCheck size={20} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Security confirmation</span>
+      <div className="min-h-screen flex items-center justify-center px-4 py-16 bg-[#f8fafc]">
+        <div className="max-w-2xl w-full">
+          <div className="bg-white rounded-none shadow-2xl border border-gray-100 p-12 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-coop-green"></div>
+            <div className="w-20 h-20 bg-coop-green/10 rounded-none flex items-center justify-center mx-auto mb-8 text-coop-green">
+              <CheckCircle2 size={48} />
             </div>
-            <p className="text-gray-600 text-sm leading-relaxed">
-                Your selections have been cryptographically hashed and appended to the Saint Vincent Cooperative ledger. A physical copy of this receipt is being synced with your member profile.
-            </p>
-          </div>
+            <h2 className="text-4xl font-black text-gray-900 mb-2 tracking-tighter uppercase text-center">Ballot Verified</h2>
+            <p className="text-gray-400 font-black uppercase tracking-[0.3em] text-[10px] mb-8 text-center">Transaction ID: {receiptHash || 'SV-TERMINAL-OFFLINE'}</p>
+            
+            <div className="bg-gray-50 p-6 rounded-none border border-gray-100 mb-10 text-left">
+              <div className="flex items-center gap-3 mb-4 text-coop-green">
+                  <ShieldCheck size={20} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Security confirmation</span>
+              </div>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                  Your selections have been cryptographically hashed and appended to the Saint Vincent Cooperative ledger. A physical copy of this receipt is being synced with your member profile.
+              </p>
+            </div>
 
-          <button 
-            onClick={(e) => {
-              console.log('Exit button clicked!', { onNavigate, isSubmitted, alreadyVoted });
-              e.preventDefault();
-              if (onNavigate) {
-                console.log('Calling onNavigate(ELECTIONS)');
-                onNavigate('ELECTIONS');
-              } else {
-                console.log('No onNavigate, reloading');
-                window.location.reload();
-              }
-            }} 
-            className="w-full bg-coop-darkGreen text-white py-6 px-8 rounded-none font-black text-lg hover:bg-coop-green hover:scale-105 shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 cursor-pointer">
-            Exit & Secure Ballot
-            <ArrowRight size={24} />
-          </button>
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                if (onNavigate) {
+                  onNavigate('ELECTIONS');
+                } else {
+                  window.location.reload();
+                }
+              }} 
+              className="w-full bg-coop-darkGreen text-white py-6 px-8 rounded-none font-black text-lg hover:bg-coop-green hover:scale-105 shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 cursor-pointer">
+              Exit & Secure Ballot
+              <ArrowRight size={24} />
+            </button>
+          </div>
         </div>
       </div>
     );
