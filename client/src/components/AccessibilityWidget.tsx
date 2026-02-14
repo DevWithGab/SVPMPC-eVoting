@@ -37,9 +37,6 @@ export const AccessibilityWidget: React.FC<AccessibilityWidgetProps> = ({
         }
 
         const profile = await userAPI.getProfile();
-        if (profile.highContrast !== undefined) {
-          setDarkMode(profile.highContrast);
-        }
         if (profile.fontSize) {
           setFontSize(profile.fontSize);
         }

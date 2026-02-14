@@ -144,7 +144,11 @@ export const electionAPI = {
     if (data.maxVotesPerMember) formData.append('maxVotesPerMember', data.maxVotesPerMember.toString());
     if (data.backgroundImage) formData.append('backgroundImage', data.backgroundImage);
     
-    const response = await api.post('/elections', formData);
+    const response = await api.post('/elections', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
   
