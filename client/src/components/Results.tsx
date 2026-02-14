@@ -410,7 +410,7 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
           transition={{ duration: 0.6 }}
         >
           {/* Gridline Background */}
-          <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{ backgroundImage: 'linear-gradient(0deg, #000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '35px 35px' }}></div>
+          <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{ backgroundImage: `linear-gradient(0deg, ${isDarkMode ? '#94a3b8' : '#000'} 1px, transparent 1px), linear-gradient(90deg, ${isDarkMode ? '#94a3b8' : '#000'} 1px, transparent 1px)`, backgroundSize: '35px 35px' }}></div>
           
           <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 sm:gap-10 lg:gap-12">
             <motion.div 

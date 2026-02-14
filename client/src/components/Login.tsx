@@ -274,7 +274,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               </motion.div>
               <div className="text-center">
                 <motion.h1 
-                  className="text-2xl font-black text-gray-900 tracking-tight uppercase leading-none"
+                  className={`text-2xl font-black tracking-tight uppercase leading-none ${isDarkMode ? 'text-slate-100' : 'text-gray-900'}`}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.6, delay: 0.2 }}

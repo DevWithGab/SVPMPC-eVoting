@@ -74,8 +74,8 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
     <div className={`min-h-screen pt-32 pb-32 px-4 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-[#fcfcfd]'}`}>
       <div className="container mx-auto max-w-7xl">
         {/* Architectural Header */}
-        <header className="mb-12 sm:mb-20 animate-slideUp">
-          <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{ backgroundImage: 'linear-gradient(0deg, #000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '35px 35px' }}></div>
+        <header className="mb-12 sm:mb-20 animate-slideUp relative">
+          <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{ backgroundImage: `linear-gradient(0deg, ${isDarkMode ? '#94a3b8' : '#000'} 1px, transparent 1px), linear-gradient(90deg, ${isDarkMode ? '#94a3b8' : '#000'} 1px, transparent 1px)`, backgroundSize: '35px 35px' }}></div>
 
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 sm:gap-12">
             <div className="max-w-4xl">
@@ -85,7 +85,7 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
               </div>
               <h1 className={`text-3xl sm:text-5xl md:text-7xl font-black tracking-tighter leading-[0.85] uppercase mb-4 sm:mb-8 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>
                 Election<br/>
-                <span className={isDarkMode ? 'text-coop-yellow' : 'text-coop-green'}>Dashboard</span>
+                <span className="text-coop-green">Dashboard</span>
               </h1>
               <p className={`text-sm sm:text-2xl font-medium leading-relaxed max-w-2xl border-l-4 pl-4 sm:pl-8 ${isDarkMode ? 'text-slate-300 border-coop-yellow/30' : 'text-gray-500 border-coop-green/10'}`}>
                 Monitor upcoming and active democratic processes. Review timelines, candidate rosters, and partylist affiliations.

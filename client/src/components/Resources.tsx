@@ -144,19 +144,19 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
         {/* Architectural Header */}
         <header className="relative mb-16 sm:mb-24 animate-slideUp">
           {/* Gridline Background */}
-          <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{ backgroundImage: 'linear-gradient(0deg, #000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '35px 35px' }}></div>
+          <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{ backgroundImage: `linear-gradient(0deg, ${isDarkMode ? '#94a3b8' : '#000'} 1px, transparent 1px), linear-gradient(90deg, ${isDarkMode ? '#94a3b8' : '#000'} 1px, transparent 1px)`, backgroundSize: '35px 35px' }}></div>
           
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6 sm:gap-10 lg:gap-12">
             <div className="w-full lg:max-w-3xl">
               <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                 <img src="/SVMPC_LOGO.png" alt="SVMPC Logo" className="h-6 sm:h-8 w-auto" />
-                <span className="text-[8px] sm:text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] sm:tracking-[0.5em]">Member Support Node</span>
+                <span className={`text-[8px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.5em] ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Member Support Node</span>
               </div>
-              <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-8xl font-black text-coop-darkGreen tracking-tighter leading-[0.85] uppercase mb-4 sm:mb-8">
+              <h1 className={`text-3xl sm:text-5xl md:text-6xl lg:text-8xl font-black tracking-tighter leading-[0.85] uppercase mb-4 sm:mb-8 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>
                 Knowledge<br/>
                 <span className="text-coop-green">Base</span>
               </h1>
-              <p className="text-sm sm:text-base md:text-xl text-gray-500 font-medium leading-relaxed max-w-xl border-l-4 border-coop-green/10 pl-3 sm:pl-8">
+              <p className={`text-sm sm:text-base md:text-xl font-medium leading-relaxed max-w-xl border-l-4 pl-3 sm:pl-8 ${isDarkMode ? 'text-slate-300 border-coop-yellow/30' : 'text-gray-500 border-coop-green/10'}`}>
                 Access the official Saint Vincent cooperative documentation, technical guides, and support protocols to ensure a smooth democratic experience.
               </p>
             </div>

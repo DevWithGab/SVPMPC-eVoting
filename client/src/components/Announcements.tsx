@@ -64,7 +64,7 @@ export const Announcements: React.FC = () => {
         {/* Modern Broadcast Header */}
         <header className="relative mb-12 sm:mb-20 animate-slideUp">
           {/* Gridline Background */}
-          <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{ backgroundImage: 'linear-gradient(0deg, #000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '35px 35px' }}></div>
+          <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{ backgroundImage: `linear-gradient(0deg, ${isDarkMode ? '#94a3b8' : '#000'} 1px, transparent 1px), linear-gradient(90deg, ${isDarkMode ? '#94a3b8' : '#000'} 1px, transparent 1px)`, backgroundSize: '35px 35px' }}></div>
           
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6 sm:gap-12">
             <div className="w-full lg:max-w-3xl">
