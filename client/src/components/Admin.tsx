@@ -1,32 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import { VotingType } from '../types.ts';
 import type { User, Candidate, Position, Announcement, Rule, VotingMode, VotingStatus } from '../types.ts';
 import { userAPI, electionAPI, positionAPI, candidateAPI, announcementAPI, ruleAPI, voteAPI, reportAPI, activityAPI } from '../services/api';
 import { useDarkMode } from '../context/DarkModeContext';
 import Swal from 'sweetalert2';
 import { 
-  Settings, Users, Download, 
+  Settings, Users,
   LayoutDashboard, UserCheck, ShieldCheck, Activity, Search, 
   CheckCircle, X, Trash2, 
-  Database, PauseCircle, PlayCircle, Lock, PlusCircle, ShieldAlert,
+  Database, Lock, PlusCircle, ShieldAlert,
   Layers,
-  FileText, Camera, LayoutList, Upload,
-  Terminal, ArrowUpRight, LogOut, Megaphone, BookOpen,
-  UserPlus, Menu, Eye, EyeOff, AlertTriangle, RefreshCw, Bell, Clock,
-  Briefcase, Edit3, ListOrdered, Globe, FilePlus, ChevronRight, Calendar
+  FileText, Camera, Upload,
+  Terminal, LogOut, Megaphone, BookOpen,
+  UserPlus, Menu, Clock,
+  Briefcase, Edit3, ListOrdered, FilePlus, ChevronRight, Calendar
 } from 'lucide-react';
 import { AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
-const TIMELINE_DATA = [
-  { time: '08:00', votes: 10 }, 
-  { time: '10:00', votes: 45 }, 
-  { time: '12:00', votes: 120 }, 
-  { time: '14:00', votes: 85 }, 
-  { time: '16:00', votes: 150 }, 
-  { time: '18:00', votes: 110 }, 
-  { time: '20:00', votes: 60 }
-];
 
 interface AdminProps {
   user: User;
@@ -88,7 +78,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
   const [electionEndDate, setElectionEndDate] = useState('');
   const [originalEndDate, setOriginalEndDate] = useState('');
   const [hasEndDateChanged, setHasEndDateChanged] = useState(false);
-  const [isSavingEndDate, setIsSavingEndDate] = useState(false);
   const [logs, setLogs] = useState<Array<{ id: string; timestamp: string; user: string; role: string; action: string }>>([]);
 
   const canManageSystem = user.role === 'admin';
@@ -138,7 +127,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
         activityAPI.getActivities().catch(() => [])
       ]);
 
-      // Map backend data to frontend types
       // Get the active election to check votes for current election only
       const activeElection = electionsData.find((e: any) => e.status === 'active') || electionsData.find((e: any) => e.status === 'completed');
       const activeElectionId = activeElection?._id || activeElection?.id;
@@ -179,7 +167,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
 
       // Calculate vote counts for candidates
       const voteCounts: Record<string, number> = {};
-      votesData.forEach((vote) => {
+      votesData.forEach((vote: any) => {
         voteCounts[vote.candidateId] = (voteCounts[vote.candidateId] || 0) + 1;
       });
 
@@ -270,9 +258,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
         setHasEndDateChanged(false);
       }
       
-      // Initialize resultsPublic state from first election (or active election)
-      // NOTE: Now reading directly from elections data in the toggle render, no need to set state
-
       const mappedLogs = activitiesData.map((activity: any) => ({
         id: activity._id || activity.id,
         timestamp: new Date(activity.createdAt).toLocaleString('en-US', { 
@@ -363,7 +348,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
         const endTime = new Date(election.endDate).getTime();
         if (endTime <= now && !completedElectionsRef.current.has(electionId)) {
           // Election has reached its end date - auto-complete
-          console.log(`Auto-completing election ${electionId}`);
           try {
             await electionAPI.updateElection(electionId, { status: 'completed' });
             completedElectionsRef.current.add(electionId);
@@ -381,174 +365,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
     return () => clearInterval(interval);
   }, [elections]);
 
-  // Handler functions
-  const handleAddCandidate = async (candidate: Candidate) => {
-    try {
-      const response = await candidateAPI.createCandidate({
-        name: candidate.name,
-        description: candidate.description,
-        photoUrl: candidate.photoUrl,
-        electionId: selectedElectionId || '',
-        positionId: candidate.id
-      });
-    
-      
-      const createdCandidate = response.candidate;
-      
-      // If we have a candidate image, upload it using multer
-      if (candidateImage && (createdCandidate?._id || createdCandidate?.id)) {
-        try {
-          // Convert data URL to blob
-          const response2 = await fetch(candidateImage);
-          const blob = await response2.blob();
-          const file = new File([blob], 'candidate-photo.jpg', { type: 'image/jpeg' });
-          
-          const candidateIdToUse = createdCandidate._id || createdCandidate.id;
-          // Upload photo using multer
-          await candidateAPI.uploadCandidatePhoto(candidateIdToUse, file);
-        } catch (photoError) {
-          console.warn('Failed to upload candidate photo:', photoError);
-          // Continue even if photo upload fails
-        }
-      }
-      
-      await fetchAllData();
-      
-      Swal.fire({
-        title: 'Success!',
-        text: 'Candidate created successfully',
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false,
-        position: 'top-end',
-        toast: true
-      });
-    } catch (error: any) {
-      const errorMsg = error?.response?.data?.message || error?.message || JSON.stringify(error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Error creating candidate: ' + errorMsg,
-        icon: 'error',
-        confirmButtonColor: '#2D7A3E'
-      });
-    }
-  };
-
-  const handleDeleteCandidate = async (id: string) => {
-    Swal.fire({
-      title: 'Delete Candidate?',
-      text: 'This action cannot be undone',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#2D7A3E',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!'
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          await candidateAPI.deleteCandidate(id);
-          await fetchAllData();
-          Swal.fire(
-            'Deleted!',
-            'Candidate has been deleted.',
-            'success'
-          );
-        } catch (error) {
-          console.error('Failed to delete candidate:', error);
-          Swal.fire('Error', 'Failed to delete candidate', 'error');
-        }
-      }
-    });
-  };
-
-  const handleAddPosition = async (position: Position) => {
-    try {
-      const now = new Date();
-      const startDate = new Date(now.getTime() + 60 * 1000); // 1 minute from now
-      await electionAPI.createElection({
-        title: position.title,
-        description: position.description,
-        startDate: startDate.toISOString(),
-        endDate: electionEndDate || new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        maxVotesPerMember: position.maxVotes
-      });
-      await fetchAllData();
-      
-      Swal.fire({
-        title: 'Success!',
-        text: 'Position/Category created successfully',
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false,
-        position: 'top-end',
-        toast: true
-      });
-    } catch (error: any) {
-      console.error('Failed to add position:', error);
-      const errorMsg = error?.response?.data?.message || error?.message || 'Unknown error';
-      Swal.fire({
-        title: 'Error',
-        text: 'Error creating position: ' + errorMsg,
-        icon: 'error',
-        confirmButtonColor: '#2D7A3E'
-      });
-    }
-  };
-
-  const handleDeletePosition = async (id: string) => {
-    Swal.fire({
-      title: 'Delete Category?',
-      text: 'This action cannot be undone',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#2D7A3E',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!'
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          await electionAPI.deleteElection(id);
-          // Add a small delay to ensure backend cascade delete completes
-          await new Promise(resolve => setTimeout(resolve, 500));
-          await fetchAllData();
-          Swal.fire(
-            'Deleted!',
-            'Category has been deleted.',
-            'success'
-          );
-        } catch (error) {
-          console.error('Failed to delete position:', error);
-          Swal.fire('Error', 'Failed to delete position', 'error');
-        }
-      }
-    });
-  };
-
-  const handleTogglePositionStatus = async (id: string, currentStatus: string) => {
-    try {
-      const newStatus = currentStatus === 'active' ? 'upcoming' : 'active';
-      await electionAPI.updateElection(id, { status: newStatus });
-      await fetchAllData();
-      
-      Swal.fire({
-        title: 'Status Updated!',
-        text: `Category status changed to ${newStatus}`,
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false,
-        position: 'top-end',
-        toast: true
-      });
-    } catch (error: any) {
-      console.error('Failed to update position status:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Error: ' + (error.response?.data?.message || error.message || 'Unknown error'),
-        icon: 'error',
-        confirmButtonColor: '#2D7A3E'
-      });
-    }
-  };
 
   const handleDeleteUser = async (id: string) => {
     Swal.fire({
@@ -577,38 +393,9 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
     });
   };
 
-  const handleGenerateReport = async (type: 'election' | 'voteCount') => {
-    try {
-      const activeElection = positions[0]?.id;
-      if (!activeElection) {
-        alert('No elections available to generate reports for');
-        return;
-      }
-
-      console.log('Generating', type, 'report for election:', activeElection);
-      
-      if (type === 'election') {
-        await reportAPI.generateElectionReport(activeElection);
-      } else {
-        await reportAPI.generateVoteCountReport(activeElection);
-      }
-
-      alert(`${type === 'election' ? 'Election Summary' : 'Vote Count'} report generated successfully!`);
-      await fetchAllData(); // Refresh logs
-    } catch (error: any) {
-      const errorMsg = error?.response?.data?.message || error?.message || 'Unknown error';
-      console.error('Failed to generate report:', error);
-      alert('Error generating report: ' + errorMsg);
-    }
-  };
 
   const handleAddAnnouncement = async (ann: Announcement) => {
     try {
-      // Convert datetime-local string to ISO string for the backend
-      let expiresAt = null;
-      if (ann.expiresAt && typeof ann.expiresAt === 'string' && ann.expiresAt.trim() !== '') {
-        expiresAt = new Date(ann.expiresAt).toISOString();
-      }
 
       await announcementAPI.createAnnouncement({
         title: ann.title,
@@ -616,7 +403,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
         priority: ann.priority,
         date: ann.date,
         author: ann.author,
-        expiresAt: expiresAt,
         targetAudience: ann.targetAudience
       });
       await fetchAllData();
@@ -807,83 +593,11 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewBgImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleResetElectionCycle = async (title: string, newEndDate: string, bgImage: string | null, wipeEntities: boolean) => {
-    try {
-      if (!title || !newEndDate) {
-        Swal.fire('Error', 'Please provide an election title and termination date', 'error');
-        return;
-      }
-
-      // Find any election to pass (not needed for deep wipe, but API expects it)
-      const targetElection = elections.find((e: any) => e.status !== 'cancelled') || elections[0];
-      
-      // For deep wipe, we don't need an election - just wipe everything
-      if (!targetElection && !wipeEntities) {
-        Swal.fire('Error', 'No election found to reset', 'error');
-        return;
-      }
-
-      const electionId = targetElection?._id || targetElection?.id || 'null';
-      
-      await electionAPI.resetCycle(electionId, newEndDate, wipeEntities, wipeEntities ? undefined : title);
-      
-      // 7. Auto-Announcement (New Requirement)
-      const announcementData = {
-        title: `URGENT: ${title} is now ACTIVE`,
-        content: `The Saint Vincent Registry Authority has officially initialized the ${title}. All authorized members are now cleared to cast their ballots. The registry window is scheduled to close on ${new Date(newEndDate).toLocaleString()}. Please ensure your identity profiles are verified before proceeding.`,
-        priority: 'HIGH' as const,
-        author: user.name,
-        targetAudience: ['hasNotVoted'] as ('all' | 'hasNotVoted' | 'hasVoted')[]
-      };
-      
-      await announcementAPI.createAnnouncement(announcementData);
-      
-      Swal.fire({
-        title: 'Election Cycle Created',
-        html: `<div class="text-left">
-          <p class="mb-2"><strong>Actions Completed:</strong></p>
-          <ul class="list-disc list-inside text-sm space-y-1">
-            ${!wipeEntities ? `<li>Election created: <strong>${title}</strong></li>` : ''}
-            <li>All votes cleared</li>
-            ${wipeEntities ? '<li>All categories/positions removed</li>' : '<li>Candidate vote counts reset</li>'}
-            ${wipeEntities ? '<li>All candidates removed</li>' : ''}
-            <li>All voter participation flags reset</li>
-            <li>End date: ${new Date(newEndDate).toLocaleDateString()}</li>
-            <li>Announcement broadcasted to all members</li>
-            ${bgImage ? '<li>Background image applied</li>' : ''}
-          </ul>
-        </div>`,
-        icon: 'success',
-        confirmButtonColor: '#4F75E2',
-      });
-      
-      // Refresh all data with a delay to ensure backend cascade delete completes
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      await fetchAllData();
-    } catch (error: any) {
-      console.error('Failed to create election cycle:', error);
-      Swal.fire('Error', error.response?.data?.message || 'Failed to create election cycle', 'error');
-    }
-  };
 
   const filteredUsers = users.filter(u => 
     u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.id.includes(searchTerm)
   );
 
-  const filteredCandidates = candidates.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.id.includes(searchTerm)
-  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -956,7 +670,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
         description: newPosition.description,
         electionId: selectedElectionId,
         order: newPosition.order || 0,
-        type: newPosition.type,
       });
 
       console.log('Position created:', response);
@@ -1038,19 +751,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
     });
   };
 
-  const onUpdateElection = async (updatedElection: any) => {
-    try {
-      const electionId = updatedElection.id || updatedElection._id;
-      await electionAPI.updateElection(electionId, {
-        status: updatedElection.status
-      });
-      await fetchAllData();
-      Swal.fire('Success!', 'Election updated', 'success');
-    } catch (error: any) {
-      console.error('Failed to update election:', error);
-      Swal.fire('Error', error?.response?.data?.message || 'Failed to update election', 'error');
-    }
-  };
 
   const onDeletePosition = async (positionId: string) => {
     Swal.fire({
