@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const sharp = require('sharp');
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, '../uploads/elections');
@@ -33,8 +34,41 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit (before compression)
   },
 });
 
-module.exports = upload;
+// Middleware to compress images after upload
+const compressImage = async (req, res, next) => {
+  if (!req.file) {
+    return next();
+  }
+
+  try {
+    const filePath = req.file.path;
+    const ext = path.extname(filePath).toLowerCase();
+    
+    // Compress and optimize the image
+    await sharp(filePath)
+      .resize(1200, 1200, {
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 80 })
+      .toFile(filePath.replace(ext, '.webp'));
+
+    // Delete original file if it's not webp
+    if (ext !== '.webp') {
+      fs.unlinkSync(filePath);
+      req.file.filename = req.file.filename.replace(ext, '.webp');
+      req.file.path = filePath.replace(ext, '.webp');
+    }
+
+    next();
+  } catch (error) {
+    console.error('Image compression error:', error);
+    next();
+  }
+};
+
+module.exports = { upload, compressImage };

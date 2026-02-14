@@ -1941,7 +1941,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                                 <td className={`px-10 py-6 text-[10px] font-mono transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>{ann.date}</td>
                                 <td className="px-10 py-6 text-right">
                                     {canManageSystem && (
-                                        <button onClick={() => handleDeleteAnnouncement(ann.id)} className={`p-2 opacity-0 group-hover:opacity-100 transition-opacity ${isDarkMode ? 'text-slate-400 hover:text-red-500' : 'text-gray-300 hover:text-red-500'}`}>
+                                        <button onClick={() => handleDeleteAnnouncement(ann.id)} className={`p-2 transition-all ${isDarkMode ? 'text-slate-500 hover:text-red-400' : 'text-gray-400 hover:text-red-500'}`}>
                                             <Trash2 size={14}/>
                                         </button>
                                     )}

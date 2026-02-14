@@ -13,7 +13,7 @@ const {
 const { validate, schemas } = require('../middleware/validation.middleware');
 const authenticate = require('../middleware/auth.middleware');
 const { checkRole } = require('../middleware/role.middleware');
-const upload = require('../config/multer');
+const { upload, compressImage } = require('../config/multer');
 
 // Public routes
 router.get('/', getElections);
@@ -46,6 +46,7 @@ router.post(
   '/',
   authenticate,
   upload.single('backgroundImage'),
+  compressImage,
   validate(schemas.election),
   checkRole(['admin', 'officer']),
   createElection
