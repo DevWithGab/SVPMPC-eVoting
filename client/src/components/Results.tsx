@@ -10,11 +10,11 @@ import {
   Download, Activity, TrendingUp, 
   RefreshCw, CheckCircle2, FileText, Award, 
   ShieldCheck, Database, Globe, Target,
-  Fingerprint, Activity as PulseIcon, Loader2
+  Fingerprint, Activity as PulseIcon, Loader2, Briefcase
 } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
 import { ResultsPDF } from '../utils/pdfGenerator';
-import { electionAPI, candidateAPI, voteAPI } from '../services/api';
+import { electionAPI, candidateAPI, voteAPI, positionAPI } from '../services/api';
 import { useDarkMode } from '../context/DarkModeContext';
 
 const AnimatedCounter: React.FC<{ value: number; prefix?: string }> = ({ value, prefix = "" }) => {
@@ -106,6 +106,7 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
       // Fetch elections, candidates, and users with better error handling
       let electionsData = [];
       let candidatesData = [];
+      let positionsData = [];
 
       try {
         electionsData = await electionAPI.getElections();
@@ -119,6 +120,13 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
         candidatesData = await candidateAPI.getCandidates();
       } catch (err) {
         console.warn('Failed to fetch candidates:', err);
+      }
+
+      try {
+        positionsData = await positionAPI.getPositions();
+        console.log('Fetched positions:', positionsData);
+      } catch (err) {
+        console.warn('Failed to fetch positions:', err);
       }
 
       // Note: We don't fetch users here as it requires auth
@@ -150,7 +158,6 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
         return;
       }
 
-      // Map elections to positions
       interface ElectionData {
         id?: string;
         _id?: string;
@@ -164,7 +171,7 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
       // Check access control FIRST - before filtering by status
       // Find the active election to check its resultsPublic setting
       const activeElection = (electionsData as ElectionData[]).find(e => e.status === 'active' || e.status === 'ongoing');
-      const isAdmin = user?.role === 'admin' || user?.role === 'staff';
+      const isAdmin = user?.role === 'admin' || user?.role === 'officer';
       const isResultsPublic = activeElection?.resultsPublic !== false; // Default to true if not set
       
       if (!isResultsPublic && !isAdmin) {
@@ -204,42 +211,62 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
         return;
       }
 
-      console.log('Setting resultsPublic to TRUE - access allowed');
       setResultsPublic(true);
 
       // Capture the election status (to determine if voting has started)
       setElectionStatus('active');
 
-      const mappedPositions: Position[] = activeElections.map((election: any) => ({
-        id: election._id || election.id,
-        title: election.title,
-        description: election.description || '',
-        maxVotes: election.maxVotesPerMember || 1,
-        order: 0,
-        type: 'OFFICER' as VotingType // Default to OFFICER, adjust if you have type in backend
-      }));
+      // Get active election IDs
+      const activeElectionIds = activeElections.map(e => e._id || e.id);
 
-      // Map candidates - only for active elections
+      // Filter positions by active election IDs
+      interface PositionData {
+        id?: string;
+        _id?: string;
+        title: string;
+        description?: string;
+        electionId: string;
+        order?: number;
+        type?: VotingType;
+      }
+
+      const mappedPositions: Position[] = (positionsData as PositionData[])
+        .filter((position: any) => {
+          const positionElectionId = typeof position.electionId === 'string' ? position.electionId : (position.electionId?._id || position.electionId?.id);
+          return activeElectionIds.includes(positionElectionId);
+        })
+        .map((position: any) => ({
+          id: position._id || position.id,
+          title: position.title,
+          description: position.description || '',
+          maxVotes: position.maxVotes || 1,
+          order: position.order || 0,
+          type: position.type || ('OFFICER' as VotingType),
+          electionId: typeof position.electionId === 'string' ? position.electionId : (position.electionId?._id || position.electionId?.id)
+        }))
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+      // Map candidates - only for active positions
       interface CandidateData {
         id?: string;
         _id?: string;
         name: string;
         description?: string;
-        electionId: string;
+        positionId: string;
         photoUrl?: string;
       }
 
-      const activeElectionIds = activeElections.map(e => e._id || e.id);
+      const activePositionIds = mappedPositions.map(p => p.id);
       const mappedCandidates: Candidate[] = (candidatesData as CandidateData[])
         .filter((candidate: any) => {
-          const candidateElectionId = typeof candidate.electionId === 'string' ? candidate.electionId : (candidate.electionId?._id || candidate.electionId?.id);
-          return activeElectionIds.includes(candidateElectionId);
+          const candidatePositionId = typeof candidate.positionId === 'string' ? candidate.positionId : (candidate.positionId?._id || candidate.positionId?.id);
+          return activePositionIds.includes(candidatePositionId);
         })
         .map((candidate: any) => ({
         id: candidate._id || candidate.id,
         name: candidate.name,
         description: candidate.description || '',
-        positionId: typeof candidate.electionId === 'string' ? candidate.electionId : (candidate.electionId?._id || candidate.electionId?.id),
+        positionId: typeof candidate.positionId === 'string' ? candidate.positionId : (candidate.positionId?._id || candidate.positionId?.id),
         votes: 0, // Will be updated from results
         imageUrl: candidate.photoUrl || '',
         photoUrl: candidate.photoUrl
@@ -248,7 +275,7 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
       setPositions(mappedPositions);
       setCandidates(mappedCandidates);
 
-      // Fetch results and vote timestamps for each election
+      // Fetch results and vote timestamps for each position
       const votesMap: { [candidateId: string]: number } = {};
       const allVoteTimestamps: Date[] = [];
       const uniqueVoters = new Set<string>();
@@ -256,7 +283,7 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
       for (const position of mappedPositions) {
         try {
           // Get vote results
-          const results = await voteAPI.getElectionResults(position.id);
+          const results = await voteAPI.getElectionResults(position.electionId || position.id);
           
           if (results.results && Array.isArray(results.results)) {
             results.results.forEach((result: { candidateId: string; voteCount: number }) => {
@@ -266,7 +293,7 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
 
           // Get vote timestamps
           try {
-            const votes = await voteAPI.getElectionVotes(position.id);
+            const votes = await voteAPI.getElectionVotes(position.electionId || position.id);
             if (Array.isArray(votes)) {
               votes.forEach((vote: { timestamp?: string; createdAt?: string; userId?: string; _id?: string }) => {
                 // Track unique voters by userId
@@ -285,10 +312,10 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
               });
             }
           } catch (err) {
-            console.error(`Failed to fetch vote timestamps for election ${position.id}:`, err);
+            console.error(`Failed to fetch vote timestamps for position ${position.id}:`, err);
           }
         } catch (err) {
-          console.error(`Failed to fetch results for election ${position.id}:`, err);
+          console.error(`Failed to fetch results for position ${position.id}:`, err);
         }
       }
 
@@ -331,10 +358,10 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
 
   useEffect(() => {
     fetchResults();
-    // Refresh results every 2 seconds for real-time updates
+    // Refresh results every 8 seconds for real-time updates
     const refreshInterval = setInterval(() => {
       fetchResults(true);
-    }, 2000);
+    }, 8000);
     
     return () => {
       clearInterval(refreshInterval);
@@ -636,6 +663,17 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
 
               return (
                 <section key={pos.id} className="animate-fadeIn" style={{ animationDelay: `${pIdx * 0.1}s` }}>
+                  {/* Position Header with Green Gradient */}
+                  <div className={`bg-gradient-to-r from-coop-darkGreen to-coop-green p-6 text-white mb-8 rounded-lg overflow-hidden shadow-sm`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <Briefcase size={24} />
+                      <h2 className="text-3xl font-black uppercase tracking-tight">{pos.title}</h2>
+                    </div>
+                    {pos.description && (
+                      <p className="text-green-100 text-sm ml-9">{pos.description}</p>
+                    )}
+                  </div>
+
                   <div className={`flex flex-col lg:flex-row justify-between items-start lg:items-end gap-10 mb-12 border-b-2 pb-10 transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
                     <div className="max-w-2xl">
                       <div className="flex items-center gap-4 mb-4">
