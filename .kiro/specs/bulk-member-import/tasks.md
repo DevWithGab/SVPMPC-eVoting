@@ -56,14 +56,14 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - Handle duplicates (skip and report)
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
   
-  - [ ] 3.3 Implement import operation tracking
+  - [x] 3.3 Implement import operation tracking
     - Create ImportOperation record
     - Track successful/failed/skipped counts
     - Store error details for each failed row
     - _Requirements: 8.1, 8.4, 8.5_
 
 - [ ] 4. Backend Notification Service
-  - [ ] 4.1 Implement SMS sending logic
+  - [x] 4.1 Implement SMS sending logic
     - Send SMS with member name, temporary password, login instructions, cooperative info
     - Log SMS send events in activity log
     - Handle SMS failures and mark member as "sms_failed"

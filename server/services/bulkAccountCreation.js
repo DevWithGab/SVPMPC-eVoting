@@ -5,6 +5,7 @@
 
 const { User, ImportOperation, Activity } = require('../models');
 const { generateTemporaryPassword, hashTemporaryPassword } = require('./passwordGenerator');
+const { sendSMSAndLog } = require('./smsService');
 
 /**
  * Creates bulk member accounts from validated CSV data
@@ -28,6 +29,8 @@ async function createBulkAccounts({ validRows, csvFileName, adminId, adminName }
   let successfulImports = 0;
   let failedImports = 0;
   let skippedRows = 0;
+  let smsSentCount = 0;
+  let smsFailedCount = 0;
   const importErrors = [];
   const createdUsers = [];
 
@@ -78,11 +81,12 @@ async function createBulkAccounts({ validRows, csvFileName, adminId, adminName }
 
       // Create new user account
       const newUser = new User({
+        username: `member_${row.member_id}`,
         member_id: row.member_id,
         fullName: row.name,
         phone_number: row.phone_number,
-        email: row.email || null,
-        password: 'temp', // Will be hashed by pre-save hook, but we use temporary password for login
+        email: row.email || `member_${row.member_id}@svmpc.local`, // Generate placeholder email if not provided
+        password: 'TempPassword123!', // Will be hashed by pre-save hook, but we use temporary password for login
         role: 'member',
         activation_status: 'pending_activation',
         import_id: importOperation._id,
@@ -91,6 +95,30 @@ async function createBulkAccounts({ validRows, csvFileName, adminId, adminName }
       });
 
       await newUser.save();
+
+      // Send SMS invitation to member
+      let smsResult = { success: false, message: 'SMS not sent' };
+      try {
+        smsResult = await sendSMSAndLog({
+          userId: newUser._id,
+          adminId,
+          temporaryPassword: tempPassword,
+          cooperativeName: 'SVMPC',
+          cooperativePhone: '+1-800-SVMPC-1',
+        });
+      } catch (smsError) {
+        // Log SMS error but don't fail the account creation
+        smsResult = {
+          success: false,
+          message: `SMS error: ${smsError.message}`,
+        };
+      }
+
+      if (smsResult.success) {
+        smsSentCount++;
+      } else {
+        smsFailedCount++;
+      }
 
       // Store the plain temporary password for return (will be sent via SMS)
       createdUsers.push({
@@ -101,6 +129,8 @@ async function createBulkAccounts({ validRows, csvFileName, adminId, adminName }
         email: newUser.email,
         temporary_password: tempPassword,
         rowNumber: row._rowNumber,
+        smsSent: smsResult.success,
+        smsError: smsResult.success ? null : smsResult.message,
       });
 
       successfulImports++;
@@ -118,6 +148,8 @@ async function createBulkAccounts({ validRows, csvFileName, adminId, adminName }
   importOperation.successful_imports = successfulImports;
   importOperation.failed_imports = failedImports;
   importOperation.skipped_rows = skippedRows;
+  importOperation.sms_sent_count = smsSentCount;
+  importOperation.sms_failed_count = smsFailedCount;
   importOperation.import_errors = importErrors;
   importOperation.status = 'completed';
 
@@ -145,6 +177,8 @@ async function createBulkAccounts({ validRows, csvFileName, adminId, adminName }
       successful_imports: successfulImports,
       failed_imports: failedImports,
       skipped_rows: skippedRows,
+      sms_sent_count: smsSentCount,
+      sms_failed_count: smsFailedCount,
       import_errors: importErrors,
     },
   };

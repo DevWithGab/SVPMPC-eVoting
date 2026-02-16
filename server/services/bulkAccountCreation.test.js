@@ -102,6 +102,7 @@ describe('Bulk Account Creation Service', () => {
     it('should skip duplicate member_id', async () => {
       // Create existing user
       await User.create({
+        username: 'existinguser1',
         member_id: 'MEM001',
         fullName: 'Existing User',
         phone_number: '+1-555-9999',
@@ -136,6 +137,7 @@ describe('Bulk Account Creation Service', () => {
     it('should skip duplicate phone_number', async () => {
       // Create existing user
       await User.create({
+        username: 'existinguser2',
         member_id: 'EXISTING',
         fullName: 'Existing User',
         phone_number: '+1-555-0001',
@@ -169,6 +171,7 @@ describe('Bulk Account Creation Service', () => {
     it('should skip duplicate email', async () => {
       // Create existing user
       await User.create({
+        username: 'existinguser3',
         member_id: 'EXISTING',
         fullName: 'Existing User',
         phone_number: '+1-555-9999',
@@ -218,7 +221,7 @@ describe('Bulk Account Creation Service', () => {
 
       expect(result.statistics.successful_imports).toBe(1);
       const createdUser = await User.findOne({ member_id: 'MEM001' });
-      expect(createdUser.email).toBeNull();
+      expect(createdUser.email).toBe('member_MEM001@svmpc.local');
     });
 
     it('should create ImportOperation record', async () => {
@@ -305,6 +308,7 @@ describe('Bulk Account Creation Service', () => {
     it('should continue processing after encountering duplicate', async () => {
       // Create existing user
       await User.create({
+        username: 'existinguser4',
         member_id: 'MEM001',
         fullName: 'Existing User',
         phone_number: '+1-555-9999',
