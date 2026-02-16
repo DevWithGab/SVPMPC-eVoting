@@ -90,7 +90,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - Return JWT token on success
     - _Requirements: 4.1, 4.2, 4.3, 7.2_
   
-  - [ ] 5.2 Implement password change endpoint
+  - [x] 5.2 Implement password change endpoint
     - Verify current password
     - Validate new password meets requirements (8+ chars, uppercase, lowercase, number, special char)
     - Hash new password with bcryptjs (salt rounds: 10)

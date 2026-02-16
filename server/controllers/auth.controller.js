@@ -169,5 +169,107 @@ const getProfile = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getProfile };
+// Password validation helper
+const validatePasswordStrength = (password) => {
+  const errors = [];
+
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must include at least one uppercase letter');
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must include at least one lowercase letter');
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push('Password must include at least one number');
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push('Password must include at least one special character');
+  }
+
+  return errors;
+};
+
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user._id;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required' });
+    }
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+
+    // Validate new password strength
+    const passwordErrors = validatePasswordStrength(newPassword);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({
+        message: 'Password does not meet security requirements',
+        errors: passwordErrors,
+      });
+    }
+
+    // Update password
+    user.password = newPassword;
+    user.last_password_change = new Date();
+
+    // Invalidate temporary password if it exists
+    if (user.temporary_password_hash) {
+      user.temporary_password_hash = null;
+      user.temporary_password_expires = null;
+      user.markModified('temporary_password_hash');
+      user.markModified('temporary_password_expires');
+    }
+
+    // Update activation status to activated if they had a temporary password
+    if (user.activation_status === 'pending_activation') {
+      user.activation_status = 'activated';
+      // Don't override activation_method if it's already set
+      user.markModified('activation_status');
+    }
+
+    await user.save();
+
+    // Log password change activity
+    await logActivity(
+      userId,
+      'PASSWORD_CHANGE',
+      `User ${user.username || user.member_id} changed their password`,
+      {
+        member_id: user.member_id,
+        activation_status: user.activation_status,
+      },
+      req
+    );
+
+    res.json({
+      message: 'Password changed successfully',
+      user: {
+        id: user.id || user._id,
+        username: user.username,
+        email: user.email,
+        member_id: user.member_id,
+        activation_status: user.activation_status,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { register, login, getProfile, changePassword, validatePasswordStrength };
 

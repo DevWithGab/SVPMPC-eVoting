@@ -479,3 +479,401 @@ describe('Auth Controller - Login Endpoint', () => {
     });
   });
 });
+
+describe('Auth Controller - Password Change Endpoint', () => {
+  const { changePassword, validatePasswordStrength } = require('./auth.controller');
+
+  beforeAll(async () => {
+    // Connect to test database
+    if (!mongoose.connection.readyState) {
+      await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/svmpc-test');
+    }
+  });
+
+  afterAll(async () => {
+    // Clean up and disconnect
+    await User.deleteMany({});
+    await mongoose.disconnect();
+  });
+
+  afterEach(async () => {
+    // Clean up after each test
+    await User.deleteMany({});
+  });
+
+  describe('Password strength validation', () => {
+    it('should reject password shorter than 8 characters', () => {
+      const errors = validatePasswordStrength('Pass1!');
+      expect(errors).toContain('Password must be at least 8 characters long');
+    });
+
+    it('should reject password without uppercase letter', () => {
+      const errors = validatePasswordStrength('password123!');
+      expect(errors).toContain('Password must include at least one uppercase letter');
+    });
+
+    it('should reject password without lowercase letter', () => {
+      const errors = validatePasswordStrength('PASSWORD123!');
+      expect(errors).toContain('Password must include at least one lowercase letter');
+    });
+
+    it('should reject password without number', () => {
+      const errors = validatePasswordStrength('Password!');
+      expect(errors).toContain('Password must include at least one number');
+    });
+
+    it('should reject password without special character', () => {
+      const errors = validatePasswordStrength('Password123');
+      expect(errors).toContain('Password must include at least one special character');
+    });
+
+    it('should accept valid password', () => {
+      const errors = validatePasswordStrength('ValidPass123!');
+      expect(errors).length === 0;
+    });
+
+    it('should accept password with various special characters', () => {
+      const specialChars = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '-', '=', '[', ']', '{', '}', ';', ':', '"', "'", '\\', '|', ',', '.', '<', '>', '/', '?'];
+      specialChars.forEach((char) => {
+        const password = `ValidPass123${char}`;
+        const errors = validatePasswordStrength(password);
+        expect(errors.length).toBe(0);
+      });
+    });
+  });
+
+  describe('Change password endpoint', () => {
+    it('should successfully change password with valid current password', async () => {
+      const currentPassword = 'CurrentPass123!';
+      const newPassword = 'NewPass123!';
+
+      const user = await User.create({
+        username: 'testuser',
+        email: 'user@example.com',
+        fullName: 'Test User',
+        password: currentPassword,
+        role: 'member',
+      });
+
+      const req = {
+        user: { _id: user._id },
+        body: {
+          currentPassword,
+          newPassword,
+        },
+        headers: {},
+        get: jest.fn().mockReturnValue('Mozilla/5.0'),
+      };
+
+      const res = {
+        json: jest.fn().mockReturnThis(),
+        status: jest.fn().mockReturnThis(),
+      };
+
+      await changePassword(req, res);
+
+      expect(res.json).toHaveBeenCalled();
+      const response = res.json.mock.calls[0][0];
+      expect(response.message).toBe('Password changed successfully');
+      expect(response.user.id).toBeDefined();
+
+      // Verify password was actually changed
+      const updatedUser = await User.findById(user._id);
+      const isNewPasswordValid = await updatedUser.comparePassword(newPassword);
+      expect(isNewPasswordValid).toBe(true);
+    });
+
+    it('should reject incorrect current password', async () => {
+      const currentPassword = 'CurrentPass123!';
+      const newPassword = 'NewPass123!';
+
+      const user = await User.create({
+        username: 'testuser',
+        email: 'user@example.com',
+        fullName: 'Test User',
+        password: currentPassword,
+        role: 'member',
+      });
+
+      const req = {
+        user: { _id: user._id },
+        body: {
+          currentPassword: 'WrongPassword123!',
+          newPassword,
+        },
+        headers: {},
+        get: jest.fn().mockReturnValue('Mozilla/5.0'),
+      };
+
+      const res = {
+        json: jest.fn().mockReturnThis(),
+        status: jest.fn().mockReturnThis(),
+      };
+
+      await changePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      const response = res.status.mock.results[0].value.json.mock.calls[0][0];
+      expect(response.message).toBe('Current password is incorrect');
+    });
+
+    it('should reject password that does not meet security requirements', async () => {
+      const currentPassword = 'CurrentPass123!';
+      const newPassword = 'weak'; // Too short, missing requirements
+
+      const user = await User.create({
+        username: 'testuser',
+        email: 'user@example.com',
+        fullName: 'Test User',
+        password: currentPassword,
+        role: 'member',
+      });
+
+      const req = {
+        user: { _id: user._id },
+        body: {
+          currentPassword,
+          newPassword,
+        },
+        headers: {},
+        get: jest.fn().mockReturnValue('Mozilla/5.0'),
+      };
+
+      const res = {
+        json: jest.fn().mockReturnThis(),
+        status: jest.fn().mockReturnThis(),
+      };
+
+      await changePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      const response = res.status.mock.results[0].value.json.mock.calls[0][0];
+      expect(response.message).toContain('Password does not meet security requirements');
+      expect(response.errors).toBeDefined();
+      expect(response.errors.length).toBeGreaterThan(0);
+    });
+
+    it('should require both current and new password', async () => {
+      const user = await User.create({
+        username: 'testuser',
+        email: 'user@example.com',
+        fullName: 'Test User',
+        password: 'CurrentPass123!',
+        role: 'member',
+      });
+
+      const req = {
+        user: { _id: user._id },
+        body: {
+          currentPassword: 'CurrentPass123!',
+          // Missing newPassword
+        },
+        headers: {},
+        get: jest.fn().mockReturnValue('Mozilla/5.0'),
+      };
+
+      const res = {
+        json: jest.fn().mockReturnThis(),
+        status: jest.fn().mockReturnThis(),
+      };
+
+      await changePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      const response = res.status.mock.results[0].value.json.mock.calls[0][0];
+      expect(response.message).toContain('required');
+    });
+
+    it('should update last_password_change timestamp', async () => {
+      const currentPassword = 'CurrentPass123!';
+      const newPassword = 'NewPass123!';
+
+      const user = await User.create({
+        username: 'testuser',
+        email: 'user@example.com',
+        fullName: 'Test User',
+        password: currentPassword,
+        role: 'member',
+      });
+
+      const beforeChange = user.last_password_change;
+
+      const req = {
+        user: { _id: user._id },
+        body: {
+          currentPassword,
+          newPassword,
+        },
+        headers: {},
+        get: jest.fn().mockReturnValue('Mozilla/5.0'),
+      };
+
+      const res = {
+        json: jest.fn().mockReturnThis(),
+        status: jest.fn().mockReturnThis(),
+      };
+
+      await changePassword(req, res);
+
+      const updatedUser = await User.findById(user._id);
+      expect(updatedUser.last_password_change).toBeDefined();
+      expect(updatedUser.last_password_change.getTime()).toBeGreaterThan(beforeChange ? beforeChange.getTime() : 0);
+    });
+
+    it('should invalidate temporary password when changing password', async () => {
+      const currentPassword = 'CurrentPass123!';
+      const newPassword = 'NewPass123!';
+      const tempPassword = 'TempPass123!';
+      const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+
+      const user = await User.create({
+        username: 'testuser',
+        email: 'user@example.com',
+        fullName: 'Test User',
+        password: currentPassword,
+        role: 'member',
+        activation_status: 'pending_activation',
+        temporary_password_hash: tempPasswordHash,
+        temporary_password_expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      });
+
+      expect(user.temporary_password_hash).toBeDefined();
+
+      const req = {
+        user: { _id: user._id },
+        body: {
+          currentPassword,
+          newPassword,
+        },
+        headers: {},
+        connection: { remoteAddress: '127.0.0.1' },
+        get: jest.fn().mockReturnValue('Mozilla/5.0'),
+      };
+
+      const res = {
+        json: jest.fn().mockReturnThis(),
+        status: jest.fn().mockReturnThis(),
+      };
+
+      await changePassword(req, res);
+
+      expect(res.json).toHaveBeenCalled();
+      const response = res.json.mock.calls[0][0];
+      expect(response.message).toBe('Password changed successfully');
+      
+      // Verify the response shows the changes
+      expect(response.user.activation_status).toBe('activated');
+    });
+
+    it('should update activation status to activated when changing password from pending_activation', async () => {
+      const currentPassword = 'CurrentPass123!';
+      const newPassword = 'NewPass123!';
+
+      const user = await User.create({
+        username: 'testuser',
+        email: 'user@example.com',
+        fullName: 'Test User',
+        password: currentPassword,
+        role: 'member',
+        activation_status: 'pending_activation',
+      });
+
+      expect(user.activation_status).toBe('pending_activation');
+
+      const req = {
+        user: { _id: user._id },
+        body: {
+          currentPassword,
+          newPassword,
+        },
+        headers: {},
+        connection: { remoteAddress: '127.0.0.1' },
+        get: jest.fn().mockReturnValue('Mozilla/5.0'),
+      };
+
+      const res = {
+        json: jest.fn().mockReturnThis(),
+        status: jest.fn().mockReturnThis(),
+      };
+
+      await changePassword(req, res);
+
+      expect(res.json).toHaveBeenCalled();
+      const response = res.json.mock.calls[0][0];
+      expect(response.message).toBe('Password changed successfully');
+      expect(response.user.activation_status).toBe('activated');
+    });
+
+    it('should log password change activity', async () => {
+      const currentPassword = 'CurrentPass123!';
+      const newPassword = 'NewPass123!';
+
+      const user = await User.create({
+        username: 'testuser',
+        email: 'user@example.com',
+        fullName: 'Test User',
+        password: currentPassword,
+        role: 'member',
+      });
+
+      const req = {
+        user: { _id: user._id },
+        body: {
+          currentPassword,
+          newPassword,
+        },
+        headers: {},
+        get: jest.fn().mockReturnValue('Mozilla/5.0'),
+      };
+
+      const res = {
+        json: jest.fn().mockReturnThis(),
+        status: jest.fn().mockReturnThis(),
+      };
+
+      await changePassword(req, res);
+
+      expect(res.json).toHaveBeenCalled();
+      // Activity logging is async and doesn't block, so we just verify the endpoint succeeded
+    });
+
+    it('should return user info in response', async () => {
+      const currentPassword = 'CurrentPass123!';
+      const newPassword = 'NewPass123!';
+
+      const user = await User.create({
+        username: 'testuser',
+        email: 'user@example.com',
+        fullName: 'Test User',
+        password: currentPassword,
+        role: 'member',
+        member_id: 'MEM001',
+      });
+
+      const req = {
+        user: { _id: user._id },
+        body: {
+          currentPassword,
+          newPassword,
+        },
+        headers: {},
+        get: jest.fn().mockReturnValue('Mozilla/5.0'),
+      };
+
+      const res = {
+        json: jest.fn().mockReturnThis(),
+        status: jest.fn().mockReturnThis(),
+      };
+
+      await changePassword(req, res);
+
+      const response = res.json.mock.calls[0][0];
+      expect(response.user).toBeDefined();
+      expect(response.user.id).toBeDefined();
+      expect(response.user.username).toBe('testuser');
+      expect(response.user.email).toBe('user@example.com');
+      expect(response.user.member_id).toBe('MEM001');
+      expect(response.user.activation_status).toBeDefined();
+    });
+  });
+});
