@@ -49,7 +49,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - Hash passwords before storage
     - _Requirements: 2.8, 2.9, 10.5_
   
-  - [ ] 3.2 Create bulk account creation logic
+  - [x] 3.2 Create bulk account creation logic
     - Create user accounts from validated CSV data
     - Set role to "member", status to "pending_activation"
     - Assign member_id, name, phone_number, email (if provided)
