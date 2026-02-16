@@ -69,7 +69,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - Handle SMS failures and mark member as "sms_failed"
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
   
-  - [ ] 4.2 Implement email sending logic (backup)
+  - [x] 4.2 Implement email sending logic (backup)
     - Send email with activation link when email is provided
     - Include login instructions and cooperative info
     - Log email send events in activity log
