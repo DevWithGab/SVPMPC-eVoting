@@ -141,5 +141,33 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
+// instance method for comparing temporary passwords
+userSchema.methods.compareTemporaryPassword = async function (candidatePassword) {
+  if (!this.temporary_password_hash) {
+    return false;
+  }
+  return bcrypt.compare(candidatePassword, this.temporary_password_hash);
+};
+
+// instance method for setting temporary password
+userSchema.methods.setTemporaryPassword = async function (hashedPassword, expirationHours = 24) {
+  this.temporary_password_hash = hashedPassword;
+  this.temporary_password_expires = new Date(Date.now() + expirationHours * 60 * 60 * 1000);
+};
+
+// instance method to check if temporary password is expired
+userSchema.methods.isTemporaryPasswordExpired = function () {
+  if (!this.temporary_password_expires) {
+    return true;
+  }
+  return new Date() > this.temporary_password_expires;
+};
+
+// instance method to invalidate temporary password
+userSchema.methods.invalidateTemporaryPassword = function () {
+  this.temporary_password_hash = null;
+  this.temporary_password_expires = null;
+};
+
 const User = mongoose.model('User', userSchema);
 module.exports = User;
