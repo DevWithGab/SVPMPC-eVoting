@@ -45,18 +45,87 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, member_id, password } = req.body;
 
-    const user = await User.findOne({ email });
+    let user;
 
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
+    // Support both email-based login and member_id-based login
+    if (member_id) {
+      // Member login with member_id and password (temporary or permanent)
+      user = await User.findOne({ member_id });
 
-    const isPasswordValid = await user.comparePassword(password);
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
 
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      // Check if using temporary password
+      if (user.temporary_password_hash && !user.isTemporaryPasswordExpired()) {
+        // Try temporary password first (only if not expired)
+        const isTempPasswordValid = await user.compareTemporaryPassword(password);
+        if (isTempPasswordValid) {
+          // Temporary password is valid, allow login
+          user.lastLogin = new Date();
+          await user.save();
+
+          const token = generateToken(user);
+
+          // Log login activity
+          await logActivity(
+            user.id || user._id,
+            'LOGIN',
+            `Member ${user.member_id} logged in with temporary password`,
+            { member_id: user.member_id, activation_status: user.activation_status },
+            req
+          );
+
+          return res.json({
+            message: 'Login successful',
+            token,
+            user: {
+              id: user.id || user._id,
+              member_id: user.member_id,
+              username: user.username,
+              email: user.email,
+              fullName: user.fullName,
+              role: user.role,
+              activation_status: user.activation_status,
+              has_temporary_password: true,
+            },
+          });
+        }
+      } else if (user.temporary_password_hash && user.isTemporaryPasswordExpired()) {
+        // Temporary password is expired, check if trying to use it
+        const isTempPasswordValid = await user.compareTemporaryPassword(password);
+        if (isTempPasswordValid) {
+          // They're trying to use the expired temporary password
+          return res.status(401).json({
+            message: 'Your temporary password has expired. Request a new one.',
+            code: 'TEMP_PASSWORD_EXPIRED',
+          });
+        }
+        // Fall through to try permanent password
+      }
+
+      // Try permanent password
+      const isPermanentPasswordValid = await user.comparePassword(password);
+      if (!isPermanentPasswordValid) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+    } else if (email) {
+      // Traditional email-based login
+      user = await User.findOne({ email });
+
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      const isPasswordValid = await user.comparePassword(password);
+
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+    } else {
+      return res.status(400).json({ message: 'Either email or member_id is required' });
     }
 
     user.lastLogin = new Date();
@@ -68,8 +137,8 @@ const login = async (req, res) => {
     await logActivity(
       user.id || user._id,
       'LOGIN',
-      `User ${user.username} logged in`,
-      { email: user.email },
+      `User ${user.username || user.member_id} logged in`,
+      { email: user.email, member_id: user.member_id },
       req
     );
 
@@ -80,8 +149,10 @@ const login = async (req, res) => {
         id: user.id || user._id,
         username: user.username,
         email: user.email,
+        member_id: user.member_id,
         fullName: user.fullName,
         role: user.role,
+        activation_status: user.activation_status,
       },
     });
   } catch (error) {

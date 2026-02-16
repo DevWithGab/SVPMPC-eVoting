@@ -76,14 +76,14 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - Handle email failures gracefully
     - _Requirements: 3.9, 3.10_
   
-  - [ ] 4.3 Implement retry logic for failed notifications
+  - [x] 4.3 Implement retry logic for failed notifications
     - Retry failed SMS/email with exponential backoff
     - Log retry attempts
     - Allow admin to manually retry
     - _Requirements: 3.8_
 
 - [ ] 5. Backend Authentication and Password Management
-  - [ ] 5.1 Extend login endpoint for temporary passwords
+  - [x] 5.1 Extend login endpoint for temporary passwords
     - Accept member_id and password (temporary or permanent)
     - Verify temporary password against hash
     - Check expiration (24 hours)
