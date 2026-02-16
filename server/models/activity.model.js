@@ -10,7 +10,22 @@ const activitySchema = new mongoose.Schema(
     },
     action: {
       type: String,
-      enum: ['LOGIN', 'LOGOUT', 'VOTE', 'PROFILE_UPDATE', 'PASSWORD_CHANGE', 'ROLE_CHANGE', 'REPORT_GENERATED', 'DATA_DOWNLOAD', 'CYCLE_RESET'],
+      enum: [
+        'LOGIN',
+        'LOGOUT',
+        'VOTE',
+        'PROFILE_UPDATE',
+        'PASSWORD_CHANGE',
+        'ROLE_CHANGE',
+        'REPORT_GENERATED',
+        'DATA_DOWNLOAD',
+        'CYCLE_RESET',
+        'BULK_IMPORT',
+        'SMS_SENT',
+        'EMAIL_SENT',
+        'ACTIVATION',
+        'RESEND_INVITATION',
+      ],
       required: true,
     },
     description: {
@@ -34,6 +49,11 @@ const activitySchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Add indexes for efficient queries
+activitySchema.index({ userId: 1 });
+activitySchema.index({ action: 1 });
+activitySchema.index({ createdAt: 1 });
 
 const Activity = mongoose.model('Activity', activitySchema);
 module.exports = Activity;

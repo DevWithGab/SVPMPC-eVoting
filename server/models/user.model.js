@@ -58,6 +58,54 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // Import-related fields
+    member_id: {
+      type: String,
+      unique: true,
+      sparse: true,
+      default: null,
+    },
+    phone_number: {
+      type: String,
+      unique: true,
+      sparse: true,
+      default: null,
+    },
+    temporary_password_hash: {
+      type: String,
+      default: null,
+    },
+    temporary_password_expires: {
+      type: Date,
+      default: null,
+    },
+    activation_status: {
+      type: String,
+      enum: ['pending_activation', 'activated', 'sms_failed', 'email_failed', 'token_expired'],
+      default: 'activated',
+    },
+    activation_method: {
+      type: String,
+      enum: ['sms', 'email'],
+      default: null,
+    },
+    import_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ImportOperation',
+      default: null,
+    },
+    sms_sent_at: {
+      type: Date,
+      default: null,
+    },
+    email_sent_at: {
+      type: Date,
+      default: null,
+    },
+    last_password_change: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -67,11 +115,19 @@ const userSchema = new mongoose.Schema(
         ret.id = ret._id;       // keep `id` in JSON like before
         delete ret._id;
         delete ret.__v;
-        delete ret.password;    // don’t expose password hashes
+        delete ret.password;    // don't expose password hashes
+        delete ret.temporary_password_hash; // don't expose temporary password hashes
       },
     },
   }
 );
+
+// Add indexes for efficient queries
+userSchema.index({ member_id: 1 });
+userSchema.index({ phone_number: 1 });
+userSchema.index({ import_id: 1 });
+userSchema.index({ activation_status: 1 });
+userSchema.index({ temporary_password_expires: 1 });
 
 // hash password before save if modified
 userSchema.pre('save', async function () {

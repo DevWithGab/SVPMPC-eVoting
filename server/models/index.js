@@ -9,6 +9,7 @@ const Report = require('./report.model');
 const Activity = require('./activity.model');
 const Verification = require('./verification.model');
 const SupportTicket = require('./support.model');
+const ImportOperation = require('./importOperation.model');
 
 module.exports = {
   User,
@@ -22,5 +23,5 @@ module.exports = {
   Activity,
   Verification,
   SupportTicket,
+  ImportOperation,
 };
-
