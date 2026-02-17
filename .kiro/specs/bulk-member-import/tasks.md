@@ -266,7 +266,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - _Requirements: 12.3, 12.4, 12.7, 12.8, 12.10_
 
 - [ ] 16. Frontend Login Enhancement
-  - [ ] 16.1 Update login component for temporary passwords
+  - [x] 16.1 Update login component for temporary passwords
     - Accept member_id and password
     - Support both temporary and permanent passwords
     - Show error for expired temporary passwords

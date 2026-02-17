@@ -30,6 +30,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [tempUser, setTempUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasTemporaryPassword, setHasTemporaryPassword] = useState(false);
+  const [showResendOption, setShowResendOption] = useState(false);
   const { isDarkMode } = useDarkMode();
 
   // Add autofill styling override
@@ -65,16 +67,29 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
     setEmail('');
     setPassword('');
+    setMemberId('');
     setShowPassword(false);
+    setHasTemporaryPassword(false);
+    setShowResendOption(false);
   };
 
   const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+    setShowResendOption(false);
     
     try {
-      const response = await authAPI.login(email, password);
+      let response;
+      
+      // Support both email-based and member_id-based login
+      if (selectedRole === 'member' && memberId) {
+        // Member login with member_id and password (temporary or permanent)
+        response = await authAPI.login(undefined, password, memberId);
+      } else {
+        // Traditional email-based login
+        response = await authAPI.login(email, password);
+      }
       
       if (!response || !response.user || !response.token) {
         setError('Invalid credentials. Please check your email and password.');
@@ -100,6 +115,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       
       localStorage.setItem('token', response.token);
 
+      // Check if user logged in with temporary password
+      const usedTemporaryPassword = response.user.has_temporary_password || false;
+      setHasTemporaryPassword(usedTemporaryPassword);
+
       let hasVoted = false;
       try {
         const votes = await voteAPI.getUserVotes();
@@ -123,8 +142,17 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       setStep('2FA');
       setIsLoading(false);
     } catch (err: unknown) {
-      const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(errorMessage || 'Verification Failed. Check your credentials.');
+      const errorData = (err as { response?: { data?: { message?: string; code?: string } } })?.response?.data;
+      const errorMessage = errorData?.message;
+      const errorCode = errorData?.code;
+
+      // Handle expired temporary password
+      if (errorCode === 'TEMP_PASSWORD_EXPIRED') {
+        setError('Your temporary password has expired. Request a new one.');
+        setShowResendOption(true);
+      } else {
+        setError(errorMessage || 'Verification Failed. Check your credentials.');
+      }
       setIsLoading(false);
     }
   };
@@ -372,8 +400,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 setStep('ROLE_SELECTION');
                 setEmail('');
                 setPassword('');
+                setMemberId('');
                 setShowPassword(false);
                 setError('');
+                setHasTemporaryPassword(false);
+                setShowResendOption(false);
               }}
               className={`mb-10 flex items-center gap-2 hover:text-coop-darkGreen transition-colors font-black text-[9px] uppercase tracking-[0.2em] group ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}
               whileHover={{ x: -4 }}
@@ -433,27 +464,53 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
-                <motion.div 
-                  className="space-y-2"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                >
-                  <div className="relative group">
-                    <div className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>
-                      <Mail size={16} />
+                {selectedRole === 'member' ? (
+                  <>
+                    <motion.div 
+                      className="space-y-2"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.5, delay: 0.3 }}
+                    >
+                      <div className="relative group">
+                        <div className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>
+                          <UserIcon size={16} />
+                        </div>
+                        <input
+                          type="text"
+                          value={memberId}
+                          onChange={(e) => setMemberId(e.target.value)}
+                          className={`w-full pl-12 pr-6 py-4 rounded-xl outline-none focus:border-coop-green focus:ring-4 font-bold text-sm transition-all shadow-sm ${isDarkMode ? 'bg-slate-800 border border-slate-700 text-slate-100 placeholder:text-slate-500 focus:ring-coop-yellow/20' : 'bg-white border border-gray-100 text-gray-900 placeholder:text-gray-300 focus:ring-coop-green/5'}`}
+                          placeholder="Member ID"
+                          required
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </motion.div>
+                  </>
+                ) : (
+                  <motion.div 
+                    className="space-y-2"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                  >
+                    <div className="relative group">
+                      <div className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>
+                        <Mail size={16} />
+                      </div>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className={`w-full pl-12 pr-6 py-4 rounded-xl outline-none focus:border-coop-green focus:ring-4 font-bold text-sm transition-all shadow-sm ${isDarkMode ? 'bg-slate-800 border border-slate-700 text-slate-100 placeholder:text-slate-500 focus:ring-coop-yellow/20' : 'bg-white border border-gray-100 text-gray-900 placeholder:text-gray-300 focus:ring-coop-green/5'}`}
+                        placeholder="Enter Email"
+                        required
+                        disabled={isLoading}
+                      />
                     </div>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className={`w-full pl-12 pr-6 py-4 rounded-xl outline-none focus:border-coop-green focus:ring-4 font-bold text-sm transition-all shadow-sm ${isDarkMode ? 'bg-slate-800 border border-slate-700 text-slate-100 placeholder:text-slate-500 focus:ring-coop-yellow/20' : 'bg-white border border-gray-100 text-gray-900 placeholder:text-gray-300 focus:ring-coop-green/5'}`}
-                      placeholder="Enter Email"
-                      required
-                      disabled={isLoading}
-                    />
-                  </div>
-                </motion.div>
+                  </motion.div>
+                )}
 
                 <motion.div 
                   className="space-y-2"
@@ -470,7 +527,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className={`w-full pl-12 pr-12 py-4 rounded-xl outline-none focus:border-coop-green focus:ring-4 font-bold text-sm transition-all shadow-sm ${isDarkMode ? 'bg-slate-800 border border-slate-700 text-slate-100 placeholder:text-slate-500 focus:ring-coop-yellow/20' : 'bg-white border border-gray-100 text-gray-900 placeholder:text-gray-300 focus:ring-coop-green/5'}`}
-                      placeholder="Password"
+                      placeholder={selectedRole === 'member' ? 'Temporary or Permanent Password' : 'Password'}
                       required
                       disabled={isLoading}
                     />
@@ -484,6 +541,51 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     </button>
                   </div>
                 </motion.div>
+
+                {showResendOption && (
+                  <motion.div 
+                    className={`p-4 rounded-xl border flex items-start gap-3 ${isDarkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-100'}`}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <MessageSquare size={16} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2">Temporary Password Expired</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          Swal.fire({
+                            title: 'Resend SMS?',
+                            text: 'We will send a new temporary password to your registered phone number.',
+                            icon: 'info',
+                            showCancelButton: true,
+                            confirmButtonText: 'Yes, Resend SMS',
+                            cancelButtonText: 'Cancel',
+                            confirmButtonColor: '#2d7a3e',
+                          }).then((result) => {
+                            if (result.isConfirmed) {
+                              Swal.fire({
+                                title: 'SMS Sent!',
+                                text: 'A new temporary password has been sent to your phone.',
+                                icon: 'success',
+                                timer: 3000,
+                                showConfirmButton: false,
+                              });
+                              setShowResendOption(false);
+                              setError('');
+                              setPassword('');
+                            }
+                          });
+                        }}
+                        className="text-blue-600 hover:text-blue-700 font-bold text-[10px] uppercase tracking-widest underline"
+                        disabled={isLoading}
+                      >
+                        Request New SMS
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
 
                 <motion.button
                   type="submit"
