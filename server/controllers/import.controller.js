@@ -1,11 +1,21 @@
 /**
  * Import Controller
  * Handles bulk member import operations and retry logic
+ * Includes comprehensive error handling for CSV uploads and account creation
  */
 
 const { User, ImportOperation, Activity } = require('../models');
 const { retrySMSWithBackoff, retryEmailWithBackoff, retryFailedNotifications } = require('../services/notificationRetry');
 const { resendInvitation, bulkResendInvitations } = require('../services/resendInvitation');
+const { parseAndValidateCSV, generatePreview } = require('../services/csvParser');
+const { createBulkAccounts } = require('../services/bulkAccountCreation');
+const {
+  handleCSVUploadError,
+  handleDatabaseError,
+  logErrorToActivity,
+  getPartialImportRecovery,
+  validateRecoveryPossible,
+} = require('../services/errorHandler');
 
 /**
  * Retry SMS for a single member
@@ -680,4 +690,289 @@ module.exports = {
   getImportHistory,
   getImportDetails,
   getImportMembers,
+  uploadCSVPreview,
+  confirmAndProcessImport,
+  getImportRecoveryInfo,
 };
+
+
+/**
+ * Upload CSV file and generate preview with validation
+ * POST /api/imports/upload
+ * 
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ */
+async function uploadCSVPreview(req, res) {
+  try {
+    // Validate file was provided
+    if (!req.file) {
+      const errorResponse = handleCSVUploadError(
+        new Error('No file provided'),
+        'unknown'
+      );
+      return res.status(400).json(errorResponse);
+    }
+
+    const adminId = req.user._id;
+    const filePath = req.file.path;
+    const filename = req.file.originalname;
+
+    // Validate file size (max 10MB)
+    const maxFileSize = 10 * 1024 * 1024; // 10MB
+    if (req.file.size > maxFileSize) {
+      const errorResponse = handleCSVUploadError(
+        { code: 'LIMIT_FILE_SIZE', message: 'File too large' },
+        filename
+      );
+      await logErrorToActivity(adminId, 'CSV_FILE_TOO_LARGE', `CSV file exceeds maximum size of 10MB`, {
+        filename,
+        file_size: req.file.size,
+      });
+      return res.status(400).json(errorResponse);
+    }
+
+    // Parse and validate CSV
+    const parseResult = await parseAndValidateCSV(filePath, filename);
+
+    if (!parseResult.success) {
+      const errorResponse = {
+        success: false,
+        error: {
+          code: 'CSV_VALIDATION_FAILED',
+          message: parseResult.error || 'CSV validation failed',
+          details: {
+            filename,
+            errors: parseResult.errors,
+            invalidRowDetails: parseResult.invalidRows,
+          },
+        },
+      };
+      await logErrorToActivity(adminId, 'CSV_VALIDATION_FAILED', parseResult.error || 'CSV validation failed', {
+        filename,
+        invalid_rows: parseResult.invalidRows?.length || 0,
+      });
+      return res.status(400).json(errorResponse);
+    }
+
+    // Generate preview
+    const preview = await generatePreview(filePath, filename);
+
+    if (!preview.success) {
+      const errorResponse = handleCSVUploadError(
+        new Error(preview.error),
+        filename
+      );
+      await logErrorToActivity(adminId, 'CSV_PREVIEW_GENERATION_FAILED', preview.error, {
+        filename,
+      });
+      return res.status(400).json(errorResponse);
+    }
+
+    // Log successful preview generation
+    await logErrorToActivity(adminId, 'CSV_PREVIEW_GENERATED', `CSV preview generated successfully`, {
+      filename,
+      total_rows: preview.totalRows,
+      valid_rows: preview.validRows,
+      invalid_rows: preview.invalidRows,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'CSV file validated successfully',
+      data: {
+        fileName: preview.fileName,
+        totalRows: preview.totalRows,
+        validRows: preview.validRows,
+        invalidRows: preview.invalidRows,
+        hasEmailColumn: preview.hasEmailColumn,
+        previewData: preview.previewData,
+        errors: preview.errors,
+      },
+    });
+  } catch (error) {
+    console.error('Error uploading CSV:', error);
+    const adminId = req.user?._id;
+    if (adminId) {
+      await logErrorToActivity(adminId, 'CSV_UPLOAD_ERROR', `Unexpected error during CSV upload: ${error.message}`, {
+        error_message: error.message,
+        stack: error.stack,
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'CSV_UPLOAD_ERROR',
+        message: `Failed to process CSV file: ${error.message}`,
+      },
+    });
+  }
+}
+
+/**
+ * Confirm and process CSV import
+ * POST /api/imports/confirm
+ * 
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ */
+async function confirmAndProcessImport(req, res) {
+  try {
+    const { filePath, filename } = req.body;
+    const adminId = req.user._id;
+    const adminName = req.user.fullName || req.user.username;
+
+    // Validate required fields
+    if (!filePath || !filename) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'MISSING_REQUIRED_FIELDS',
+          message: 'filePath and filename are required',
+        },
+      });
+    }
+
+    // Parse and validate CSV again (security check)
+    const parseResult = await parseAndValidateCSV(filePath, filename);
+
+    if (!parseResult.success) {
+      const errorResponse = {
+        success: false,
+        error: {
+          code: 'CSV_VALIDATION_FAILED',
+          message: parseResult.error || 'CSV validation failed',
+          details: {
+            filename,
+            errors: parseResult.errors,
+            invalidRowDetails: parseResult.invalidRows,
+          },
+        },
+      };
+      await logErrorToActivity(adminId, 'CSV_VALIDATION_FAILED_ON_CONFIRM', parseResult.error || 'CSV validation failed', {
+        filename,
+        invalid_rows: parseResult.invalidRows?.length || 0,
+      });
+      return res.status(400).json(errorResponse);
+    }
+
+    // Create bulk accounts with comprehensive error handling
+    let importResult;
+    try {
+      importResult = await createBulkAccounts({
+        validRows: parseResult.validRows,
+        csvFileName: filename,
+        adminId,
+        adminName,
+      });
+    } catch (error) {
+      const errorResponse = handleDatabaseError(error, 'bulk_account_creation');
+      await logErrorToActivity(adminId, errorResponse.error.code, errorResponse.error.message, {
+        filename,
+        error_message: error.message,
+      });
+      return res.status(500).json(errorResponse);
+    }
+
+    // Log successful import
+    await logErrorToActivity(adminId, 'BULK_IMPORT_COMPLETED', `Bulk import completed successfully`, {
+      import_id: importResult.importOperation._id,
+      filename,
+      successful_imports: importResult.statistics.successful_imports,
+      failed_imports: importResult.statistics.failed_imports,
+      skipped_rows: importResult.statistics.skipped_rows,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Import completed successfully',
+      data: {
+        importOperation: importResult.importOperation,
+        statistics: importResult.statistics,
+        createdUsers: importResult.createdUsers,
+      },
+    });
+  } catch (error) {
+    console.error('Error confirming import:', error);
+    const adminId = req.user?._id;
+    if (adminId) {
+      await logErrorToActivity(adminId, 'IMPORT_CONFIRMATION_ERROR', `Unexpected error during import confirmation: ${error.message}`, {
+        error_message: error.message,
+        stack: error.stack,
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'IMPORT_CONFIRMATION_ERROR',
+        message: `Failed to process import: ${error.message}`,
+      },
+    });
+  }
+}
+
+/**
+ * Get import recovery information for interrupted imports
+ * GET /api/imports/recovery/:importId
+ * 
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ */
+async function getImportRecoveryInfo(req, res) {
+  try {
+    const { importId } = req.params;
+    const adminId = req.user._id;
+
+    // Validate recovery is possible
+    const recoveryValidation = await validateRecoveryPossible(importId);
+
+    if (!recoveryValidation.canRecover) {
+      return res.status(400).json({
+        success: false,
+        message: recoveryValidation.reason,
+        data: recoveryValidation.data,
+      });
+    }
+
+    // Get partial import recovery information
+    const recoveryInfo = await getPartialImportRecovery(importId);
+
+    if (!recoveryInfo.success) {
+      await logErrorToActivity(adminId, 'IMPORT_RECOVERY_ERROR', recoveryInfo.message, {
+        import_id: importId,
+      });
+      return res.status(500).json({
+        success: false,
+        message: recoveryInfo.message,
+        error: recoveryInfo.error,
+      });
+    }
+
+    // Log recovery info retrieval
+    await logErrorToActivity(adminId, 'IMPORT_RECOVERY_INFO_RETRIEVED', `Retrieved recovery information for import ${importId}`, {
+      import_id: importId,
+      successful_members: recoveryInfo.data.successful_members.length,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Import recovery information retrieved successfully',
+      data: recoveryInfo.data,
+    });
+  } catch (error) {
+    console.error('Error getting import recovery info:', error);
+    const adminId = req.user?._id;
+    if (adminId) {
+      await logErrorToActivity(adminId, 'IMPORT_RECOVERY_ERROR', `Unexpected error retrieving recovery info: ${error.message}`, {
+        error_message: error.message,
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'IMPORT_RECOVERY_ERROR',
+        message: `Failed to retrieve recovery information: ${error.message}`,
+      },
+    });
+  }
+}
