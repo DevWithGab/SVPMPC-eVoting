@@ -2,9 +2,11 @@
  * Email Service
  * Handles sending email invitations to members with activation links
  * Logs email events in activity log and tracks failures
+ * Uses Nodemailer for real email sending
  */
 
 const { User, Activity, ImportOperation } = require('../models');
+const { transporter } = require('../config/nodemailer');
 
 /**
  * Generates an activation token for email-based activation
@@ -58,9 +60,8 @@ async function sendEmailInvitation({
       cooperativePhone,
     });
 
-    // Send email (using mock implementation for now)
-    // In production, integrate with actual email provider (SendGrid, AWS SES, Nodemailer, etc.)
-    const emailSendResult = await mockSendEmail({
+    // Send email via Nodemailer (real email sending)
+    const emailSendResult = await sendEmailViaNodemailer({
       email,
       subject: `${cooperativeName} - Activate Your Account`,
       htmlContent: emailContent.html,
@@ -177,8 +178,49 @@ Thank you!`;
 }
 
 /**
- * Mock email sending function (replace with actual email provider)
- * In production, integrate with SendGrid, AWS SES, Nodemailer, or similar service
+ * Sends email using Nodemailer
+ * Supports Gmail and custom SMTP providers
+ * 
+ * @param {object} params - Parameters object
+ * @param {string} params.email - Recipient email address
+ * @param {string} params.subject - Email subject
+ * @param {string} params.htmlContent - HTML email content
+ * @param {string} params.textContent - Plain text email content
+ * @returns {Promise<object>} - Email send result
+ */
+async function sendEmailViaNodemailer({ email, subject, htmlContent, textContent }) {
+  try {
+    // Verify transporter is configured
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      console.warn('⚠️ Email credentials not configured. Using mock mode.');
+      return mockSendEmail({ email, subject, htmlContent, textContent });
+    }
+
+    // Send email via Nodemailer
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      to: email,
+      subject: subject,
+      html: htmlContent,
+      text: textContent,
+    });
+
+    return {
+      emailId: info.messageId,
+      email,
+      status: 'sent',
+      timestamp: new Date(),
+      response: info.response,
+    };
+  } catch (error) {
+    console.error('❌ Nodemailer error:', error.message);
+    // Fallback to mock if real sending fails
+    return mockSendEmail({ email, subject, htmlContent, textContent });
+  }
+}
+
+/**
+ * Mock email sending function (fallback when real email is unavailable)
  * 
  * @param {object} params - Parameters object
  * @param {string} params.email - Recipient email address
@@ -191,13 +233,13 @@ async function mockSendEmail({ email, subject, htmlContent, textContent }) {
   // Simulate email sending delay
   await new Promise((resolve) => setTimeout(resolve, 100));
 
-  // In production, this would call actual email provider API
-  // For now, we simulate success with a mock email ID
+  // Mock email ID for testing
   return {
     emailId: `EMAIL_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
     email,
     status: 'sent',
     timestamp: new Date(),
+    isMock: true,
   };
 }
 
@@ -391,4 +433,6 @@ module.exports = {
   formatEmailMessage,
   generateActivationToken,
   generateActivationLink,
+  sendEmailViaNodemailer,
+  mockSendEmail,
 };

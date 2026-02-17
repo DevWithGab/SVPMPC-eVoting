@@ -433,6 +433,26 @@ export const activityAPI = {
 };
 
 export const importAPI = {
+  uploadCSVPreview: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/imports/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+  
+  confirmAndProcessImport: async (data: {
+    data: Record<string, string>[];
+    headers: string[];
+    rowCount: number;
+  }) => {
+    const response = await api.post('/imports/confirm', data);
+    return response.data;
+  },
+  
   getImportedMembers: async (params?: {
     status?: string;
     search?: string;
@@ -451,7 +471,32 @@ export const importAPI = {
   },
   
   resendInvitation: async (memberId: string, method: 'sms' | 'email') => {
-    const response = await api.post(`/imports/members/${memberId}/resend-invitation`, { method });
+    const response = await api.post(`/imports/resend-invitation/${memberId}`, { deliveryMethod: method });
+    return response.data;
+  },
+  
+  bulkResendInvitations: async (memberIds: string[], method: 'sms' | 'email') => {
+    const response = await api.post('/imports/bulk-resend-invitations', { memberIds, deliveryMethod: method });
+    return response.data;
+  },
+  
+  retrySMS: async (userId: string) => {
+    const response = await api.post(`/imports/retry-sms/${userId}`);
+    return response.data;
+  },
+  
+  retryEmail: async (userId: string) => {
+    const response = await api.post(`/imports/retry-email/${userId}`);
+    return response.data;
+  },
+  
+  bulkRetryNotifications: async (userIds: string[], notificationType: 'sms' | 'email') => {
+    const response = await api.post('/imports/bulk-retry', { userIds, notificationType });
+    return response.data;
+  },
+  
+  getRetryStatus: async (userId: string) => {
+    const response = await api.get(`/imports/retry-status/${userId}`);
     return response.data;
   },
   
@@ -461,12 +506,12 @@ export const importAPI = {
     sortBy?: string;
     sortOrder?: string;
   }) => {
-    const response = await api.get('/imports', { params });
+    const response = await api.get('/imports/history', { params });
     return response.data;
   },
   
   getImportDetails: async (importId: string) => {
-    const response = await api.get(`/imports/${importId}`);
+    const response = await api.get(`/imports/history/${importId}`);
     return response.data;
   },
   
@@ -474,7 +519,17 @@ export const importAPI = {
     page?: number;
     limit?: number;
   }) => {
-    const response = await api.get(`/imports/${importId}/members`, { params });
+    const response = await api.get(`/imports/history/${importId}/members`, { params });
+    return response.data;
+  },
+  
+  getImportRecoveryInfo: async (importId: string) => {
+    const response = await api.get(`/imports/recovery/${importId}`);
+    return response.data;
+  },
+  
+  retryFailedImport: async (importId: string) => {
+    const response = await api.post(`/imports/retry/${importId}`);
     return response.data;
   },
 };

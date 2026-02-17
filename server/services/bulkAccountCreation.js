@@ -7,6 +7,7 @@
 const { User, ImportOperation, Activity } = require('../models');
 const { generateTemporaryPassword, hashTemporaryPassword } = require('./passwordGenerator');
 const { sendSMSAndLog } = require('./smsService');
+const { sendEmailAndLog } = require('./emailService');
 const {
   handleAccountCreationError,
   handleNotificationError,
@@ -40,6 +41,8 @@ async function createBulkAccounts({ validRows, csvFileName, adminId, adminName }
   let skippedRows = 0;
   let smsSentCount = 0;
   let smsFailedCount = 0;
+  let emailSentCount = 0;
+  let emailFailedCount = 0;
   const importErrors = [];
   const createdUsers = [];
 
@@ -198,6 +201,32 @@ async function createBulkAccounts({ validRows, csvFileName, adminId, adminName }
         smsFailedCount++;
       }
 
+      // Send email invitation to member (if email provided)
+      if (row.email && row.email.trim() !== '') {
+        try {
+          const activationToken = `${newUser._id}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+          const activationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/activate?token=${activationToken}`;
+          
+          const emailResult = await sendEmailAndLog({
+            userId: newUser._id,
+            adminId,
+            cooperativeName: 'SVMPC',
+            cooperativePhone: '+1-800-SVMPC-1',
+          });
+
+          if (emailResult.success) {
+            emailSentCount++;
+          } else {
+            emailFailedCount++;
+            console.warn(`⚠️ Email failed for member ${newUser.member_id}: ${emailResult.message}`);
+          }
+        } catch (emailError) {
+          emailFailedCount++;
+          console.error(`❌ Email error for member ${newUser.member_id}:`, emailError.message);
+          // Don't fail the import if email fails
+        }
+      }
+
       // Store the plain temporary password for return (will be sent via SMS)
       createdUsers.push({
         userId: newUser._id,
@@ -238,6 +267,8 @@ async function createBulkAccounts({ validRows, csvFileName, adminId, adminName }
     importOperation.skipped_rows = skippedRows;
     importOperation.sms_sent_count = smsSentCount;
     importOperation.sms_failed_count = smsFailedCount;
+    importOperation.email_sent_count = emailSentCount;
+    importOperation.email_failed_count = emailFailedCount;
     importOperation.import_errors = importErrors;
     importOperation.status = 'completed';
 
@@ -254,7 +285,7 @@ async function createBulkAccounts({ validRows, csvFileName, adminId, adminName }
     await Activity.create({
       userId: adminId,
       action: 'BULK_IMPORT',
-      description: `Bulk imported ${successfulImports} members from CSV file "${csvFileName}". Failed: ${failedImports}, Skipped: ${skippedRows}`,
+      description: `Bulk imported ${successfulImports} members from CSV file "${csvFileName}". SMS: ${smsSentCount} sent, ${smsFailedCount} failed. Email: ${emailSentCount} sent, ${emailFailedCount} failed. Failed: ${failedImports}, Skipped: ${skippedRows}`,
       metadata: {
         import_id: importOperation._id,
         total_rows: validRows.length,
@@ -263,6 +294,8 @@ async function createBulkAccounts({ validRows, csvFileName, adminId, adminName }
         skipped_rows: skippedRows,
         sms_sent_count: smsSentCount,
         sms_failed_count: smsFailedCount,
+        email_sent_count: emailSentCount,
+        email_failed_count: emailFailedCount,
       },
     });
   } catch (activityError) {
@@ -279,6 +312,8 @@ async function createBulkAccounts({ validRows, csvFileName, adminId, adminName }
       skipped_rows: skippedRows,
       sms_sent_count: smsSentCount,
       sms_failed_count: smsFailedCount,
+      email_sent_count: emailSentCount,
+      email_failed_count: emailFailedCount,
       import_errors: importErrors,
     },
   };

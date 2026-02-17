@@ -829,23 +829,52 @@ async function uploadCSVPreview(req, res) {
  */
 async function confirmAndProcessImport(req, res) {
   try {
-    const { filePath, filename } = req.body;
+    const { csvContent, rowCount, headers } = req.body;
     const adminId = req.user._id;
     const adminName = req.user.fullName || req.user.username;
 
     // Validate required fields
-    if (!filePath || !filename) {
+    if (!csvContent || !headers || !Array.isArray(headers)) {
       return res.status(400).json({
         success: false,
         error: {
           code: 'MISSING_REQUIRED_FIELDS',
-          message: 'filePath and filename are required',
+          message: 'csvContent and headers are required',
         },
       });
     }
 
-    // Parse and validate CSV again (security check)
-    const parseResult = await parseAndValidateCSV(filePath, filename);
+    // Parse CSV content directly
+    const lines = csvContent.trim().split('\n');
+    const validRows = [];
+    const invalidRows = [];
+
+    // Skip header row and process data rows
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].trim() === '') continue;
+
+      const values = lines[i].split(',').map(v => v.trim());
+      const row = {};
+
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
+      });
+
+      // Basic validation
+      const isValid = headers.every(header => row[header] && row[header].trim() !== '');
+      if (isValid) {
+        validRows.push(row);
+      } else {
+        invalidRows.push({ rowNumber: i + 1, data: row });
+      }
+    }
+
+    const parseResult = {
+      success: validRows.length > 0,
+      validRows: validRows,
+      invalidRows: invalidRows,
+      error: invalidRows.length > 0 ? `${invalidRows.length} invalid rows found` : null,
+    };
 
     if (!parseResult.success) {
       const errorResponse = {
@@ -854,14 +883,12 @@ async function confirmAndProcessImport(req, res) {
           code: 'CSV_VALIDATION_FAILED',
           message: parseResult.error || 'CSV validation failed',
           details: {
-            filename,
             errors: parseResult.errors,
             invalidRowDetails: parseResult.invalidRows,
           },
         },
       };
       await logErrorToActivity(adminId, 'CSV_VALIDATION_FAILED_ON_CONFIRM', parseResult.error || 'CSV validation failed', {
-        filename,
         invalid_rows: parseResult.invalidRows?.length || 0,
       });
       return res.status(400).json(errorResponse);
@@ -872,14 +899,13 @@ async function confirmAndProcessImport(req, res) {
     try {
       importResult = await createBulkAccounts({
         validRows: parseResult.validRows,
-        csvFileName: filename,
+        csvFileName: 'bulk_import.csv',
         adminId,
         adminName,
       });
     } catch (error) {
       const errorResponse = handleDatabaseError(error, 'bulk_account_creation');
       await logErrorToActivity(adminId, errorResponse.error.code, errorResponse.error.message, {
-        filename,
         error_message: error.message,
       });
       return res.status(500).json(errorResponse);
@@ -888,7 +914,6 @@ async function confirmAndProcessImport(req, res) {
     // Log successful import
     await logErrorToActivity(adminId, 'BULK_IMPORT_COMPLETED', `Bulk import completed successfully`, {
       import_id: importResult.importOperation._id,
-      filename,
       successful_imports: importResult.statistics.successful_imports,
       failed_imports: importResult.statistics.failed_imports,
       skipped_rows: importResult.statistics.skipped_rows,

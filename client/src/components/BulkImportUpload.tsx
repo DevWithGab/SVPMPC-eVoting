@@ -307,10 +307,18 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
         setProcessingProgress(prev => Math.min(prev + 15, 90));
       }, 500);
 
+      // Convert parsed data to CSV format for backend processing
+      const csvContent = [
+        parsedData?.headers?.join(',') || '',
+        ...(parsedData?.rows?.map(row => 
+          (parsedData.headers || []).map(header => row[header] || '').join(',')
+        ) || [])
+      ].join('\n');
+
       const response = await api.post('/imports/confirm', {
-        data: parsedData?.rows,
-        headers: parsedData?.headers,
-        rowCount: parsedData?.rowCount
+        csvContent: csvContent,
+        rowCount: parsedData?.rowCount,
+        headers: parsedData?.headers || [],
       });
 
       clearInterval(progressInterval);

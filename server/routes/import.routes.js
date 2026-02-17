@@ -22,7 +22,7 @@ const {
   uploadCSVPreview,
   confirmAndProcessImport,
 } = require('../controllers/import.controller');
-const { verifyToken } = require('../middleware/auth.middleware');
+const verifyToken = require('../middleware/auth.middleware');
 const { checkRole } = require('../middleware/role.middleware');
 const {
   requireAdminForImport,
