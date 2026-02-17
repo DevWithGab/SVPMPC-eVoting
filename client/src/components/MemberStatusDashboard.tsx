@@ -269,7 +269,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
         {/* Search Bar */}
         <div className="flex gap-2">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" aria-hidden="true" />
             <input
               type="text"
               placeholder={t('bulkImport.searchByMemberId')}
@@ -277,28 +277,31 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
               onChange={handleSearch}
               onKeyPress={(e) => e.key === 'Enter' && handleSearchSubmit()}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              aria-label={t('bulkImport.searchByMemberId')}
             />
           </div>
           <button
             onClick={handleSearchSubmit}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition focus:outline-none focus:ring-2 focus:ring-green-500"
+            aria-label={t('bulkImport.searchByMemberId')}
           >
             {t('bulkImport.searchByMemberId')}
           </button>
         </div>
 
         {/* Status Filter */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2" role="group" aria-label={t('bulkImport.filterByStatus')}>
           <span className="text-sm font-semibold text-gray-700 self-center">{t('bulkImport.filterByStatus')}:</span>
           {Object.entries(statusLabels).map(([status, label]) => (
             <button
               key={status}
               onClick={() => handleStatusFilterChange(status)}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition ${
+              className={`px-3 py-1 rounded-full text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-green-500 ${
                 statusFilter === status
                   ? statusColors[status]
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
+              aria-pressed={statusFilter === status}
             >
               {label}
             </button>
@@ -306,7 +309,8 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
           {statusFilter && (
             <button
               onClick={() => setStatusFilter('')}
-              className="px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300"
+              className="px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 transition focus:outline-none focus:ring-2 focus:ring-green-500"
+              aria-label={`Clear ${statusFilter} filter`}
             >
               {t('bulkImport.cancelButton')}
             </button>
@@ -316,23 +320,24 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
 
       {/* Bulk Resend Button */}
       {selectedMembers.size > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between" role="region" aria-live="polite" aria-label="Bulk actions">
           <span className="text-sm font-medium text-blue-900">
             {t('bulkImport.selectedCount', { count: selectedMembers.size })}
           </span>
           <button
             onClick={handleBulkResend}
             disabled={isBulkResending}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            aria-label={`Bulk resend invitations to ${selectedMembers.size} members`}
           >
             {isBulkResending ? (
               <>
-                <Loader className="w-4 h-4 animate-spin" />
+                <Loader className="w-4 h-4 animate-spin" aria-hidden="true" />
                 {t('bulkImport.bulkResendInProgress')}
               </>
             ) : (
               <>
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-4 h-4" aria-hidden="true" />
                 {t('bulkImport.bulkResend')}
               </>
             )}
@@ -349,65 +354,70 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full" role="table" aria-label="Imported members">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left">
+                    <th className="px-6 py-3 text-left" scope="col">
                       <input
                         type="checkbox"
                         checked={selectedMembers.size === members.length && members.length > 0}
                         onChange={handleSelectAll}
                         className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500 cursor-pointer"
-                        title={t('bulkImport.selectMembers')}
+                        aria-label="Select all members"
                       />
                     </th>
-                    <th className="px-6 py-3 text-left">
+                    <th className="px-6 py-3 text-left" scope="col">
                       <button
                         onClick={() => handleSort('member_id')}
-                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
+                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-2 py-1"
+                        aria-label={`Sort by ${t('bulkImport.memberId')}`}
                       >
                         {t('bulkImport.memberId')}
                         <SortIcon field="member_id" />
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left">
+                    <th className="px-6 py-3 text-left" scope="col">
                       <button
                         onClick={() => handleSort('name')}
-                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
+                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-2 py-1"
+                        aria-label={`Sort by ${t('bulkImport.memberName')}`}
                       >
                         {t('bulkImport.memberName')}
                         <SortIcon field="name" />
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left">
+                    <th className="px-6 py-3 text-left" scope="col">
                       <button
                         onClick={() => handleSort('phone_number')}
-                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
+                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-2 py-1"
+                        aria-label={`Sort by ${t('bulkImport.phoneNumber')}`}
                       >
                         {t('bulkImport.phoneNumber')}
                         <SortIcon field="phone_number" />
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left">
+                    <th className="px-6 py-3 text-left" scope="col">
                       <button
                         onClick={() => handleSort('activation_status')}
-                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
+                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-2 py-1"
+                        aria-label={`Sort by ${t('bulkImport.status')}`}
                       >
                         {t('bulkImport.status')}
                         <SortIcon field="activation_status" />
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left">
+                    <th className="px-6 py-3 text-left" scope="col">
                       <button
                         onClick={() => handleSort('created_at')}
-                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
+                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-2 py-1"
+                        aria-label={`Sort by ${t('bulkImport.importedDate')}`}
                       >
                         {t('bulkImport.importedDate')}
                         <SortIcon field="created_at" />
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-700">{t('bulkImport.activationMethod')}</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-700">{t('bulkImport.resendInvitation')}</th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-700" scope="col">{t('bulkImport.activationMethod')}</th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-700" scope="col">{t('bulkImport.resendInvitation')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -419,6 +429,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                           checked={selectedMembers.has(member.id)}
                           onChange={() => handleSelectMember(member.id)}
                           className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500 cursor-pointer"
+                          aria-label={`Select ${member.name}`}
                         />
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">{member.member_id}</td>
@@ -438,18 +449,20 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                       <td className="px-6 py-4 text-sm space-x-2 flex">
                         <button
                           onClick={() => handleViewDetails(member.id)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded transition focus:outline-none focus:ring-2 focus:ring-blue-500"
                           title={t('bulkImport.viewDetails')}
+                          aria-label={`View details for ${member.name}`}
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-4 h-4" aria-hidden="true" />
                         </button>
                         {member.activation_status === 'pending_activation' && (
                           <button
                             onClick={() => handleResendInvitation(member.id)}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded transition"
+                            className="p-2 text-green-600 hover:bg-green-50 rounded transition focus:outline-none focus:ring-2 focus:ring-green-500"
                             title={t('bulkImport.resendInvitation')}
+                            aria-label={`Resend invitation to ${member.name}`}
                           >
-                            <RotateCcw className="w-4 h-4" />
+                            <RotateCcw className="w-4 h-4" aria-hidden="true" />
                           </button>
                         )}
                       </td>
@@ -505,13 +518,14 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
 
       {/* Member Details Modal */}
       {showDetailsModal && memberDetails && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-labelledby="modal-title">
           <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
             <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
-              <h3 className="text-xl font-bold text-gray-800">{t('bulkImport.viewDetails')}</h3>
+              <h3 className="text-xl font-bold text-gray-800" id="modal-title">{t('bulkImport.viewDetails')}</h3>
               <button
                 onClick={() => setShowDetailsModal(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
+                className="text-gray-500 hover:text-gray-700 text-2xl focus:outline-none focus:ring-2 focus:ring-green-500 rounded p-1"
+                aria-label="Close modal"
               >
                 ×
               </button>
@@ -575,7 +589,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
             <div className="p-6 border-t border-gray-200 flex justify-end gap-2">
               <button
                 onClick={() => setShowDetailsModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition"
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 {t('bulkImport.cancelButton')}
               </button>
@@ -585,7 +599,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                     setShowDetailsModal(false);
                     handleResendInvitation(memberDetails.id);
                   }}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   {t('bulkImport.resendInvitation')}
                 </button>

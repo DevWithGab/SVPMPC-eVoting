@@ -382,7 +382,17 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={t('bulkImport.dragDropText')}
+            aria-describedby="file-upload-hint"
+            className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
               isDragging
                 ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
                 : 'border-gray-300 dark:border-gray-600 hover:border-green-400 dark:hover:border-green-500'
@@ -395,13 +405,14 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
               onChange={handleFileInputChange}
               className="hidden"
               disabled={isUploading}
+              aria-label={t('bulkImport.uploadButton')}
             />
 
-            <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" aria-hidden="true" />
             <p className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
               {t('bulkImport.dragDropText')}
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-gray-500 dark:text-gray-400" id="file-upload-hint">
               {t('bulkImport.fileFormatHint')}
             </p>
           </div>
@@ -421,7 +432,7 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
             </div>
           )}
 
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4" role="region" aria-label="Upload requirements">
             <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">
               {t('bulkImport.uploadSection')}
             </h3>
@@ -460,14 +471,15 @@ const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConf
       </h2>
       <button
         onClick={handleCancel}
-        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 rounded p-1"
+        aria-label={t('bulkImport.cancelButton')}
       >
-        <X className="w-6 h-6" />
+        <X className="w-6 h-6" aria-hidden="true" />
       </button>
     </div>
 
     <div className="grid grid-cols-3 gap-4">
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4" role="region" aria-label="Row count">
         <p className="text-sm text-gray-600 dark:text-gray-400">{t('bulkImport.rowCount', { count: parsedData?.rowCount || 0 })}</p>
         <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
           {parsedData?.rowCount || 0}
@@ -477,7 +489,7 @@ const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConf
         validationErrors.length === 0
           ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
           : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-      }`}>
+      }`} role="region" aria-label="Validation errors">
         <p className="text-sm text-gray-600 dark:text-gray-400">{t('bulkImport.errorDetails')}</p>
         <p className={`text-2xl font-bold ${
           validationErrors.length === 0
@@ -487,7 +499,7 @@ const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConf
           {validationErrors.length}
         </p>
       </div>
-      <div className="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+      <div className="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800 rounded-lg p-4" role="region" aria-label="Column count">
         <p className="text-sm text-gray-600 dark:text-gray-400">{t('bulkImport.uploadSection')}</p>
         <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
           {parsedData?.headers.length || 0}
@@ -496,9 +508,9 @@ const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConf
     </div>
 
     {validationErrors.length > 0 && (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4" role="alert" aria-live="polite">
         <div className="flex items-center gap-2 mb-3">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" aria-hidden="true" />
           <h3 className="font-semibold text-red-900 dark:text-red-300">
             {t('bulkImport.errorDetails')} ({validationErrors.length})
           </h3>
@@ -517,12 +529,12 @@ const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConf
     {parsedData && validationErrors.length === 0 && (
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" role="table" aria-label="CSV preview">
             <thead className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">#</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300" scope="col">#</th>
                 {parsedData.headers.map((header: string) => (
-                  <th key={header} className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">
+                  <th key={header} className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300" scope="col">
                     {header}
                   </th>
                 ))}
@@ -553,20 +565,21 @@ const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConf
     <div className="flex gap-4 justify-end">
       <button
         onClick={handleCancel}
-        className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
       >
         {t('bulkImport.cancelButton')}
       </button>
       <button
         onClick={handleConfirmImport}
         disabled={validationErrors.length > 0}
-        className={`px-6 py-2 rounded-lg text-white font-semibold transition-colors flex items-center gap-2 ${
+        className={`px-6 py-2 rounded-lg text-white font-semibold transition-colors flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
           validationErrors.length > 0
             ? 'bg-gray-400 cursor-not-allowed'
             : 'bg-green-600 hover:bg-green-700'
         }`}
+        aria-label={t('bulkImport.confirmImport')}
       >
-        <CheckCircle className="w-5 h-5" />
+        <CheckCircle className="w-5 h-5" aria-hidden="true" />
         {t('bulkImport.confirmImport')}
       </button>
     </div>

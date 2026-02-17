@@ -132,8 +132,10 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="p-6 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-4"
+          role="region"
+          aria-label="Password change prompt"
         >
-          <AlertCircle size={20} className="text-blue-500 flex-shrink-0 mt-0.5" />
+          <AlertCircle size={20} className="text-blue-500 flex-shrink-0 mt-0.5" aria-hidden="true" />
           <div>
             <p className="font-bold text-blue-900 mb-1">{t('bulkImport.changePasswordPrompt')}</p>
             <p className="text-sm text-blue-700">{t('bulkImport.changePasswordPrompt')}</p>
@@ -156,10 +158,13 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className="p-6 bg-red-50 border border-red-100 rounded-lg space-y-2"
+            role="alert"
+            aria-live="assertive"
+            aria-label="Form errors"
           >
             {errors.map((error, idx) => (
               <div key={idx} className="flex items-start gap-3">
-                <AlertCircle size={16} className="text-red-500 mt-0.5 flex-shrink-0" />
+                <AlertCircle size={16} className="text-red-500 mt-0.5 flex-shrink-0" aria-hidden="true" />
                 <p className="text-sm text-red-700 font-medium">{error}</p>
               </div>
             ))}
@@ -168,50 +173,57 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
 
         {/* Current Password */}
         <div className="space-y-3">
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+          <label htmlFor="current-password" className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
             {t('bulkImport.currentPassword')}
           </label>
           <div className="relative">
             <input
+              id="current-password"
               type={showCurrentPassword ? 'text' : 'password'}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               placeholder={t('bulkImport.currentPassword')}
-              className="w-full px-6 py-4 bg-gray-50 border border-gray-100 text-sm font-medium outline-none focus:border-[#4F75E2] transition-colors"
+              className="w-full px-6 py-4 bg-gray-50 border border-gray-100 text-sm font-medium outline-none focus:border-[#4F75E2] focus:ring-2 focus:ring-[#4F75E2] transition-colors"
               disabled={loading}
+              aria-label={t('bulkImport.currentPassword')}
             />
             <button
               type="button"
               onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-[#4F75E2] rounded p-1"
               disabled={loading}
+              aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
             >
-              {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showCurrentPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
             </button>
           </div>
         </div>
 
         {/* New Password */}
         <div className="space-y-3">
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+          <label htmlFor="new-password" className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
             {t('bulkImport.newPassword')}
           </label>
           <div className="relative">
             <input
+              id="new-password"
               type={showNewPassword ? 'text' : 'password'}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder={t('bulkImport.newPassword')}
-              className="w-full px-6 py-4 bg-gray-50 border border-gray-100 text-sm font-medium outline-none focus:border-[#4F75E2] transition-colors"
+              className="w-full px-6 py-4 bg-gray-50 border border-gray-100 text-sm font-medium outline-none focus:border-[#4F75E2] focus:ring-2 focus:ring-[#4F75E2] transition-colors"
               disabled={loading}
+              aria-label={t('bulkImport.newPassword')}
+              aria-describedby="password-requirements"
             />
             <button
               type="button"
               onClick={() => setShowNewPassword(!showNewPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-[#4F75E2] rounded p-1"
               disabled={loading}
+              aria-label={showNewPassword ? 'Hide password' : 'Show password'}
             >
-              {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showNewPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
             </button>
           </div>
 
@@ -221,6 +233,10 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-4 p-4 bg-gray-50 border border-gray-100 space-y-3"
+              id="password-requirements"
+              role="region"
+              aria-live="polite"
+              aria-label="Password requirements"
             >
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('bulkImport.passwordRequirements')}</p>
               <div className="space-y-2">
@@ -230,8 +246,10 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
                       className={`w-4 h-4 rounded-full flex items-center justify-center transition-all ${
                         req.met ? 'bg-coop-green/20' : 'bg-gray-200'
                       }`}
+                      role="status"
+                      aria-label={req.met ? `${req.label} - met` : `${req.label} - not met`}
                     >
-                      {req.met && <CheckCircle2 size={14} className="text-coop-green" />}
+                      {req.met && <CheckCircle2 size={14} className="text-coop-green" aria-hidden="true" />}
                     </div>
                     <span
                       className={`text-[9px] font-medium uppercase tracking-widest ${
@@ -246,7 +264,7 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
 
               {/* Strength Bar */}
               <div className="mt-4 space-y-2">
-                <div className="flex gap-1">
+                <div className="flex gap-1" role="progressbar" aria-valuenow={passwordRequirements.filter(r => r.met).length} aria-valuemin={0} aria-valuemax={passwordRequirements.length} aria-label="Password strength">
                   {[0, 1, 2, 3, 4].map((idx) => (
                     <div
                       key={idx}
@@ -268,29 +286,33 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
 
         {/* Confirm Password */}
         <div className="space-y-3">
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+          <label htmlFor="confirm-password" className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
             {t('bulkImport.confirmPassword')}
           </label>
           <div className="relative">
             <input
+              id="confirm-password"
               type={showConfirmPassword ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder={t('bulkImport.confirmPassword')}
               className={`w-full px-6 py-4 bg-gray-50 border text-sm font-medium outline-none transition-colors ${
                 confirmPassword && !passwordsMatch
-                  ? 'border-red-200 focus:border-red-300'
-                  : 'border-gray-100 focus:border-[#4F75E2]'
+                  ? 'border-red-200 focus:border-red-300 focus:ring-2 focus:ring-red-300'
+                  : 'border-gray-100 focus:border-[#4F75E2] focus:ring-2 focus:ring-[#4F75E2]'
               }`}
               disabled={loading}
+              aria-label={t('bulkImport.confirmPassword')}
+              aria-invalid={confirmPassword && !passwordsMatch ? 'true' : 'false'}
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-[#4F75E2] rounded p-1"
               disabled={loading}
+              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
             >
-              {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showConfirmPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
             </button>
           </div>
 
@@ -299,8 +321,9 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center gap-2 text-red-600"
+              role="alert"
             >
-              <AlertCircle size={14} />
+              <AlertCircle size={14} aria-hidden="true" />
               <span className="text-[9px] font-medium uppercase tracking-widest">{t('bulkImport.errorPasswordMismatch')}</span>
             </motion.div>
           )}
@@ -310,8 +333,9 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center gap-2 text-coop-green"
+              role="status"
             >
-              <CheckCircle2 size={14} />
+              <CheckCircle2 size={14} aria-hidden="true" />
               <span className="text-[9px] font-medium uppercase tracking-widest">{t('bulkImport.passwordChangeSuccess')}</span>
             </motion.div>
           )}
@@ -322,7 +346,8 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
           <button
             type="submit"
             disabled={loading || !allRequirementsMet || !passwordsMatch}
-            className="flex-1 bg-[#4F75E2] text-white py-5 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 bg-[#4F75E2] text-white py-5 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#4F75E2] focus:ring-offset-2"
+            aria-label={loading ? t('bulkImport.importInProgress') : t('bulkImport.changePasswordButton')}
           >
             {loading ? t('bulkImport.importInProgress') : t('bulkImport.changePasswordButton')}
           </button>
@@ -332,7 +357,7 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="flex-1 border border-gray-200 text-gray-600 py-5 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 border border-gray-200 text-gray-600 py-5 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
             >
               {t('bulkImport.cancelButton')}
             </button>

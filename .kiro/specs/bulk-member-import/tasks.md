@@ -294,7 +294,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - Test with both English and Filipino
 
 - [ ] 18. Frontend Accessibility
-  - [ ] 18.1 Ensure accessibility compliance
+  - [x] 18.1 Ensure accessibility compliance
     - Add ARIA labels to all form inputs
     - Ensure keyboard navigation works
     - Test with screen readers

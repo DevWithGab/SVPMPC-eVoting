@@ -145,39 +145,42 @@ export const ImportHistoryView: React.FC<ImportHistoryViewProps> = ({ onNavigate
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full" role="table" aria-label="Import history">
                 <thead>
                   <tr className="border-b-2 border-gray-200">
-                    <th className="px-4 py-3 text-left">
+                    <th className="px-4 py-3 text-left" scope="col">
                       <button
                         onClick={() => handleSort('createdAt')}
-                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-green-600"
+                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-2 py-1"
+                        aria-label={`Sort by ${t('bulkImport.importDate')}`}
                       >
                         {t('bulkImport.importDate')} <SortIcon field="createdAt" />
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-left">
+                    <th className="px-4 py-3 text-left" scope="col">
                       <button
                         onClick={() => handleSort('admin_name')}
-                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-green-600"
+                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-2 py-1"
+                        aria-label={`Sort by ${t('bulkImport.importedBy')}`}
                       >
                         {t('bulkImport.importedBy')} <SortIcon field="admin_name" />
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">{t('bulkImport.csvFileName')}</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">{t('bulkImport.totalMembers')}</th>
-                    <th className="px-4 py-3 text-center">
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700" scope="col">{t('bulkImport.csvFileName')}</th>
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700" scope="col">{t('bulkImport.totalMembers')}</th>
+                    <th className="px-4 py-3 text-center" scope="col">
                       <button
                         onClick={() => handleSort('successful_imports')}
-                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-green-600 mx-auto"
+                        className="flex items-center gap-2 font-semibold text-gray-700 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-2 py-1 mx-auto"
+                        aria-label={`Sort by ${t('bulkImport.successCount')}`}
                       >
                         {t('bulkImport.successCount')} <SortIcon field="successful_imports" />
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">{t('bulkImport.failureCount')}</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">{t('bulkImport.skippedRows')}</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">{t('bulkImport.status')}</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">{t('bulkImport.viewDetails')}</th>
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700" scope="col">{t('bulkImport.failureCount')}</th>
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700" scope="col">{t('bulkImport.skippedRows')}</th>
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700" scope="col">{t('bulkImport.status')}</th>
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700" scope="col">{t('bulkImport.viewDetails')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -185,13 +188,13 @@ export const ImportHistoryView: React.FC<ImportHistoryViewProps> = ({ onNavigate
                     <tr key={importOp.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm text-gray-700">
                         <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-gray-400" />
+                          <Calendar className="w-4 h-4 text-gray-400" aria-hidden="true" />
                           {formatDate(importOp.created_at)}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-gray-400" />
+                          <User className="w-4 h-4 text-gray-400" aria-hidden="true" />
                           {importOp.admin_name}
                         </div>
                       </td>
@@ -224,9 +227,10 @@ export const ImportHistoryView: React.FC<ImportHistoryViewProps> = ({ onNavigate
                       <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => handleViewDetails(importOp.id)}
-                          className="inline-flex items-center gap-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                          className="inline-flex items-center gap-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                          aria-label={`View details for import on ${formatDate(importOp.created_at)}`}
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-4 h-4" aria-hidden="true" />
                           {t('bulkImport.viewDetails')}
                         </button>
                       </td>
@@ -245,14 +249,16 @@ export const ImportHistoryView: React.FC<ImportHistoryViewProps> = ({ onNavigate
                 <button
                   onClick={handlePreviousPage}
                   disabled={pagination.page === 1}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+                  aria-label="Previous page"
                 >
                   Previous
                 </button>
                 <button
                   onClick={handleNextPage}
                   disabled={pagination.page === pagination.pages}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+                  aria-label="Next page"
                 >
                   Next
                 </button>
