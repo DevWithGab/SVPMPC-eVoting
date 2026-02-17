@@ -121,7 +121,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - Log resend event
     - _Requirements: 6.2, 6.3, 6.4, 6.5, 6.6, 6.11_
   
-  - [ ] 6.3 Implement bulk resend functionality
+  - [x] 6.3 Implement bulk resend functionality
     - Accept list of member IDs
     - Resend invitations to all selected members
     - Track success/failure for each
