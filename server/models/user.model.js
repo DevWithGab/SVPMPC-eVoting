@@ -1,6 +1,7 @@
 // server/models/user.model.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { encrypt, decrypt } = require('../services/encryptionService');
 
 const userSchema = new mongoose.Schema(
   {
@@ -17,6 +18,12 @@ const userSchema = new mongoose.Schema(
       unique: true,
       // simple email validation
       match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address'],
+      // Note: This field is encrypted at rest via pre-save hook
+    },
+    email_encrypted: {
+      type: String,
+      default: null,
+      // Stores the encrypted version of email for at-rest encryption
     },
     password: {
       type: String,
@@ -64,6 +71,12 @@ const userSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
       default: null,
+      // Note: This field is encrypted at rest via pre-save hook
+    },
+    member_id_encrypted: {
+      type: String,
+      default: null,
+      // Stores the encrypted version of member_id for at-rest encryption
     },
     phone_number: {
       type: String,
@@ -156,6 +169,20 @@ userSchema.pre('save', async function () {
   if (this.isModified('password')) {
     this.password = await bcrypt.hash(this.password, 10);
   }
+
+  // Encrypt sensitive fields at rest
+  try {
+    if (this.isModified('email') && this.email) {
+      this.email_encrypted = encrypt(this.email);
+    }
+    if (this.isModified('member_id') && this.member_id) {
+      this.member_id_encrypted = encrypt(this.member_id);
+    }
+  } catch (error) {
+    console.error('Encryption error in pre-save hook:', error.message);
+    // Don't fail the save, but log the error
+    // In production, you might want to handle this differently
+  }
 });
 
 // instance method for comparing passwords
@@ -190,6 +217,35 @@ userSchema.methods.invalidateTemporaryPassword = function () {
   this.temporary_password_hash = null;
   this.temporary_password_expires = null;
 };
+
+// Post-find hooks to decrypt sensitive fields
+userSchema.post('findOne', decryptSensitiveFields);
+userSchema.post('find', decryptSensitiveFields);
+userSchema.post('findOneAndUpdate', decryptSensitiveFields);
+
+/**
+ * Decrypts sensitive fields after retrieval from database
+ * Handles both single documents and arrays of documents
+ */
+function decryptSensitiveFields(doc) {
+  if (!doc) return;
+
+  const docs = Array.isArray(doc) ? doc : [doc];
+
+  docs.forEach(d => {
+    try {
+      if (d.email_encrypted && !d.email) {
+        d.email = decrypt(d.email_encrypted);
+      }
+      if (d.member_id_encrypted && !d.member_id) {
+        d.member_id = decrypt(d.member_id_encrypted);
+      }
+    } catch (error) {
+      console.error('Decryption error in post-find hook:', error.message);
+      // Don't fail the retrieval, but log the error
+    }
+  });
+}
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;

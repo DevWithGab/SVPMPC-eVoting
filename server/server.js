@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
+const { createHTTPSServer, enforceHTTPS, setSecurityHeaders } = require('./config/https');
 
 // Routes
 const authRoutes = require('./routes/auth.routes.js');
@@ -23,6 +24,10 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Security middleware
+app.use(enforceHTTPS);
+app.use(setSecurityHeaders);
 
 // Serve static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -66,10 +71,24 @@ const startServer = async () => {
     await connectDB();
     console.log('Database connection established successfully.');
     
-    // Start the server
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
+    // Try to create HTTPS server
+    const httpsServer = createHTTPSServer(app);
+    
+    if (httpsServer) {
+      // Start HTTPS server
+      httpsServer.listen(PORT, () => {
+        console.log(`HTTPS Server is running on port ${PORT}`);
+      });
+    } else {
+      // Fall back to HTTP server
+      app.listen(PORT, () => {
+        console.log(`HTTP Server is running on port ${PORT}`);
+        if (process.env.NODE_ENV === 'production') {
+          console.warn('WARNING: Running in production without HTTPS. This is not recommended.');
+          console.warn('Set SSL_CERT_PATH and SSL_KEY_PATH environment variables to enable HTTPS.');
+        }
+      });
+    }
   } catch (error) {
     console.error('Unable to start server:', error);
     process.exit(1);
