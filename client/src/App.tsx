@@ -1,9 +1,11 @@
 
 import React, { useState, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { Landing } from './components/Landing';
 import { Login } from './components/Login';
+import { Activate } from './components/Activate';
 import { Voting } from './components/Voting';
 import { Results } from './components/Results';
 import { Admin } from './components/Admin';
@@ -31,6 +33,11 @@ const App: React.FC = () => {
     return localStorage.getItem('selectedElectionId') || '';
   });
   const { isDarkMode, toggleDarkMode } = useDarkMode();
+
+  const location = useLocation();
+
+  // Check if we're on the activate page
+  const isActivatePage = location.pathname === '/activate';
 
   // Scroll to top and navigate
   const handleNavigate = useCallback((page: PageView, electionId?: string) => {
@@ -99,6 +106,8 @@ const App: React.FC = () => {
         return <Rules />;
       case 'LOGIN':
         return <Login onLogin={handleLogin} />;
+      case 'ACTIVATE':
+        return <Activate onNavigate={handleNavigate} />;
       case 'VOTING':
         if (!user) return <Login onLogin={handleLogin} />;
         return <Voting onNavigate={handleNavigate} />;
@@ -132,12 +141,24 @@ const App: React.FC = () => {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }
 
+  // Handle activation page separately (doesn't need authentication)
+  if (isActivatePage) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <main className="grow animate-fadeIn">
+          <Activate onNavigate={handleNavigate} />
+        </main>
+        <AccessibilityWidget highContrast={isDarkMode} toggleHighContrast={toggleDarkMode} fontSize={fontSize} setFontSize={setFontSize} />
+      </div>
+    );
+  }
+
   // If not authenticated after splash, show login
   if (!isAuthenticated) {
     return (
       <div className="flex flex-col min-h-screen">
         <main className="grow animate-fadeIn">
-          <Login onNavigate={handleNavigate} onLogin={(user) => {
+          <Login onLogin={(user) => {
             handleLogin(user);
             setIsAuthenticated(true);
           }} />

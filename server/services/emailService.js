@@ -40,6 +40,7 @@ function generateActivationLink(activationToken, baseUrl = process.env.FRONTEND_
  * @param {string} params.email - Member's email address
  * @param {string} params.memberName - Member's full name
  * @param {string} params.activationLink - Activation link URL
+ * @param {string} params.temporaryPassword - Temporary password for initial login
  * @param {string} params.cooperativeName - Name of the cooperative
  * @param {string} params.cooperativePhone - Cooperative contact phone
  * @returns {Promise<object>} - Result with success status and message
@@ -48,14 +49,16 @@ async function sendEmailInvitation({
   email,
   memberName,
   activationLink,
+  temporaryPassword,
   cooperativeName = 'SVMPC',
   cooperativePhone = '+1-800-SVMPC-1',
 }) {
   try {
-    // Format email message with member name, activation link, and instructions
+    // Format email message with member name, activation link, temporary password, and instructions
     const emailContent = formatEmailMessage({
       memberName,
       activationLink,
+      temporaryPassword,
       cooperativeName,
       cooperativePhone,
     });
@@ -91,6 +94,7 @@ async function sendEmailInvitation({
  * @param {object} params - Parameters object
  * @param {string} params.memberName - Member's name
  * @param {string} params.activationLink - Activation link
+ * @param {string} params.temporaryPassword - Temporary password
  * @param {string} params.cooperativeName - Cooperative name
  * @param {string} params.cooperativePhone - Cooperative phone
  * @returns {object} - Object with html and text content
@@ -98,6 +102,7 @@ async function sendEmailInvitation({
 function formatEmailMessage({
   memberName,
   activationLink,
+  temporaryPassword,
   cooperativeName,
   cooperativePhone,
 }) {
@@ -105,17 +110,23 @@ function formatEmailMessage({
 
 Welcome to ${cooperativeName}! Your account has been created.
 
-To activate your account and set your password, please click the link below:
+TEMPORARY PASSWORD (for initial login):
+${temporaryPassword}
+
+To activate your account and set a permanent password, please click the link below:
 ${activationLink}
 
 This link will expire in 24 hours.
 
-Instructions:
+INSTRUCTIONS:
+Option 1 - Using Email Activation Link (Recommended):
 1. Click the activation link above
 2. Set a permanent password (minimum 8 characters, must include uppercase, lowercase, number, and special character)
-3. Log in to the voting portal
+3. Log in to the voting portal with your new password
 
-If you did not receive an SMS with a temporary password, you can use this email link to activate your account.
+Option 2 - Using Temporary Password:
+1. Log in with your temporary password: ${temporaryPassword}
+2. Change your password in your profile settings
 
 For assistance, contact: ${cooperativePhone}
 
@@ -132,6 +143,7 @@ Thank you!`;
     .header { background-color: #2c3e50; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
     .content { background-color: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-radius: 0 0 5px 5px; }
     .button { display: inline-block; background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .password-box { background-color: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0; font-family: monospace; }
     .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
   </style>
 </head>
@@ -146,7 +158,13 @@ Thank you!`;
       
       <p>Welcome to ${cooperativeName}! Your account has been created.</p>
       
-      <p>To activate your account and set your password, please click the button below:</p>
+      <div class="password-box">
+        <strong>TEMPORARY PASSWORD (for initial login):</strong><br>
+        <code>${temporaryPassword}</code>
+      </div>
+      
+      <h3>Activate Your Account (Recommended):</h3>
+      <p>To activate your account and set a permanent password, please click the button below:</p>
       
       <a href="${activationLink}" class="button">Activate Your Account</a>
       
@@ -154,12 +172,20 @@ Thank you!`;
       
       <h3>Instructions:</h3>
       <ol>
-        <li>Click the activation link above</li>
-        <li>Set a permanent password (minimum 8 characters, must include uppercase, lowercase, number, and special character)</li>
-        <li>Log in to the voting portal</li>
+        <li><strong>Option 1 - Using Email Activation Link (Recommended):</strong>
+          <ul>
+            <li>Click the activation link above</li>
+            <li>Set a permanent password (minimum 8 characters, must include uppercase, lowercase, number, and special character)</li>
+            <li>Log in to the voting portal with your new password</li>
+          </ul>
+        </li>
+        <li><strong>Option 2 - Using Temporary Password:</strong>
+          <ul>
+            <li>Log in with your temporary password: <code>${temporaryPassword}</code></li>
+            <li>Change your password in your profile settings</li>
+          </ul>
+        </li>
       </ol>
-      
-      <p>If you did not receive an SMS with a temporary password, you can use this email link to activate your account.</p>
       
       <p>If the button above doesn't work, copy and paste this link into your browser:<br>
       <a href="${activationLink}">${activationLink}</a></p>
@@ -257,6 +283,7 @@ async function mockSendEmail({ email, subject, htmlContent, textContent }) {
 async function sendEmailAndLog({
   userId,
   adminId,
+  temporaryPassword,
   cooperativeName = 'SVMPC',
   cooperativePhone = '+1-800-SVMPC-1',
 }) {
@@ -275,11 +302,17 @@ async function sendEmailAndLog({
     const activationToken = generateActivationToken(userId);
     const activationLink = generateActivationLink(activationToken);
 
-    // Send email invitation
+    // Store activation token in database with 24-hour expiration
+    user.activation_token = activationToken;
+    user.activation_token_expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await user.save();
+
+    // Send email invitation with temporary password
     const emailResult = await sendEmailInvitation({
       email: user.email,
       memberName: user.fullName,
       activationLink,
+      temporaryPassword,
       cooperativeName,
       cooperativePhone,
     });

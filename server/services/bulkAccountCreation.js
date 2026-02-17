@@ -204,12 +204,10 @@ async function createBulkAccounts({ validRows, csvFileName, adminId, adminName }
       // Send email invitation to member (if email provided)
       if (row.email && row.email.trim() !== '') {
         try {
-          const activationToken = `${newUser._id}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-          const activationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/activate?token=${activationToken}`;
-          
           const emailResult = await sendEmailAndLog({
             userId: newUser._id,
             adminId,
+            temporaryPassword: tempPassword,
             cooperativeName: 'SVMPC',
             cooperativePhone: '+1-800-SVMPC-1',
           });

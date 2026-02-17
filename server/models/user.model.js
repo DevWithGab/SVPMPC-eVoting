@@ -141,6 +141,16 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    activation_token: {
+      type: String,
+      default: null,
+      // Stores the activation token for email-based activation
+    },
+    activation_token_expires: {
+      type: Date,
+      default: null,
+      // Expiration time for the activation token (24 hours)
+    },
   },
   {
     timestamps: true,

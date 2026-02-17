@@ -16,7 +16,7 @@ export type VotingType = typeof VotingType[keyof typeof VotingType];
 
 export type VotingMode = 'ONE_MEMBER_ONE_VOTE' | 'WEIGHTED_SHARES' | 'WEIGHTED_BOARD';
 export type VotingStatus = 'OPEN' | 'PAUSED';
-export type PageView = 'LANDING' | 'LOGIN' | 'PROFILE' | 'VOTING' | 'RESULTS' | 'RULES' | 'ANNOUNCEMENTS' | 'RESOURCES' | 'ADMIN' | 'STAFF' | 'ELECTIONS' | 'CANDIDATES' | 'POSITIONS';
+export type PageView = 'LANDING' | 'LOGIN' | 'ACTIVATE' | 'PROFILE' | 'VOTING' | 'RESULTS' | 'RULES' | 'ANNOUNCEMENTS' | 'RESOURCES' | 'ADMIN' | 'STAFF' | 'ELECTIONS' | 'CANDIDATES' | 'POSITIONS';
 
 export interface Election {
   id: string;

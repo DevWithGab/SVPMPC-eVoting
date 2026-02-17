@@ -208,8 +208,14 @@ const changePassword = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Verify current password
-    const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+    // Verify current password (check both permanent and temporary passwords)
+    let isCurrentPasswordValid = await user.comparePassword(currentPassword);
+    
+    // If permanent password doesn't match, try temporary password
+    if (!isCurrentPasswordValid && user.temporary_password_hash && !user.isTemporaryPasswordExpired()) {
+      isCurrentPasswordValid = await user.compareTemporaryPassword(currentPassword);
+    }
+    
     if (!isCurrentPasswordValid) {
       return res.status(401).json({ message: 'Current password is incorrect' });
     }
@@ -291,5 +297,116 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getProfile, changePassword, validatePasswordStrength };
+activate = async (req, res) => {
+    try {
+      const { token, password } = req.body;
+
+      if (!token) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'MISSING_TOKEN',
+            message: 'Activation token is required',
+          },
+        });
+      }
+
+      // Find user by activation token
+      const user = await User.findOne({ activation_token: token });
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'INVALID_TOKEN',
+            message: 'Invalid or expired activation token',
+          },
+        });
+      }
+
+      // Check if token has expired
+      if (!user.activation_token_expires || new Date() > user.activation_token_expires) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'TOKEN_EXPIRED',
+            message: 'Activation token has expired. Please request a new one.',
+          },
+        });
+      }
+
+      // Check if already activated
+      if (user.activation_status === 'activated') {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'ALREADY_ACTIVATED',
+            message: 'Account is already activated',
+          },
+        });
+      }
+
+      // If password is provided, validate and set it
+      if (password) {
+        const passwordValidation = validatePasswordStrength(password);
+        if (!passwordValidation.isValid) {
+          return res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_PASSWORD',
+              message: passwordValidation.message,
+            },
+          });
+        }
+        user.password = password;
+      }
+
+      // Update activation status
+      user.activation_status = 'activated';
+      user.activated_at = new Date();
+      user.activation_method = 'email';
+      user.activation_token = null; // Clear the token after use
+      user.activation_token_expires = null;
+      user.markModified('activation_status');
+      user.markModified('activated_at');
+      user.markModified('activation_method');
+      user.markModified('activation_token');
+      user.markModified('activation_token_expires');
+
+      await user.save();
+
+      // Log activation event
+      await logActivity(
+        user._id,
+        'ACTIVATION',
+        `Member ${user.member_id} activated their account via email link`,
+        {
+          member_id: user.member_id,
+          activation_method: 'email',
+          import_id: user.import_id,
+        }
+      );
+
+      res.json({
+        success: true,
+        message: 'Account activated successfully',
+        user: {
+          id: user.id || user._id,
+          member_id: user.member_id,
+          email: user.email,
+          fullName: user.fullName,
+          activation_status: user.activation_status,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'ACTIVATION_ERROR',
+          message: error.message,
+        },
+      });
+    }
+  }
+
+module.exports = { register, login, getProfile, changePassword, validatePasswordStrength, activate };
 
