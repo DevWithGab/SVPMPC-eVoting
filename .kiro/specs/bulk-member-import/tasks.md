@@ -169,7 +169,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - Validate admin permissions on all endpoints
     - _Requirements: 10.4_
   
-  - [ ] 9.3 Implement data masking
+  - [x] 9.3 Implement data masking
     - Mask sensitive information in member lists
     - Show full details only in member detail view
     - _Requirements: 10.7_

@@ -19,6 +19,7 @@ const {
   validateRecoveryPossible,
   updateImportOperationWithError,
 } = require('../services/errorHandler');
+const { maskMembersForList } = require('../services/dataMasking');
 
 /**
  * Retry SMS for a single member
@@ -296,10 +297,13 @@ async function getImportedMembers(req, res) {
       temporary_password_expires: member.temporary_password_expires,
     }));
 
+    // Apply data masking to list view (mask email, phone_number, member_id)
+    const maskedMembers = maskMembersForList(formattedMembers);
+
     return res.status(200).json({
       message: 'Imported members retrieved successfully',
       data: {
-        members: formattedMembers,
+        members: maskedMembers,
         pagination: {
           page: pageNum,
           limit: limitNum,
@@ -658,11 +662,14 @@ async function getImportMembers(req, res) {
       temporary_password_expires: member.temporary_password_expires,
     }));
 
+    // Apply data masking to list view (mask email, phone_number, member_id)
+    const maskedMembers = maskMembersForList(formattedMembers);
+
     return res.status(200).json({
       message: 'Import members retrieved successfully',
       data: {
         import_id: importId,
-        members: formattedMembers,
+        members: maskedMembers,
         pagination: {
           page: pageNum,
           limit: limitNum,
