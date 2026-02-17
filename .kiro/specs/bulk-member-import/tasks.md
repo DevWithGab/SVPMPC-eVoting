@@ -280,7 +280,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - _Requirements: 4.4, 12.12_
 
 - [ ] 17. Frontend Internationalization
-  - [ ] 17.1 Add translation keys for bulk import feature
+  - [x] 17.1 Add translation keys for bulk import feature
     - CSV upload interface strings
     - Status labels and messages
     - Error messages
