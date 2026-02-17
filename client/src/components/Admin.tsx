@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 import { BulkImportUpload } from './BulkImportUpload';
 import { ImportHistoryView } from './ImportHistoryView';
 import { ImportDetailView } from './ImportDetailView';
+import { MemberStatusDashboard } from './MemberStatusDashboard';
 import { 
   Settings, Users,
   LayoutDashboard, UserCheck, ShieldCheck, Activity, Search, 
@@ -26,7 +27,7 @@ interface AdminProps {
   onLogout: () => void;
 }
 
-type AdminTab = 'OVERVIEW' | 'VOTERS' | 'ELECTION' | 'ANNOUNCEMENTS' | 'RULES' | 'SETTINGS' | 'LOGS' | 'BULK_IMPORT';
+type AdminTab = 'OVERVIEW' | 'VOTERS' | 'ELECTION' | 'ANNOUNCEMENTS' | 'RULES' | 'SETTINGS' | 'LOGS' | 'BULK_IMPORT' | 'MEMBER_STATUS';
 
 export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
   const { isDarkMode } = useDarkMode();
@@ -1628,6 +1629,11 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
           )}
         </div>
       );
+      case 'MEMBER_STATUS': return (
+        <div className="animate-fadeIn">
+          <MemberStatusDashboard />
+        </div>
+      );
       case 'ANNOUNCEMENTS': return (
         <div className={`border animate-fadeIn transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
             <div className={`p-10 border-b flex justify-between items-center transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-100'}`}>
@@ -1877,6 +1883,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
     { id: 'OVERVIEW', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'officer'] },
     { id: 'ELECTION', label: 'Elections', icon: Briefcase, roles: ['admin', 'officer'] },
     { id: 'BULK_IMPORT', label: 'Member Import', icon: Upload, roles: ['admin'] },
+    { id: 'MEMBER_STATUS', label: 'Member Status', icon: UserCheck, roles: ['admin'] },
     { id: 'RULES', label: 'Protocols', icon: BookOpen, roles: ['admin', 'officer'] },
     { id: 'ANNOUNCEMENTS', label: 'Announcements', icon: Megaphone, roles: ['admin', 'officer'] },
     { id: 'VOTERS', label: 'Ledger', icon: Users, roles: ['admin'] },
