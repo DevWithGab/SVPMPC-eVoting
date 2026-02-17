@@ -5,6 +5,7 @@
 
 const { User, ImportOperation, Activity } = require('../models');
 const { retrySMSWithBackoff, retryEmailWithBackoff, retryFailedNotifications } = require('../services/notificationRetry');
+const { resendInvitation, bulkResendInvitations } = require('../services/resendInvitation');
 
 /**
  * Retry SMS for a single member
@@ -365,6 +366,101 @@ async function getImportedMemberDetails(req, res) {
   }
 }
 
+/**
+ * Resend invitation to a single member
+ * POST /api/imports/resend-invitation/:userId
+ * 
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ */
+async function resendInvitationEndpoint(req, res) {
+  try {
+    const { userId } = req.params;
+    const { deliveryMethod = 'sms', cooperativeName, cooperativePhone } = req.body;
+    const adminId = req.user._id;
+
+    // Validate required fields
+    if (!userId) {
+      return res.status(400).json({
+        message: 'Missing required field: userId',
+      });
+    }
+
+    if (!['sms', 'email'].includes(deliveryMethod)) {
+      return res.status(400).json({
+        message: 'Invalid delivery method. Must be "sms" or "email"',
+      });
+    }
+
+    // Perform resend invitation
+    const result = await resendInvitation({
+      userId,
+      adminId,
+      deliveryMethod,
+      cooperativeName: cooperativeName || 'SVMPC',
+      cooperativePhone: cooperativePhone || '+1-800-SVMPC-1',
+    });
+
+    return res.status(result.success ? 200 : 400).json({
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error resending invitation:', error);
+    return res.status(500).json({
+      message: 'Error resending invitation',
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * Bulk resend invitations to multiple members
+ * POST /api/imports/bulk-resend-invitations
+ * 
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ */
+async function bulkResendInvitationsEndpoint(req, res) {
+  try {
+    const { memberIds, deliveryMethod = 'sms', cooperativeName, cooperativePhone } = req.body;
+    const adminId = req.user._id;
+
+    // Validate required fields
+    if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+      return res.status(400).json({
+        message: 'Missing or invalid required field: memberIds (must be non-empty array)',
+      });
+    }
+
+    if (!['sms', 'email'].includes(deliveryMethod)) {
+      return res.status(400).json({
+        message: 'Invalid delivery method. Must be "sms" or "email"',
+      });
+    }
+
+    // Perform bulk resend
+    const result = await bulkResendInvitations({
+      memberIds,
+      adminId,
+      deliveryMethod,
+      cooperativeName: cooperativeName || 'SVMPC',
+      cooperativePhone: cooperativePhone || '+1-800-SVMPC-1',
+    });
+
+    return res.status(200).json({
+      message: `Bulk resend of ${deliveryMethod} invitations completed`,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error in bulk resend invitations:', error);
+    return res.status(500).json({
+      message: 'Error performing bulk resend invitations',
+      error: error.message,
+    });
+  }
+}
+
 module.exports = {
   retrySMS,
   retryEmail,
@@ -372,4 +468,6 @@ module.exports = {
   getRetryStatus,
   getImportedMembers,
   getImportedMemberDetails,
+  resendInvitationEndpoint,
+  bulkResendInvitationsEndpoint,
 };

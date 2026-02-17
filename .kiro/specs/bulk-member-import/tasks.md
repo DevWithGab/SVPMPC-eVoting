@@ -113,7 +113,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - Support sorting by any column
     - _Requirements: 5.1, 5.2, 5.8, 5.9, 5.10_
   
-  - [ ] 6.2 Implement resend invitation logic
+  - [x] 6.2 Implement resend invitation logic
     - Generate new temporary password
     - Invalidate old temporary password
     - Send new SMS/email based on admin choice

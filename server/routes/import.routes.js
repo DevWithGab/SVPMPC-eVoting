@@ -12,6 +12,8 @@ const {
   getRetryStatus,
   getImportedMembers,
   getImportedMemberDetails,
+  resendInvitationEndpoint,
+  bulkResendInvitationsEndpoint,
 } = require('../controllers/import.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 const { checkRole } = require('../middleware/role.middleware');
@@ -58,5 +60,19 @@ router.post('/bulk-retry', bulkRetryNotifications);
  * GET /api/imports/retry-status/:userId
  */
 router.get('/retry-status/:userId', getRetryStatus);
+
+/**
+ * Resend invitation to a single member
+ * POST /api/imports/resend-invitation/:userId
+ * Body: { deliveryMethod: 'sms' | 'email', cooperativeName?, cooperativePhone? }
+ */
+router.post('/resend-invitation/:userId', resendInvitationEndpoint);
+
+/**
+ * Bulk resend invitations to multiple members
+ * POST /api/imports/bulk-resend-invitations
+ * Body: { memberIds: string[], deliveryMethod: 'sms' | 'email', cooperativeName?, cooperativePhone? }
+ */
+router.post('/bulk-resend-invitations', bulkResendInvitationsEndpoint);
 
 module.exports = router;
