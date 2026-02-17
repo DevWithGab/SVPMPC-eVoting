@@ -70,7 +70,7 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/auth/change-password', {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
