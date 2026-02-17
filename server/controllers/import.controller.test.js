@@ -9,6 +9,8 @@ const {
   getImportHistory,
   getImportDetails,
   getImportMembers,
+  getImportRecoveryInfo,
+  retryFailedImport,
 } = require('./import.controller');
 const { User, Activity, ImportOperation } = require('../models');
 const { retrySMSWithBackoff, retryEmailWithBackoff, retryFailedNotifications } = require('../services/notificationRetry');
@@ -34,6 +36,24 @@ jest.mock('../services/notificationRetry', () => ({
   retrySMSWithBackoff: jest.fn(),
   retryEmailWithBackoff: jest.fn(),
   retryFailedNotifications: jest.fn(),
+}));
+
+jest.mock('../services/errorHandler', () => ({
+  handleCSVUploadError: jest.fn(),
+  handleDatabaseError: jest.fn(),
+  logErrorToActivity: jest.fn(),
+  getPartialImportRecovery: jest.fn(),
+  validateRecoveryPossible: jest.fn(),
+  updateImportOperationWithError: jest.fn(),
+}));
+
+jest.mock('../services/passwordGenerator', () => ({
+  generateTemporaryPassword: jest.fn(),
+  hashTemporaryPassword: jest.fn(),
+}));
+
+jest.mock('../services/smsService', () => ({
+  sendSMSAndLog: jest.fn(),
 }));
 
 describe('Import Controller', () => {
@@ -1288,6 +1308,353 @@ describe('Import Controller', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           message: 'Error retrieving import members',
+        })
+      );
+    });
+  });
+
+  describe('getImportRecoveryInfo', () => {
+    test('should get import recovery information successfully', async () => {
+      const { getPartialImportRecovery, validateRecoveryPossible, logErrorToActivity } = require('../services/errorHandler');
+
+      const req = {
+        params: { importId: 'import1' },
+        user: { _id: 'admin123' },
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      validateRecoveryPossible.mockResolvedValue({
+        canRecover: true,
+        reason: 'Import can be retried',
+      });
+
+      getPartialImportRecovery.mockResolvedValue({
+        success: true,
+        message: 'Found 5 successfully imported members',
+        data: {
+          import_id: 'import1',
+          total_successful: 95,
+          total_failed: 5,
+          total_skipped: 0,
+          successful_members: [
+            { member_id: 'MEM001', fullName: 'John Doe', phone_number: '+1234567890', activation_status: 'activated' },
+          ],
+        },
+      });
+
+      logErrorToActivity.mockResolvedValue({});
+
+      await getImportRecoveryInfo(req, res);
+
+      expect(validateRecoveryPossible).toHaveBeenCalledWith('import1');
+      expect(getPartialImportRecovery).toHaveBeenCalledWith('import1');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: 'Import recovery information retrieved successfully',
+          data: expect.objectContaining({
+            import_id: 'import1',
+            total_successful: 95,
+            total_failed: 5,
+          }),
+        })
+      );
+    });
+
+    test('should return 400 if recovery is not possible', async () => {
+      const { validateRecoveryPossible } = require('../services/errorHandler');
+
+      const req = {
+        params: { importId: 'import1' },
+        user: { _id: 'admin123' },
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      validateRecoveryPossible.mockResolvedValue({
+        canRecover: false,
+        reason: 'Import operation already completed',
+      });
+
+      await getImportRecoveryInfo(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: 'Import operation already completed',
+        })
+      );
+    });
+
+    test('should handle recovery info retrieval errors', async () => {
+      const { validateRecoveryPossible, getPartialImportRecovery, logErrorToActivity } = require('../services/errorHandler');
+
+      const req = {
+        params: { importId: 'import1' },
+        user: { _id: 'admin123' },
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      validateRecoveryPossible.mockResolvedValue({
+        canRecover: true,
+        reason: 'Import can be retried',
+      });
+
+      getPartialImportRecovery.mockResolvedValue({
+        success: false,
+        message: 'Failed to retrieve recovery info',
+        error: 'Database error',
+      });
+
+      logErrorToActivity.mockResolvedValue({});
+
+      await getImportRecoveryInfo(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: 'Failed to retrieve recovery info',
+        })
+      );
+    });
+  });
+
+  describe('retryFailedImport', () => {
+    test('should retry failed import successfully', async () => {
+      const { generateTemporaryPassword, hashTemporaryPassword } = require('../services/passwordGenerator');
+      const { sendSMSAndLog } = require('../services/smsService');
+      const { logErrorToActivity, updateImportOperationWithError } = require('../services/errorHandler');
+
+      const mockImportOp = {
+        _id: 'import1',
+        csv_file_name: 'members.csv',
+        admin_name: 'Admin User',
+        successful_imports: 95,
+        failed_imports: 5,
+        skipped_rows: 0,
+      };
+
+      const mockFailedMembers = [
+        {
+          _id: 'user1',
+          member_id: 'MEM001',
+          fullName: 'John Doe',
+          phone_number: '+1234567890',
+          activation_status: 'sms_failed',
+          save: jest.fn().mockResolvedValue({}),
+        },
+        {
+          _id: 'user2',
+          member_id: 'MEM002',
+          fullName: 'Jane Smith',
+          phone_number: '+1234567891',
+          activation_status: 'pending_activation',
+          save: jest.fn().mockResolvedValue({}),
+        },
+      ];
+
+      const req = {
+        params: { importId: 'import1' },
+        user: { _id: 'admin123', fullName: 'Admin User', username: 'admin' },
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      ImportOperation.findById.mockResolvedValue(mockImportOp);
+      User.find.mockResolvedValue(mockFailedMembers);
+      generateTemporaryPassword.mockReturnValue('TempPass123!');
+      hashTemporaryPassword.mockResolvedValue('hashed_password');
+      sendSMSAndLog.mockResolvedValue({ success: true });
+      logErrorToActivity.mockResolvedValue({});
+      updateImportOperationWithError.mockResolvedValue({});
+
+      await retryFailedImport(req, res);
+
+      expect(ImportOperation.findById).toHaveBeenCalledWith('import1');
+      expect(User.find).toHaveBeenCalledWith({
+        import_id: 'import1',
+        activation_status: { $in: ['sms_failed', 'email_failed', 'pending_activation'] },
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: expect.stringContaining('Retry completed'),
+          data: expect.objectContaining({
+            statistics: expect.objectContaining({
+              total_members_retried: 2,
+              successful_retries: 2,
+              failed_retries: 0,
+            }),
+          }),
+        })
+      );
+    });
+
+    test('should return 404 if import operation not found', async () => {
+      const req = {
+        params: { importId: 'nonexistent' },
+        user: { _id: 'admin123', fullName: 'Admin User' },
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      ImportOperation.findById.mockResolvedValue(null);
+
+      await retryFailedImport(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: 'Import operation not found',
+        })
+      );
+    });
+
+    test('should return 400 if no failed members to retry', async () => {
+      const mockImportOp = {
+        _id: 'import1',
+        csv_file_name: 'members.csv',
+        admin_name: 'Admin User',
+      };
+
+      const req = {
+        params: { importId: 'import1' },
+        user: { _id: 'admin123', fullName: 'Admin User' },
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      ImportOperation.findById.mockResolvedValue(mockImportOp);
+      User.find.mockResolvedValue([]);
+
+      await retryFailedImport(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: 'No failed members to retry',
+        })
+      );
+    });
+
+    test('should handle partial retry failures', async () => {
+      const { generateTemporaryPassword, hashTemporaryPassword } = require('../services/passwordGenerator');
+      const { sendSMSAndLog } = require('../services/smsService');
+      const { logErrorToActivity, updateImportOperationWithError } = require('../services/errorHandler');
+
+      const mockImportOp = {
+        _id: 'import1',
+        csv_file_name: 'members.csv',
+        admin_name: 'Admin User',
+      };
+
+      const mockFailedMembers = [
+        {
+          _id: 'user1',
+          member_id: 'MEM001',
+          fullName: 'John Doe',
+          phone_number: '+1234567890',
+          activation_status: 'sms_failed',
+          save: jest.fn().mockResolvedValue({}),
+        },
+        {
+          _id: 'user2',
+          member_id: 'MEM002',
+          fullName: 'Jane Smith',
+          phone_number: '+1234567891',
+          activation_status: 'sms_failed',
+          save: jest.fn().mockResolvedValue({}),
+        },
+      ];
+
+      const req = {
+        params: { importId: 'import1' },
+        user: { _id: 'admin123', fullName: 'Admin User', username: 'admin' },
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      ImportOperation.findById.mockResolvedValue(mockImportOp);
+      User.find.mockResolvedValue(mockFailedMembers);
+      generateTemporaryPassword.mockReturnValue('TempPass123!');
+      hashTemporaryPassword.mockResolvedValue('hashed_password');
+      sendSMSAndLog
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: false, message: 'SMS send failed' });
+      logErrorToActivity.mockResolvedValue({});
+      updateImportOperationWithError.mockResolvedValue({});
+
+      await retryFailedImport(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({
+            statistics: expect.objectContaining({
+              total_members_retried: 2,
+              successful_retries: 1,
+              failed_retries: 1,
+            }),
+          }),
+        })
+      );
+    });
+
+    test('should handle database errors during retry', async () => {
+      const { logErrorToActivity } = require('../services/errorHandler');
+
+      const req = {
+        params: { importId: 'import1' },
+        user: { _id: 'admin123', fullName: 'Admin User' },
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      ImportOperation.findById.mockRejectedValue(new Error('Database error'));
+      logErrorToActivity.mockResolvedValue({});
+
+      await retryFailedImport(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          error: expect.objectContaining({
+            code: 'IMPORT_RETRY_ERROR',
+          }),
         })
       );
     });

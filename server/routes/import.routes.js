@@ -17,6 +17,8 @@ const {
   getImportHistory,
   getImportDetails,
   getImportMembers,
+  getImportRecoveryInfo,
+  retryFailedImport,
 } = require('../controllers/import.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 const { checkRole } = require('../middleware/role.middleware');
@@ -97,5 +99,23 @@ router.get('/history/:importId', getImportDetails);
  * Query: page, limit, sortBy, sortOrder
  */
 router.get('/history/:importId/members', getImportMembers);
+
+/**
+ * Get import recovery information for interrupted imports
+ * GET /api/imports/recovery/:importId
+ * 
+ * Returns information about successfully imported members and failed members
+ * that can be retried from a previous import operation.
+ */
+router.get('/recovery/:importId', getImportRecoveryInfo);
+
+/**
+ * Retry failed imports from a previous import operation
+ * POST /api/imports/retry/:importId
+ * 
+ * Allows admin to retry importing members that failed in a previous import operation.
+ * Generates new temporary passwords and resends SMS invitations to failed members.
+ */
+router.post('/retry/:importId', retryFailedImport);
 
 module.exports = router;

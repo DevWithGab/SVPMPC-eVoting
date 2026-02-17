@@ -9,12 +9,15 @@ const { retrySMSWithBackoff, retryEmailWithBackoff, retryFailedNotifications } =
 const { resendInvitation, bulkResendInvitations } = require('../services/resendInvitation');
 const { parseAndValidateCSV, generatePreview } = require('../services/csvParser');
 const { createBulkAccounts } = require('../services/bulkAccountCreation');
+const { generateTemporaryPassword, hashTemporaryPassword } = require('../services/passwordGenerator');
+const { sendSMSAndLog } = require('../services/smsService');
 const {
   handleCSVUploadError,
   handleDatabaseError,
   logErrorToActivity,
   getPartialImportRecovery,
   validateRecoveryPossible,
+  updateImportOperationWithError,
 } = require('../services/errorHandler');
 
 /**
@@ -693,6 +696,7 @@ module.exports = {
   uploadCSVPreview,
   confirmAndProcessImport,
   getImportRecoveryInfo,
+  retryFailedImport,
 };
 
 
@@ -972,6 +976,204 @@ async function getImportRecoveryInfo(req, res) {
       error: {
         code: 'IMPORT_RECOVERY_ERROR',
         message: `Failed to retrieve recovery information: ${error.message}`,
+      },
+    });
+  }
+}
+
+/**
+ * Retry failed imports from a previous import operation
+ * POST /api/imports/retry/:importId
+ * 
+ * Allows admin to retry importing members that failed in a previous import operation.
+ * Tracks which members were successfully imported before interruption and retries only failed members.
+ * 
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ */
+async function retryFailedImport(req, res) {
+  try {
+    const { importId } = req.params;
+    const adminId = req.user._id;
+    const adminName = req.user.fullName || req.user.username;
+
+    // Validate import operation exists
+    const importOp = await ImportOperation.findById(importId);
+    if (!importOp) {
+      return res.status(404).json({
+        success: false,
+        message: 'Import operation not found',
+        error: {
+          code: 'IMPORT_NOT_FOUND',
+          message: `Import operation with ID ${importId} does not exist`,
+        },
+      });
+    }
+
+    // Get all members from the failed import
+    const failedMembers = await User.find({
+      import_id: importId,
+      activation_status: { $in: ['sms_failed', 'email_failed', 'pending_activation'] },
+    });
+
+    if (failedMembers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No failed members to retry',
+        data: {
+          import_id: importId,
+          failed_members_count: 0,
+        },
+      });
+    }
+
+    // Log retry attempt
+    await logErrorToActivity(adminId, 'IMPORT_RETRY_STARTED', `Starting retry for ${failedMembers.length} failed members from import ${importId}`, {
+      import_id: importId,
+      failed_members_count: failedMembers.length,
+    });
+
+    // Create new import operation for retry
+    const retryImportOp = new ImportOperation({
+      admin_id: adminId,
+      admin_name: adminName,
+      csv_file_name: `${importOp.csv_file_name} (Retry)`,
+      total_rows: failedMembers.length,
+      status: 'pending',
+    });
+
+    try {
+      await retryImportOp.save();
+    } catch (error) {
+      console.error('Failed to create retry import operation:', error.message);
+      await logErrorToActivity(adminId, 'IMPORT_RETRY_ERROR', `Failed to create retry import operation: ${error.message}`, {
+        import_id: importId,
+      });
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'RETRY_OPERATION_ERROR',
+          message: `Failed to initialize retry operation: ${error.message}`,
+        },
+      });
+    }
+
+    let successfulRetries = 0;
+    let failedRetries = 0;
+    let retryErrors = [];
+    const retriedMembers = [];
+
+    // Retry sending notifications to failed members
+    for (const member of failedMembers) {
+      try {
+        // Generate new temporary password
+        const tempPassword = generateTemporaryPassword();
+        const hashedTempPassword = await hashTemporaryPassword(tempPassword);
+
+        // Update member with new temporary password
+        member.temporary_password_hash = hashedTempPassword;
+        member.temporary_password_expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        member.activation_status = 'pending_activation';
+        await member.save();
+
+        // Send SMS invitation
+        let smsResult = { success: false };
+        try {
+          smsResult = await sendSMSAndLog({
+            userId: member._id,
+            adminId,
+            temporaryPassword: tempPassword,
+            cooperativeName: 'SVMPC',
+            cooperativePhone: '+1-800-SVMPC-1',
+          });
+        } catch (smsError) {
+          console.error(`SMS error for member ${member.member_id}:`, smsError.message);
+          smsResult = { success: false, message: smsError.message };
+        }
+
+        if (smsResult.success) {
+          successfulRetries++;
+          retriedMembers.push({
+            member_id: member.member_id,
+            name: member.fullName,
+            phone_number: member.phone_number,
+            status: 'retry_successful',
+          });
+        } else {
+          failedRetries++;
+          const errorInfo = {
+            member_id: member.member_id,
+            error_message: smsResult.message || 'SMS send failed',
+            error_code: 'SMS_RETRY_FAILED',
+          };
+          retryErrors.push(errorInfo);
+          await updateImportOperationWithError(retryImportOp._id, errorInfo);
+        }
+      } catch (error) {
+        failedRetries++;
+        const errorInfo = {
+          member_id: member.member_id,
+          error_message: `Unexpected error during retry: ${error.message}`,
+          error_code: 'UNKNOWN_RETRY_ERROR',
+        };
+        retryErrors.push(errorInfo);
+        await updateImportOperationWithError(retryImportOp._id, errorInfo);
+        await logErrorToActivity(adminId, 'IMPORT_RETRY_ERROR', errorInfo.error_message, {
+          member_id: member.member_id,
+          import_id: importId,
+        });
+      }
+    }
+
+    // Update retry import operation with statistics
+    try {
+      retryImportOp.successful_imports = successfulRetries;
+      retryImportOp.failed_imports = failedRetries;
+      retryImportOp.import_errors = retryErrors;
+      retryImportOp.status = 'completed';
+      await retryImportOp.save();
+    } catch (error) {
+      console.error('Failed to update retry import operation:', error.message);
+      await logErrorToActivity(adminId, 'IMPORT_RETRY_UPDATE_ERROR', `Failed to save retry operation: ${error.message}`, {
+        import_id: importId,
+      });
+    }
+
+    // Log retry completion
+    await logErrorToActivity(adminId, 'IMPORT_RETRY_COMPLETED', `Retry completed: ${successfulRetries} successful, ${failedRetries} failed`, {
+      import_id: importId,
+      retry_import_id: retryImportOp._id,
+      successful_retries: successfulRetries,
+      failed_retries: failedRetries,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Retry completed: ${successfulRetries} successful, ${failedRetries} failed`,
+      data: {
+        retryImportOperation: retryImportOp.toJSON(),
+        statistics: {
+          total_members_retried: failedMembers.length,
+          successful_retries: successfulRetries,
+          failed_retries: failedRetries,
+          retry_errors: retryErrors,
+        },
+        retriedMembers,
+      },
+    });
+  } catch (error) {
+    console.error('Error retrying failed import:', error);
+    const adminId = req.user?._id;
+    if (adminId) {
+      await logErrorToActivity(adminId, 'IMPORT_RETRY_ERROR', `Unexpected error during retry: ${error.message}`, {
+        error_message: error.message,
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'IMPORT_RETRY_ERROR',
+        message: `Failed to retry import: ${error.message}`,
       },
     });
   }
