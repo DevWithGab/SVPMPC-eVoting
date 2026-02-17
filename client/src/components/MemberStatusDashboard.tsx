@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronUp, ChevronDown, Eye, RotateCcw } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, Eye, RotateCcw, Loader } from 'lucide-react';
 import Swal from 'sweetalert2';
 import api from '../services/api';
 
@@ -43,6 +43,8 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
   });
   const [memberDetails, setMemberDetails] = useState<ImportedMember | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
+  const [isBulkResending, setIsBulkResending] = useState(false);
 
   const statusColors: Record<string, string> = {
     pending_activation: 'bg-yellow-100 text-yellow-800',
@@ -155,6 +157,95 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
     }
   };
 
+  const handleSelectMember = (memberId: string) => {
+    const newSelected = new Set(selectedMembers);
+    if (newSelected.has(memberId)) {
+      newSelected.delete(memberId);
+    } else {
+      newSelected.add(memberId);
+    }
+    setSelectedMembers(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedMembers.size === members.length) {
+      setSelectedMembers(new Set());
+    } else {
+      setSelectedMembers(new Set(members.map((m) => m.id)));
+    }
+  };
+
+  const handleBulkResend = async () => {
+    if (selectedMembers.size === 0) {
+      Swal.fire('Warning', 'Please select at least one member', 'warning');
+      return;
+    }
+
+    const { value: method } = await Swal.fire({
+      title: 'Bulk Resend Invitations',
+      html: `<p>You are about to resend invitations to <strong>${selectedMembers.size}</strong> member(s).</p><p>Choose delivery method:</p>`,
+      input: 'radio',
+      inputOptions: {
+        sms: 'SMS',
+        email: 'Email',
+      },
+      inputValue: 'sms',
+      showCancelButton: true,
+      confirmButtonText: 'Resend',
+      confirmButtonColor: '#2D7A3E',
+    });
+
+    if (method) {
+      try {
+        setIsBulkResending(true);
+
+        // Show progress dialog
+        Swal.fire({
+          title: 'Sending Invitations',
+          html: '<div class="flex items-center justify-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div></div>',
+          allowOutsideClick: false,
+          didOpen: async () => {
+            try {
+              const response = await api.post('/imports/bulk-resend', {
+                memberIds: Array.from(selectedMembers),
+                deliveryMethod: method,
+              });
+
+              const result = response.data.data;
+
+              // Close progress dialog and show summary
+              Swal.fire({
+                title: 'Bulk Resend Complete',
+                html: `
+                  <div class="text-left space-y-2">
+                    <p><strong>Total Members:</strong> ${result.totalMembers}</p>
+                    <p><strong>Successful:</strong> <span class="text-green-600">${result.successCount}</span></p>
+                    <p><strong>Failed:</strong> <span class="text-red-600">${result.failureCount}</span></p>
+                    ${result.failureCount > 0 ? `<p class="text-sm text-gray-600 mt-4"><strong>Failed Members:</strong><br/>${result.failedMembers?.map((m: any) => `${m.member_id}: ${m.error}`).join('<br/>')}</p>` : ''}
+                  </div>
+                `,
+                icon: result.failureCount === 0 ? 'success' : 'warning',
+                confirmButtonColor: '#2D7A3E',
+              });
+
+              setSelectedMembers(new Set());
+              fetchMembers(pagination.page);
+            } catch (error) {
+              console.error('Error during bulk resend:', error);
+              Swal.fire('Error', 'Failed to complete bulk resend', 'error');
+            } finally {
+              setIsBulkResending(false);
+            }
+          },
+        });
+      } catch (error) {
+        console.error('Error initiating bulk resend:', error);
+        Swal.fire('Error', 'Failed to initiate bulk resend', 'error');
+        setIsBulkResending(false);
+      }
+    }
+  };
+
   const SortIcon = ({ field }: { field: string }) => {
     if (sortBy !== field) return <ChevronUp className="w-4 h-4 text-gray-400" />;
     return sortOrder === 'asc' ? (
@@ -221,6 +312,32 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
         </div>
       </div>
 
+      {/* Bulk Resend Button */}
+      {selectedMembers.size > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+          <span className="text-sm font-medium text-blue-900">
+            {selectedMembers.size} member(s) selected
+          </span>
+          <button
+            onClick={handleBulkResend}
+            disabled={isBulkResending}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
+          >
+            {isBulkResending ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <RotateCcw className="w-4 h-4" />
+                Bulk Resend Invitations
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Members Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {loading ? (
@@ -233,6 +350,15 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
+                    <th className="px-6 py-3 text-left">
+                      <input
+                        type="checkbox"
+                        checked={selectedMembers.size === members.length && members.length > 0}
+                        onChange={handleSelectAll}
+                        className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500 cursor-pointer"
+                        title="Select all members on this page"
+                      />
+                    </th>
                     <th className="px-6 py-3 text-left">
                       <button
                         onClick={() => handleSort('member_id')}
@@ -285,6 +411,14 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                 <tbody className="divide-y divide-gray-200">
                   {members.map((member) => (
                     <tr key={member.id} className="hover:bg-gray-50 transition">
+                      <td className="px-6 py-4 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedMembers.has(member.id)}
+                          onChange={() => handleSelectMember(member.id)}
+                          className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-900">{member.member_id}</td>
                       <td className="px-6 py-4 text-sm text-gray-900">{member.name}</td>
                       <td className="px-6 py-4 text-sm text-gray-900">{member.phone_number}</td>

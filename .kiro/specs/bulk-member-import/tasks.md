@@ -220,14 +220,14 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - _Requirements: 5.11_
 
 - [ ] 13. Frontend Resend Invitation Functionality
-  - [ ] 13.1 Implement single resend button
+  - [x] 13.1 Implement single resend button
     - Show "Resend Invitation" button for pending members
     - Allow admin to choose delivery method (SMS or email)
     - Display confirmation dialog
     - Show success/error message
     - _Requirements: 6.1, 6.2, 6.11_
   
-  - [ ] 13.2 Implement bulk resend functionality
+  - [x] 13.2 Implement bulk resend functionality
     - Allow multi-select of members
     - Show bulk resend button when members selected
     - Display confirmation with member count
