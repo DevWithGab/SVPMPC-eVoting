@@ -4,6 +4,9 @@ import type { User, Candidate, Position, Announcement, Rule, VotingMode, VotingS
 import { userAPI, electionAPI, positionAPI, candidateAPI, announcementAPI, ruleAPI, voteAPI, reportAPI, activityAPI } from '../services/api';
 import { useDarkMode } from '../context/DarkModeContext';
 import Swal from 'sweetalert2';
+import { BulkImportUpload } from './BulkImportUpload';
+import { ImportHistoryView } from './ImportHistoryView';
+import { ImportDetailView } from './ImportDetailView';
 import { 
   Settings, Users,
   LayoutDashboard, UserCheck, ShieldCheck, Activity, Search, 
@@ -23,7 +26,7 @@ interface AdminProps {
   onLogout: () => void;
 }
 
-type AdminTab = 'OVERVIEW' | 'VOTERS' | 'ELECTION' | 'ANNOUNCEMENTS' | 'RULES' | 'SETTINGS' | 'LOGS';
+type AdminTab = 'OVERVIEW' | 'VOTERS' | 'ELECTION' | 'ANNOUNCEMENTS' | 'RULES' | 'SETTINGS' | 'LOGS' | 'BULK_IMPORT';
 
 export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
   const { isDarkMode } = useDarkMode();
@@ -50,6 +53,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [selectedImportId, setSelectedImportId] = useState<string | null>(null);
   
   // Modal state
   const [isAddingAnnouncement, setIsAddingAnnouncement] = useState(false);
@@ -107,9 +111,18 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
       setActiveTab(itemId);
       setSearchTerm('');
       setIsMobileMenuOpen(false);
+      setSelectedImportId(null);
       // End transition after new content loads
       setIsTransitioning(false);
     }, 150);
+  };
+
+  const handleImportNavigation = (view: string, importId?: string) => {
+    if (view === 'import-history') {
+      setSelectedImportId(null);
+    } else if (view === 'import-detail' && importId) {
+      setSelectedImportId(importId);
+    }
   };
 
   // Define fetchAllData with useCallback to maintain stable reference
@@ -1598,6 +1611,23 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
             )}
         </div>
       );
+      case 'BULK_IMPORT': return (
+        <div className="animate-fadeIn">
+          {selectedImportId ? (
+            <ImportDetailView 
+              importId={selectedImportId}
+              onNavigate={handleImportNavigation}
+            />
+          ) : (
+            <div className="space-y-6">
+              <BulkImportUpload />
+              <ImportHistoryView 
+                onNavigate={handleImportNavigation}
+              />
+            </div>
+          )}
+        </div>
+      );
       case 'ANNOUNCEMENTS': return (
         <div className={`border animate-fadeIn transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
             <div className={`p-10 border-b flex justify-between items-center transition-colors duration-300 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-100'}`}>
@@ -1846,6 +1876,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
   const navItems = [
     { id: 'OVERVIEW', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'officer'] },
     { id: 'ELECTION', label: 'Elections', icon: Briefcase, roles: ['admin', 'officer'] },
+    { id: 'BULK_IMPORT', label: 'Member Import', icon: Upload, roles: ['admin'] },
     { id: 'RULES', label: 'Protocols', icon: BookOpen, roles: ['admin', 'officer'] },
     { id: 'ANNOUNCEMENTS', label: 'Announcements', icon: Megaphone, roles: ['admin', 'officer'] },
     { id: 'VOTERS', label: 'Ledger', icon: Users, roles: ['admin'] },

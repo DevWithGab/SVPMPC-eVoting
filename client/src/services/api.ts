@@ -454,6 +454,29 @@ export const importAPI = {
     const response = await api.post(`/imports/members/${memberId}/resend-invitation`, { method });
     return response.data;
   },
+  
+  getImportHistory: async (params?: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: string;
+  }) => {
+    const response = await api.get('/imports', { params });
+    return response.data;
+  },
+  
+  getImportDetails: async (importId: string) => {
+    const response = await api.get(`/imports/${importId}`);
+    return response.data;
+  },
+  
+  getImportMembers: async (importId: string, params?: {
+    page?: number;
+    limit?: number;
+  }) => {
+    const response = await api.get(`/imports/${importId}/members`, { params });
+    return response.data;
+  },
 };
 
 export default api;

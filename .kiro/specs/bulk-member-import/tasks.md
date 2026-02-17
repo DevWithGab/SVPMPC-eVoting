@@ -236,13 +236,13 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - _Requirements: 6.7, 6.8, 6.9, 6.10_
 
 - [ ] 14. Frontend Import History View
-  - [ ] 14.1 Create ImportHistoryView component
+  - [x] 14.1 Create ImportHistoryView component
     - Display list of all import operations
     - Show date, admin name, member count, success/failure counts
     - Implement pagination
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
   
-  - [ ] 14.2 Implement import detail drill-down
+  - [x] 14.2 Implement import detail drill-down
     - Show detailed information about specific import
     - Display CSV file name and upload date
     - Show list of all members from that import
