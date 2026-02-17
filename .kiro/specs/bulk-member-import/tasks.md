@@ -207,13 +207,13 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - Show activation method (SMS or email)
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_
   
-  - [ ] 12.2 Implement filtering and search
+  - [x] 12.2 Implement filtering and search
     - Filter by activation status
     - Search by member_id or phone_number
     - Sort by any column
     - _Requirements: 5.8, 5.9, 5.10_
   
-  - [ ] 12.3 Implement member detail view
+  - [x] 12.3 Implement member detail view
     - Display full member information
     - Show activation history
     - Show SMS/email send dates
