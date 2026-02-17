@@ -14,6 +14,9 @@ const {
   getImportedMemberDetails,
   resendInvitationEndpoint,
   bulkResendInvitationsEndpoint,
+  getImportHistory,
+  getImportDetails,
+  getImportMembers,
 } = require('../controllers/import.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 const { checkRole } = require('../middleware/role.middleware');
@@ -74,5 +77,25 @@ router.post('/resend-invitation/:userId', resendInvitationEndpoint);
  * Body: { memberIds: string[], deliveryMethod: 'sms' | 'email', cooperativeName?, cooperativePhone? }
  */
 router.post('/bulk-resend-invitations', bulkResendInvitationsEndpoint);
+
+/**
+ * Get all import operations with pagination
+ * GET /api/imports/history
+ * Query: page, limit, sortBy, sortOrder
+ */
+router.get('/history', getImportHistory);
+
+/**
+ * Get import details by ID
+ * GET /api/imports/history/:importId
+ */
+router.get('/history/:importId', getImportDetails);
+
+/**
+ * Get members from a specific import operation
+ * GET /api/imports/history/:importId/members
+ * Query: page, limit, sortBy, sortOrder
+ */
+router.get('/history/:importId/members', getImportMembers);
 
 module.exports = router;

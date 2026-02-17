@@ -129,7 +129,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - _Requirements: 6.7_
 
 - [ ] 7. Backend Import History and Audit Trail
-  - [ ] 7.1 Create import history query endpoints
+  - [x] 7.1 Create import history query endpoints
     - Get all import operations with pagination
     - Get import details by ID
     - Get members from specific import

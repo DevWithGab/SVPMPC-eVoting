@@ -460,6 +460,213 @@ async function bulkResendInvitationsEndpoint(req, res) {
     });
   }
 }
+/**
+ * Get all import operations with pagination
+ * GET /api/imports/history
+ * Query parameters:
+ *   - page: Page number for pagination (default: 1)
+ *   - limit: Number of records per page (default: 50)
+ *   - sortBy: Column to sort by (created_at, admin_name, successful_imports, status)
+ *   - sortOrder: Sort order (asc or desc, default: desc)
+ *
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ */
+async function getImportHistory(req, res) {
+  try {
+    const { page = 1, limit = 50, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+
+    // Validate sortBy parameter
+    const validSortFields = ['createdAt', 'admin_name', 'successful_imports', 'status'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
+
+    // Validate sortOrder parameter
+    const sortOrderValue = sortOrder === 'asc' ? 1 : -1;
+
+    // Calculate pagination
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 50));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Execute query with sorting and pagination
+    const imports = await ImportOperation.find()
+      .sort({ [sortField]: sortOrderValue })
+      .skip(skip)
+      .limit(limitNum)
+      .select('admin_name csv_file_name total_rows successful_imports failed_imports skipped_rows status createdAt')
+      .lean();
+
+    // Get total count for pagination
+    const totalCount = await ImportOperation.countDocuments();
+
+    // Format response data
+    const formattedImports = imports.map(importOp => ({
+      id: importOp._id,
+      admin_name: importOp.admin_name,
+      csv_file_name: importOp.csv_file_name,
+      total_rows: importOp.total_rows,
+      successful_imports: importOp.successful_imports,
+      failed_imports: importOp.failed_imports,
+      skipped_rows: importOp.skipped_rows,
+      status: importOp.status,
+      created_at: importOp.createdAt,
+    }));
+
+    return res.status(200).json({
+      message: 'Import history retrieved successfully',
+      data: {
+        imports: formattedImports,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limitNum),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error getting import history:', error);
+    return res.status(500).json({
+      message: 'Error retrieving import history',
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * Get import details by ID
+ * GET /api/imports/history/:importId
+ *
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ */
+async function getImportDetails(req, res) {
+  try {
+    const { importId } = req.params;
+
+    // Find import operation by ID
+    const importOp = await ImportOperation.findById(importId);
+
+    if (!importOp) {
+      return res.status(404).json({
+        message: 'Import operation not found',
+      });
+    }
+
+    return res.status(200).json({
+      message: 'Import details retrieved successfully',
+      data: {
+        id: importOp._id,
+        admin_name: importOp.admin_name,
+        csv_file_name: importOp.csv_file_name,
+        total_rows: importOp.total_rows,
+        successful_imports: importOp.successful_imports,
+        failed_imports: importOp.failed_imports,
+        skipped_rows: importOp.skipped_rows,
+        sms_sent_count: importOp.sms_sent_count,
+        sms_failed_count: importOp.sms_failed_count,
+        email_sent_count: importOp.email_sent_count,
+        email_failed_count: importOp.email_failed_count,
+        status: importOp.status,
+        import_errors: importOp.import_errors,
+        created_at: importOp.createdAt,
+        updated_at: importOp.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Error getting import details:', error);
+    return res.status(500).json({
+      message: 'Error retrieving import details',
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * Get members from a specific import operation
+ * GET /api/imports/history/:importId/members
+ * Query parameters:
+ *   - page: Page number for pagination (default: 1)
+ *   - limit: Number of records per page (default: 50)
+ *   - sortBy: Column to sort by (member_id, name, phone_number, activation_status, created_at)
+ *   - sortOrder: Sort order (asc or desc, default: asc)
+ *
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ */
+async function getImportMembers(req, res) {
+  try {
+    const { importId } = req.params;
+    const { page = 1, limit = 50, sortBy = 'createdAt', sortOrder = 'asc' } = req.query;
+
+    // Verify import operation exists
+    const importOp = await ImportOperation.findById(importId);
+    if (!importOp) {
+      return res.status(404).json({
+        message: 'Import operation not found',
+      });
+    }
+
+    // Validate sortBy parameter
+    const validSortFields = ['member_id', 'fullName', 'phone_number', 'activation_status', 'createdAt'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
+
+    // Validate sortOrder parameter
+    const sortOrderValue = sortOrder === 'desc' ? -1 : 1;
+
+    // Calculate pagination
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 50));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Execute query with sorting and pagination
+    const members = await User.find({ import_id: importId })
+      .sort({ [sortField]: sortOrderValue })
+      .skip(skip)
+      .limit(limitNum)
+      .select('member_id fullName phone_number email activation_status activation_method createdAt activated_at sms_sent_at temporary_password_expires')
+      .lean();
+
+    // Get total count for pagination
+    const totalCount = await User.countDocuments({ import_id: importId });
+
+    // Format response data
+    const formattedMembers = members.map(member => ({
+      id: member._id,
+      member_id: member.member_id,
+      name: member.fullName,
+      phone_number: member.phone_number,
+      email: member.email,
+      activation_status: member.activation_status,
+      activation_method: member.activation_method,
+      imported_at: member.createdAt,
+      activated_at: member.activated_at,
+      sms_sent_at: member.sms_sent_at,
+      temporary_password_expires: member.temporary_password_expires,
+    }));
+
+    return res.status(200).json({
+      message: 'Import members retrieved successfully',
+      data: {
+        import_id: importId,
+        members: formattedMembers,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limitNum),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error getting import members:', error);
+    return res.status(500).json({
+      message: 'Error retrieving import members',
+      error: error.message,
+    });
+  }
+}
+
 
 module.exports = {
   retrySMS,
@@ -470,4 +677,7 @@ module.exports = {
   getImportedMemberDetails,
   resendInvitationEndpoint,
   bulkResendInvitationsEndpoint,
+  getImportHistory,
+  getImportDetails,
+  getImportMembers,
 };
