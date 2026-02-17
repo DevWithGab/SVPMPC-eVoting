@@ -432,4 +432,28 @@ export const activityAPI = {
   },
 };
 
+export const importAPI = {
+  getImportedMembers: async (params?: {
+    status?: string;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const response = await api.get('/imports/members', { params });
+    return response.data;
+  },
+  
+  getImportedMemberDetails: async (memberId: string) => {
+    const response = await api.get(`/imports/members/${memberId}`);
+    return response.data;
+  },
+  
+  resendInvitation: async (memberId: string, method: 'sms' | 'email') => {
+    const response = await api.post(`/imports/members/${memberId}/resend-invitation`, { method });
+    return response.data;
+  },
+};
+
 export default api;

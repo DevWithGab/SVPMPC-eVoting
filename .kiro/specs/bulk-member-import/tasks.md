@@ -187,13 +187,13 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - Display upload progress
     - _Requirements: 1.1, 1.2_
   
-  - [ ] 11.2 Implement CSV preview functionality
+  - [x] 11.2 Implement CSV preview functionality
     - Parse CSV and display preview table
     - Show row count and column headers
     - Display validation errors if any
     - _Requirements: 1.10_
   
-  - [ ] 11.3 Implement confirmation dialog
+  - [x] 11.3 Implement confirmation dialog
     - Show summary of data to be imported
     - Allow admin to confirm or cancel
     - Call backend API to process import
@@ -201,7 +201,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - _Requirements: 1.10, 2.1_
 
 - [ ] 12. Frontend Member Status Dashboard
-  - [ ] 12.1 Create MemberStatusDashboard component
+  - [x] 12.1 Create MemberStatusDashboard component
     - Display table of imported members
     - Show member_id, name, phone_number, status, dates
     - Show activation method (SMS or email)

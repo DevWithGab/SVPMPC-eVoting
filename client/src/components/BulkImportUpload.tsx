@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, X, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import Swal from 'sweetalert2';
+import api from '../services/api';
 
 interface BulkImportUploadProps {
   onUploadComplete?: (data: any) => void;
@@ -27,26 +28,26 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
   const [parsedData, setParsedData] = useState<ParsedCSVData | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [importResult, setImportResult] = useState<any>(null);
+  const [showResults, setShowResults] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const REQUIRED_COLUMNS = ['member_id', 'name', 'phone_number'];
   const OPTIONAL_COLUMNS = ['email'];
   const ALL_VALID_COLUMNS = [...REQUIRED_COLUMNS, ...OPTIONAL_COLUMNS];
 
-  // Validate phone number format (basic validation)
   const isValidPhoneNumber = (phone: string): boolean => {
-    // Accept phone numbers with digits, spaces, hyphens, parentheses, and + sign
     const phoneRegex = /^[\d\s\-()+]+$/;
     return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 7;
   };
 
-  // Validate email format
   const isValidEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  // Parse CSV content
   const parseCSV = (content: string): ParsedCSVData | null => {
     try {
       const lines = content.trim().split('\n');
@@ -54,25 +55,21 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
         throw new Error('CSV file must contain at least a header row and one data row');
       }
 
-      // Parse header
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
 
-      // Validate required columns exist
       const missingColumns = REQUIRED_COLUMNS.filter(col => !headers.includes(col));
       if (missingColumns.length > 0) {
         throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
       }
 
-      // Validate no unknown columns
       const unknownColumns = headers.filter(col => !ALL_VALID_COLUMNS.includes(col));
       if (unknownColumns.length > 0) {
         throw new Error(`Unknown columns: ${unknownColumns.join(', ')}`);
       }
 
-      // Parse data rows
       const rows: Record<string, string>[] = [];
       for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim() === '') continue; // Skip empty lines
+        if (lines[i].trim() === '') continue;
 
         const values = lines[i].split(',').map(v => v.trim());
         const row: Record<string, string> = {};
@@ -94,7 +91,6 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
     }
   };
 
-  // Validate parsed CSV data
   const validateCSVData = (data: ParsedCSVData): ValidationError[] => {
     const errors: ValidationError[] = [];
     const seenMemberIds = new Set<string>();
@@ -102,9 +98,8 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
     const seenEmails = new Set<string>();
 
     data.rows.forEach((row, index) => {
-      const rowNumber = index + 2; // +2 because row 1 is header, index starts at 0
+      const rowNumber = index + 2;
 
-      // Check required fields are not empty
       REQUIRED_COLUMNS.forEach(col => {
         if (!row[col] || row[col].trim() === '') {
           errors.push({
@@ -116,7 +111,6 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
         }
       });
 
-      // Validate phone number format
       if (row.phone_number && row.phone_number.trim() !== '') {
         if (!isValidPhoneNumber(row.phone_number)) {
           errors.push({
@@ -128,7 +122,6 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
         }
       }
 
-      // Validate email format if provided
       if (row.email && row.email.trim() !== '') {
         if (!isValidEmail(row.email)) {
           errors.push({
@@ -140,7 +133,6 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
         }
       }
 
-      // Check for duplicate member_ids
       if (row.member_id && row.member_id.trim() !== '') {
         if (seenMemberIds.has(row.member_id)) {
           errors.push({
@@ -153,7 +145,6 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
         seenMemberIds.add(row.member_id);
       }
 
-      // Check for duplicate phone numbers
       if (row.phone_number && row.phone_number.trim() !== '') {
         if (seenPhoneNumbers.has(row.phone_number)) {
           errors.push({
@@ -166,7 +157,6 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
         seenPhoneNumbers.add(row.phone_number);
       }
 
-      // Check for duplicate emails
       if (row.email && row.email.trim() !== '') {
         if (seenEmails.has(row.email)) {
           errors.push({
@@ -183,7 +173,6 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
     return errors;
   };
 
-  // Handle file selection
   const handleFileSelect = async (file: File) => {
     if (!file.name.endsWith('.csv')) {
       Swal.fire({
@@ -199,21 +188,17 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
       setIsUploading(true);
       setUploadProgress(0);
 
-      // Simulate progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 100);
 
-      // Read file
       const content = await file.text();
 
-      // Parse CSV
       const parsed = parseCSV(content);
       if (!parsed) {
         throw new Error('Failed to parse CSV');
       }
 
-      // Validate data
       const errors = validateCSVData(parsed);
 
       setUploadProgress(100);
@@ -223,7 +208,6 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
       setValidationErrors(errors);
       setShowPreview(true);
 
-      // Show result
       if (errors.length > 0) {
         Swal.fire({
           icon: 'warning',
@@ -254,7 +238,6 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
     }
   };
 
-  // Handle drag and drop
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
@@ -275,7 +258,6 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
     }
   };
 
-  // Handle file input change
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -283,8 +265,7 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
     }
   };
 
-  // Handle confirm import
-  const handleConfirmImport = () => {
+  const handleConfirmImport = async () => {
     if (!parsedData || validationErrors.length > 0) {
       Swal.fire({
         icon: 'warning',
@@ -295,7 +276,7 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
       return;
     }
 
-    Swal.fire({
+    const result = await Swal.fire({
       icon: 'question',
       title: 'Confirm Import',
       html: `<p>You are about to import <strong>${parsedData.rowCount}</strong> member records.</p><p>This action cannot be undone.</p>`,
@@ -304,21 +285,75 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
       cancelButtonColor: '#d33',
       confirmButtonText: 'Yes, Import',
       cancelButtonText: 'Cancel'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        if (onUploadComplete) {
-          onUploadComplete(parsedData);
-        }
-      }
     });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    await processImport();
   };
 
-  // Handle cancel
+  const processImport = async () => {
+    try {
+      setIsProcessing(true);
+      setShowPreview(false);
+      setShowResults(false);
+      setProcessingProgress(0);
+
+      const progressInterval = setInterval(() => {
+        setProcessingProgress(prev => Math.min(prev + 15, 90));
+      }, 500);
+
+      const response = await api.post('/imports/confirm', {
+        data: parsedData?.rows,
+        headers: parsedData?.headers,
+        rowCount: parsedData?.rowCount
+      });
+
+      clearInterval(progressInterval);
+      setProcessingProgress(100);
+
+      if (response.data.success) {
+        setImportResult(response.data.data);
+        setShowResults(true);
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Import Completed',
+          html: `<p>Successfully imported <strong>${response.data.data.statistics.successful_imports}</strong> members.</p>
+                 ${response.data.data.statistics.failed_imports > 0 ? `<p>Failed: <strong>${response.data.data.statistics.failed_imports}</strong></p>` : ''}
+                 ${response.data.data.statistics.skipped_rows > 0 ? `<p>Skipped: <strong>${response.data.data.statistics.skipped_rows}</strong></p>` : ''}`,
+          confirmButtonColor: '#2D7A3E'
+        });
+
+        if (onUploadComplete) {
+          onUploadComplete(response.data.data);
+        }
+      } else {
+        throw new Error(response.data.error?.message || 'Import failed');
+      }
+    } catch (error: any) {
+      setProcessingProgress(0);
+      Swal.fire({
+        icon: 'error',
+        title: 'Import Failed',
+        text: error.response?.data?.error?.message || error.message || 'Failed to process import',
+        confirmButtonColor: '#2D7A3E'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleCancel = () => {
     setParsedData(null);
     setValidationErrors([]);
     setShowPreview(false);
+    setShowResults(false);
+    setImportResult(null);
     setUploadProgress(0);
+    setProcessingProgress(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -329,8 +364,7 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
-      {!showPreview ? (
-        // Upload Section
+      {!showPreview && !showResults && !isProcessing ? (
         <div className="space-y-6">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
@@ -341,7 +375,6 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
             </p>
           </div>
 
-          {/* Drag and Drop Area */}
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -371,7 +404,6 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
             </p>
           </div>
 
-          {/* Upload Progress */}
           {isUploading && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
@@ -387,7 +419,6 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
             </div>
           )}
 
-          {/* CSV Format Instructions */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">
               CSV Format Requirements
@@ -401,131 +432,299 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
             </ul>
           </div>
         </div>
-      ) : (
-        // Preview Section
-        <div className="space-y-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-              Import Preview
-            </h2>
-            <button
-              onClick={handleCancel}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-
-          {/* Summary */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Records</p>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {parsedData?.rowCount || 0}
-              </p>
-            </div>
-            <div className={`rounded-lg p-4 border ${
-              validationErrors.length === 0
-                ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-            }`}>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Validation Errors</p>
-              <p className={`text-2xl font-bold ${
-                validationErrors.length === 0
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-red-600 dark:text-red-400'
-              }`}>
-                {validationErrors.length}
-              </p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Columns</p>
-              <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
-                {parsedData?.headers.length || 0}
-              </p>
-            </div>
-          </div>
-
-          {/* Validation Errors */}
-          {validationErrors.length > 0 && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                <h3 className="font-semibold text-red-900 dark:text-red-300">
-                  Validation Errors ({validationErrors.length})
-                </h3>
-              </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {validationErrors.map((error, idx) => (
-                  <div key={idx} className="text-sm text-red-800 dark:text-red-200 bg-red-100 dark:bg-red-900/40 p-2 rounded">
-                    <strong>Row {error.rowNumber}, {error.field}:</strong> {error.message}
-                    {error.value && <span className="block text-xs mt-1">Value: "{error.value}"</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Data Preview Table */}
-          {parsedData && validationErrors.length === 0 && (
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">#</th>
-                      {parsedData.headers.map(header => (
-                        <th key={header} className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">
-                          {header}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {parsedData.rows.slice(0, 5).map((row, idx) => (
-                      <tr key={idx} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{idx + 1}</td>
-                        {parsedData.headers.map(header => (
-                          <td key={`${idx}-${header}`} className="px-4 py-3 text-gray-700 dark:text-gray-300">
-                            {row[header] || '-'}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {parsedData.rowCount > 5 && (
-                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">
-                  Showing 5 of {parsedData.rowCount} records
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-4 justify-end">
-            <button
-              onClick={handleCancel}
-              className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleConfirmImport}
-              disabled={validationErrors.length > 0}
-              className={`px-6 py-2 rounded-lg text-white font-semibold transition-colors flex items-center gap-2 ${
-                validationErrors.length > 0
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-green-600 hover:bg-green-700'
-              }`}
-            >
-              <CheckCircle className="w-5 h-5" />
-              Confirm Import
-            </button>
-          </div>
-        </div>
-      )}
+      ) : showPreview && !isProcessing && !showResults ? (
+        <PreviewSection 
+          parsedData={parsedData}
+          validationErrors={validationErrors}
+          handleCancel={handleCancel}
+          handleConfirmImport={handleConfirmImport}
+        />
+      ) : isProcessing ? (
+        <ProcessingSection processingProgress={processingProgress} />
+      ) : showResults && importResult ? (
+        <ResultsSection importResult={importResult} handleCancel={handleCancel} />
+      ) : null}
     </div>
   );
 };
+
+
+// Preview and Results sections
+const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConfirmImport }: any) => (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between mb-6">
+      <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+        Import Preview
+      </h2>
+      <button
+        onClick={handleCancel}
+        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+      >
+        <X className="w-6 h-6" />
+      </button>
+    </div>
+
+    <div className="grid grid-cols-3 gap-4">
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <p className="text-sm text-gray-600 dark:text-gray-400">Total Records</p>
+        <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+          {parsedData?.rowCount || 0}
+        </p>
+      </div>
+      <div className={`rounded-lg p-4 border ${
+        validationErrors.length === 0
+          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+          : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+      }`}>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Validation Errors</p>
+        <p className={`text-2xl font-bold ${
+          validationErrors.length === 0
+            ? 'text-green-600 dark:text-green-400'
+            : 'text-red-600 dark:text-red-400'
+        }`}>
+          {validationErrors.length}
+        </p>
+      </div>
+      <div className="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+        <p className="text-sm text-gray-600 dark:text-gray-400">Columns</p>
+        <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
+          {parsedData?.headers.length || 0}
+        </p>
+      </div>
+    </div>
+
+    {validationErrors.length > 0 && (
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+          <h3 className="font-semibold text-red-900 dark:text-red-300">
+            Validation Errors ({validationErrors.length})
+          </h3>
+        </div>
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {validationErrors.map((error: ValidationError, idx: number) => (
+            <div key={idx} className="text-sm text-red-800 dark:text-red-200 bg-red-100 dark:bg-red-900/40 p-2 rounded">
+              <strong>Row {error.rowNumber}, {error.field}:</strong> {error.message}
+              {error.value && <span className="block text-xs mt-1">Value: "{error.value}"</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {parsedData && validationErrors.length === 0 && (
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+              <tr>
+                <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">#</th>
+                {parsedData.headers.map((header: string) => (
+                  <th key={header} className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {parsedData.rows.slice(0, 5).map((row: Record<string, string>, idx: number) => (
+                <tr key={idx} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{idx + 1}</td>
+                  {parsedData.headers.map((header: string) => (
+                    <td key={`${idx}-${header}`} className="px-4 py-3 text-gray-700 dark:text-gray-300">
+                      {row[header] || '-'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {parsedData.rowCount > 5 && (
+          <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">
+            Showing 5 of {parsedData.rowCount} records
+          </div>
+        )}
+      </div>
+    )}
+
+    <div className="flex gap-4 justify-end">
+      <button
+        onClick={handleCancel}
+        className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+      >
+        Cancel
+      </button>
+      <button
+        onClick={handleConfirmImport}
+        disabled={validationErrors.length > 0}
+        className={`px-6 py-2 rounded-lg text-white font-semibold transition-colors flex items-center gap-2 ${
+          validationErrors.length > 0
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-green-600 hover:bg-green-700'
+        }`}
+      >
+        <CheckCircle className="w-5 h-5" />
+        Confirm Import
+      </button>
+    </div>
+  </div>
+);
+
+const ProcessingSection = ({ processingProgress }: any) => (
+  <div className="space-y-6">
+    <div className="text-center mb-8">
+      <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+        Processing Import
+      </h2>
+      <p className="text-gray-600 dark:text-gray-400">
+        Please wait while we import your members...
+      </p>
+    </div>
+
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8">
+      <div className="flex items-center justify-center mb-6">
+        <Loader className="w-12 h-12 text-green-600 dark:text-green-400 animate-spin" />
+      </div>
+      <div className="space-y-4">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600 dark:text-gray-400">Processing members...</span>
+          <span className="text-gray-600 dark:text-gray-400">{processingProgress}%</span>
+        </div>
+        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+          <div
+            className="bg-green-500 h-3 rounded-full transition-all duration-300"
+            style={{ width: `${processingProgress}%` }}
+          />
+        </div>
+      </div>
+    </div>
+
+    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+      <p className="text-sm text-blue-800 dark:text-blue-200">
+        Creating accounts, generating temporary passwords, and sending SMS invitations...
+      </p>
+    </div>
+  </div>
+);
+
+const ResultsSection = ({ importResult, handleCancel }: any) => (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between mb-6">
+      <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+        Import Results
+      </h2>
+      <button
+        onClick={handleCancel}
+        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+      >
+        <X className="w-6 h-6" />
+      </button>
+    </div>
+
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+        <p className="text-sm text-gray-600 dark:text-gray-400">Successful</p>
+        <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+          {importResult.statistics?.successful_imports || 0}
+        </p>
+      </div>
+      <div className={`rounded-lg p-4 border ${
+        (importResult.statistics?.failed_imports || 0) > 0
+          ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+          : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
+      }`}>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Failed</p>
+        <p className={`text-3xl font-bold ${
+          (importResult.statistics?.failed_imports || 0) > 0
+            ? 'text-red-600 dark:text-red-400'
+            : 'text-gray-600 dark:text-gray-400'
+        }`}>
+          {importResult.statistics?.failed_imports || 0}
+        </p>
+      </div>
+      <div className={`rounded-lg p-4 border ${
+        (importResult.statistics?.skipped_rows || 0) > 0
+          ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+          : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
+      }`}>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Skipped</p>
+        <p className={`text-3xl font-bold ${
+          (importResult.statistics?.skipped_rows || 0) > 0
+            ? 'text-yellow-600 dark:text-yellow-400'
+            : 'text-gray-600 dark:text-gray-400'
+        }`}>
+          {importResult.statistics?.skipped_rows || 0}
+        </p>
+      </div>
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
+        <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+          {(importResult.statistics?.successful_imports || 0) + 
+           (importResult.statistics?.failed_imports || 0) + 
+           (importResult.statistics?.skipped_rows || 0)}
+        </p>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 gap-4">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+        <h3 className="font-semibold text-gray-800 dark:text-white mb-3">SMS Invitations</h3>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-600 dark:text-gray-400">Sent:</span>
+            <span className="font-semibold text-green-600 dark:text-green-400">
+              {importResult.statistics?.sms_sent_count || 0}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600 dark:text-gray-400">Failed:</span>
+            <span className="font-semibold text-red-600 dark:text-red-400">
+              {importResult.statistics?.sms_failed_count || 0}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+        <h3 className="font-semibold text-gray-800 dark:text-white mb-3">Email Invitations</h3>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-600 dark:text-gray-400">Sent:</span>
+            <span className="font-semibold text-green-600 dark:text-green-400">
+              {importResult.statistics?.email_sent_count || 0}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600 dark:text-gray-400">Failed:</span>
+            <span className="font-semibold text-red-600 dark:text-red-400">
+              {importResult.statistics?.email_failed_count || 0}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+      <div className="flex items-start gap-3">
+        <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <h3 className="font-semibold text-green-900 dark:text-green-300 mb-1">
+            Import Completed Successfully
+          </h3>
+          <p className="text-sm text-green-800 dark:text-green-200">
+            Members have been created and SMS invitations have been sent. You can now view their activation status in the Member Status Dashboard.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div className="flex gap-4 justify-end">
+      <button
+        onClick={handleCancel}
+        className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+      >
+        Done
+      </button>
+    </div>
+  </div>
+);
