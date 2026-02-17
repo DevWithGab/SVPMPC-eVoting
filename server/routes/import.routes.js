@@ -19,86 +19,139 @@ const {
   getImportMembers,
   getImportRecoveryInfo,
   retryFailedImport,
+  uploadCSVPreview,
+  confirmAndProcessImport,
 } = require('../controllers/import.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 const { checkRole } = require('../middleware/role.middleware');
+const {
+  requireAdminForImport,
+  requireAdminForMemberAccess,
+  requireAdminForImportAccess,
+  requireAdminForMemberDetail,
+  maskSensitiveData,
+} = require('../middleware/importAccess.middleware');
+const { csvUpload } = require('../config/csvUpload');
 
 /**
- * All import routes require authentication and admin role
+ * All import routes require authentication
  */
 router.use(verifyToken);
-router.use(checkRole(['admin']));
+
+/**
+ * Upload CSV file and generate preview with validation
+ * POST /api/imports/upload
+ * 
+ * Access Control: Admin only
+ * File: CSV file (max 10MB)
+ */
+router.post('/upload', requireAdminForImport, csvUpload.single('file'), uploadCSVPreview);
+
+/**
+ * Confirm and process CSV import
+ * POST /api/imports/confirm
+ * 
+ * Access Control: Admin only
+ * Body: { filePath: string, filename: string }
+ */
+router.post('/confirm', requireAdminForImport, confirmAndProcessImport);
 
 /**
  * Get all imported members with status, dates, and activation method
  * Supports filtering by status, searching by member_id or phone_number, and sorting
  * GET /api/imports/members
+ * 
+ * Access Control: Admin only
+ * Data Masking: Sensitive fields masked in list view
  */
-router.get('/members', getImportedMembers);
+router.get('/members', requireAdminForMemberAccess, maskSensitiveData, getImportedMembers);
 
 /**
  * Get details for a specific imported member
  * GET /api/imports/members/:memberId
+ * 
+ * Access Control: Admin only
+ * Note: Full details shown (no masking) for detail view
  */
-router.get('/members/:memberId', getImportedMemberDetails);
+router.get('/members/:memberId', requireAdminForMemberDetail, getImportedMemberDetails);
 
 /**
  * Retry SMS for a single member
  * POST /api/imports/retry-sms/:userId
+ * 
+ * Access Control: Admin only
  */
-router.post('/retry-sms/:userId', retrySMS);
+router.post('/retry-sms/:userId', requireAdminForMemberDetail, retrySMS);
 
 /**
  * Retry email for a single member
  * POST /api/imports/retry-email/:userId
+ * 
+ * Access Control: Admin only
  */
-router.post('/retry-email/:userId', retryEmail);
+router.post('/retry-email/:userId', requireAdminForMemberDetail, retryEmail);
 
 /**
  * Bulk retry notifications for multiple members
  * POST /api/imports/bulk-retry
+ * 
+ * Access Control: Admin only
  */
-router.post('/bulk-retry', bulkRetryNotifications);
+router.post('/bulk-retry', requireAdminForImport, bulkRetryNotifications);
 
 /**
  * Get retry status for a member
  * GET /api/imports/retry-status/:userId
+ * 
+ * Access Control: Admin only
  */
-router.get('/retry-status/:userId', getRetryStatus);
+router.get('/retry-status/:userId', requireAdminForMemberDetail, getRetryStatus);
 
 /**
  * Resend invitation to a single member
  * POST /api/imports/resend-invitation/:userId
  * Body: { deliveryMethod: 'sms' | 'email', cooperativeName?, cooperativePhone? }
+ * 
+ * Access Control: Admin only
  */
-router.post('/resend-invitation/:userId', resendInvitationEndpoint);
+router.post('/resend-invitation/:userId', requireAdminForMemberDetail, resendInvitationEndpoint);
 
 /**
  * Bulk resend invitations to multiple members
  * POST /api/imports/bulk-resend-invitations
  * Body: { memberIds: string[], deliveryMethod: 'sms' | 'email', cooperativeName?, cooperativePhone? }
+ * 
+ * Access Control: Admin only
  */
-router.post('/bulk-resend-invitations', bulkResendInvitationsEndpoint);
+router.post('/bulk-resend-invitations', requireAdminForImport, bulkResendInvitationsEndpoint);
 
 /**
  * Get all import operations with pagination
  * GET /api/imports/history
  * Query: page, limit, sortBy, sortOrder
+ * 
+ * Access Control: Admin only
+ * Data Masking: Sensitive fields masked in list view
  */
-router.get('/history', getImportHistory);
+router.get('/history', requireAdminForImport, maskSensitiveData, getImportHistory);
 
 /**
  * Get import details by ID
  * GET /api/imports/history/:importId
+ * 
+ * Access Control: Admin only
  */
-router.get('/history/:importId', getImportDetails);
+router.get('/history/:importId', requireAdminForImportAccess, getImportDetails);
 
 /**
  * Get members from a specific import operation
  * GET /api/imports/history/:importId/members
  * Query: page, limit, sortBy, sortOrder
+ * 
+ * Access Control: Admin only
+ * Data Masking: Sensitive fields masked in list view
  */
-router.get('/history/:importId/members', getImportMembers);
+router.get('/history/:importId/members', requireAdminForImportAccess, maskSensitiveData, getImportMembers);
 
 /**
  * Get import recovery information for interrupted imports
@@ -106,8 +159,10 @@ router.get('/history/:importId/members', getImportMembers);
  * 
  * Returns information about successfully imported members and failed members
  * that can be retried from a previous import operation.
+ * 
+ * Access Control: Admin only
  */
-router.get('/recovery/:importId', getImportRecoveryInfo);
+router.get('/recovery/:importId', requireAdminForImportAccess, getImportRecoveryInfo);
 
 /**
  * Retry failed imports from a previous import operation
@@ -115,7 +170,9 @@ router.get('/recovery/:importId', getImportRecoveryInfo);
  * 
  * Allows admin to retry importing members that failed in a previous import operation.
  * Generates new temporary passwords and resends SMS invitations to failed members.
+ * 
+ * Access Control: Admin only
  */
-router.post('/retry/:importId', retryFailedImport);
+router.post('/retry/:importId', requireAdminForImportAccess, retryFailedImport);
 
 module.exports = router;

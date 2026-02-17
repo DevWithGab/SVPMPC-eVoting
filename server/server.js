@@ -17,6 +17,7 @@ const ruleRoutes = require('./routes/rule.routes.js');
 const activityRoutes = require('./routes/activity.routes.js');
 const verificationRoutes = require('./routes/verification.routes.js');
 const supportRoutes = require('./routes/support.routes.js');
+const importRoutes = require('./routes/import.routes.js');
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use('/api/rules', ruleRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/imports', importRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
