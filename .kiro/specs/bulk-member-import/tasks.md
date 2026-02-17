@@ -288,7 +288,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - Add to both en.json and ph.json
     - _Requirements: All_
   
-  - [ ] 17.2 Integrate i18n into all components
+  - [x] 17.2 Integrate i18n into all components
     - Use useTranslation hook in all new components
     - Ensure all user-facing text is translatable
     - Test with both English and Filipino

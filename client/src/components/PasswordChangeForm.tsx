@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff, CheckCircle2, AlertCircle, Lock } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -15,6 +16,7 @@ interface PasswordRequirement {
 }
 
 export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSuccess, onCancel, isFirstTimeChange = false }) => {
+  const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -42,27 +44,27 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
 
     // Validation
     if (!currentPassword) {
-      setErrors(['Current password is required']);
+      setErrors([t('bulkImport.errorIncorrectPassword')]);
       return;
     }
 
     if (!newPassword) {
-      setErrors(['New password is required']);
+      setErrors([t('bulkImport.newPassword')]);
       return;
     }
 
     if (!confirmPassword) {
-      setErrors(['Password confirmation is required']);
+      setErrors([t('bulkImport.confirmPassword')]);
       return;
     }
 
     if (!allRequirementsMet) {
-      setErrors(['New password does not meet all security requirements']);
+      setErrors([t('bulkImport.passwordRequirements')]);
       return;
     }
 
     if (!passwordsMatch) {
-      setErrors(['Passwords do not match']);
+      setErrors([t('bulkImport.errorPasswordMismatch')]);
       return;
     }
 
@@ -88,7 +90,7 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
         if (data.errors && Array.isArray(data.errors)) {
           setErrors(data.errors);
         } else {
-          setErrors([data.message || 'Failed to change password']);
+          setErrors([data.message || t('bulkImport.passwordChangeFailed')]);
         }
         return;
       }
@@ -96,8 +98,8 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
       // Success
       Swal.fire({
         icon: 'success',
-        title: 'Success!',
-        text: 'Your password has been changed successfully.',
+        title: t('bulkImport.passwordChangeSuccess'),
+        text: t('bulkImport.passwordChangeSuccess'),
         timer: 2000,
         showConfirmButton: false,
       });
@@ -112,7 +114,7 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
       }
     } catch (error) {
       console.error('Password change error:', error);
-      setErrors(['An error occurred while changing your password. Please try again.']);
+      setErrors([t('bulkImport.passwordChangeFailed')]);
     } finally {
       setLoading(false);
     }
@@ -133,16 +135,16 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
         >
           <AlertCircle size={20} className="text-blue-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold text-blue-900 mb-1">Welcome to Your Account</p>
-            <p className="text-sm text-blue-700">You logged in with a temporary password. Please set a permanent password to fully activate your account.</p>
+            <p className="font-bold text-blue-900 mb-1">{t('bulkImport.changePasswordPrompt')}</p>
+            <p className="text-sm text-blue-700">{t('bulkImport.changePasswordPrompt')}</p>
           </div>
         </motion.div>
       )}
 
       <div className="flex justify-between items-end mb-10 border-b border-gray-100 pb-8">
         <div>
-          <h3 className="text-3xl font-black text-gray-900 uppercase tracking-tighter">Change Password</h3>
-          <p className="mono-label text-gray-400 mt-2">Update your account security credentials</p>
+          <h3 className="text-3xl font-black text-gray-900 uppercase tracking-tighter">{t('bulkImport.passwordChangeTitle')}</h3>
+          <p className="mono-label text-gray-400 mt-2">{t('bulkImport.passwordChangeTitle')}</p>
         </div>
         <Lock size={32} className="text-gray-100" />
       </div>
@@ -167,14 +169,14 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
         {/* Current Password */}
         <div className="space-y-3">
           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-            Current Password
+            {t('bulkImport.currentPassword')}
           </label>
           <div className="relative">
             <input
               type={showCurrentPassword ? 'text' : 'password'}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Enter your current password"
+              placeholder={t('bulkImport.currentPassword')}
               className="w-full px-6 py-4 bg-gray-50 border border-gray-100 text-sm font-medium outline-none focus:border-[#4F75E2] transition-colors"
               disabled={loading}
             />
@@ -192,14 +194,14 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
         {/* New Password */}
         <div className="space-y-3">
           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-            New Password
+            {t('bulkImport.newPassword')}
           </label>
           <div className="relative">
             <input
               type={showNewPassword ? 'text' : 'password'}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Enter your new password"
+              placeholder={t('bulkImport.newPassword')}
               className="w-full px-6 py-4 bg-gray-50 border border-gray-100 text-sm font-medium outline-none focus:border-[#4F75E2] transition-colors"
               disabled={loading}
             />
@@ -220,7 +222,7 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
               animate={{ opacity: 1, y: 0 }}
               className="mt-4 p-4 bg-gray-50 border border-gray-100 space-y-3"
             >
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Password Requirements</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('bulkImport.passwordRequirements')}</p>
               <div className="space-y-2">
                 {passwordRequirements.map((req, idx) => (
                   <div key={idx} className="flex items-center gap-3">
@@ -267,14 +269,14 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
         {/* Confirm Password */}
         <div className="space-y-3">
           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-            Confirm New Password
+            {t('bulkImport.confirmPassword')}
           </label>
           <div className="relative">
             <input
               type={showConfirmPassword ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm your new password"
+              placeholder={t('bulkImport.confirmPassword')}
               className={`w-full px-6 py-4 bg-gray-50 border text-sm font-medium outline-none transition-colors ${
                 confirmPassword && !passwordsMatch
                   ? 'border-red-200 focus:border-red-300'
@@ -299,7 +301,7 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
               className="flex items-center gap-2 text-red-600"
             >
               <AlertCircle size={14} />
-              <span className="text-[9px] font-medium uppercase tracking-widest">Passwords do not match</span>
+              <span className="text-[9px] font-medium uppercase tracking-widest">{t('bulkImport.errorPasswordMismatch')}</span>
             </motion.div>
           )}
 
@@ -310,7 +312,7 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
               className="flex items-center gap-2 text-coop-green"
             >
               <CheckCircle2 size={14} />
-              <span className="text-[9px] font-medium uppercase tracking-widest">Passwords match</span>
+              <span className="text-[9px] font-medium uppercase tracking-widest">{t('bulkImport.passwordChangeSuccess')}</span>
             </motion.div>
           )}
         </div>
@@ -322,7 +324,7 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
             disabled={loading || !allRequirementsMet || !passwordsMatch}
             className="flex-1 bg-[#4F75E2] text-white py-5 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Updating...' : 'Update Password'}
+            {loading ? t('bulkImport.importInProgress') : t('bulkImport.changePasswordButton')}
           </button>
 
           {onCancel && (
@@ -332,7 +334,7 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
               disabled={loading}
               className="flex-1 border border-gray-200 text-gray-600 py-5 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Cancel
+              {t('bulkImport.cancelButton')}
             </button>
           )}
         </div>

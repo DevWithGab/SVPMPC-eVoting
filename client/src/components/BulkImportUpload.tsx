@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Swal from 'sweetalert2';
 import api from '../services/api';
 
@@ -22,6 +23,7 @@ interface ValidationError {
 }
 
 export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComplete, onCancel }) => {
+  const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -177,8 +179,8 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
     if (!file.name.endsWith('.csv')) {
       Swal.fire({
         icon: 'error',
-        title: 'Invalid File Format',
-        text: 'Please select a CSV file',
+        title: t('bulkImport.errorFileFormat'),
+        text: t('bulkImport.errorFileFormat'),
         confirmButtonColor: '#2D7A3E'
       });
       return;
@@ -211,15 +213,15 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
       if (errors.length > 0) {
         Swal.fire({
           icon: 'warning',
-          title: 'Validation Issues Found',
-          html: `<p>Found ${errors.length} validation error(s) in the CSV file.</p><p>Please review the errors below.</p>`,
+          title: t('bulkImport.errorDetails'),
+          html: `<p>${t('bulkImport.errorDetails')}: ${errors.length}</p><p>${t('bulkImport.viewDetails')}</p>`,
           confirmButtonColor: '#2D7A3E'
         });
       } else {
         Swal.fire({
           icon: 'success',
-          title: 'CSV Valid',
-          text: `Successfully parsed ${parsed.rowCount} member records`,
+          title: t('bulkImport.uploadButton'),
+          text: t('bulkImport.rowCount', { count: parsed.rowCount }),
           confirmButtonColor: '#2D7A3E',
           timer: 2000,
           showConfirmButton: false
@@ -228,8 +230,8 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
     } catch (error: any) {
       Swal.fire({
         icon: 'error',
-        title: 'Error',
-        text: error.message || 'Failed to process CSV file',
+        title: t('bulkImport.importFailed'),
+        text: error.message || t('bulkImport.errorFileUpload'),
         confirmButtonColor: '#2D7A3E'
       });
     } finally {
@@ -269,8 +271,8 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
     if (!parsedData || validationErrors.length > 0) {
       Swal.fire({
         icon: 'warning',
-        title: 'Cannot Import',
-        text: 'Please fix all validation errors before importing',
+        title: t('bulkImport.confirmImport'),
+        text: t('bulkImport.errorDetails'),
         confirmButtonColor: '#2D7A3E'
       });
       return;
@@ -278,13 +280,13 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
 
     const result = await Swal.fire({
       icon: 'question',
-      title: 'Confirm Import',
-      html: `<p>You are about to import <strong>${parsedData.rowCount}</strong> member records.</p><p>This action cannot be undone.</p>`,
+      title: t('bulkImport.confirmImport'),
+      html: `<p>${t('bulkImport.confirmMessage', { count: parsedData.rowCount })}</p>`,
       showCancelButton: true,
       confirmButtonColor: '#2D7A3E',
       cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, Import',
-      cancelButtonText: 'Cancel'
+      confirmButtonText: t('bulkImport.confirmImport'),
+      cancelButtonText: t('bulkImport.cancelButton')
     });
 
     if (!result.isConfirmed) {
@@ -320,10 +322,10 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
 
         Swal.fire({
           icon: 'success',
-          title: 'Import Completed',
-          html: `<p>Successfully imported <strong>${response.data.data.statistics.successful_imports}</strong> members.</p>
-                 ${response.data.data.statistics.failed_imports > 0 ? `<p>Failed: <strong>${response.data.data.statistics.failed_imports}</strong></p>` : ''}
-                 ${response.data.data.statistics.skipped_rows > 0 ? `<p>Skipped: <strong>${response.data.data.statistics.skipped_rows}</strong></p>` : ''}`,
+          title: t('bulkImport.importSuccess'),
+          html: `<p>${t('bulkImport.successfulImports', { count: response.data.data.statistics.successful_imports })}</p>
+                 ${response.data.data.statistics.failed_imports > 0 ? `<p>${t('bulkImport.failedImports', { count: response.data.data.statistics.failed_imports })}</p>` : ''}
+                 ${response.data.data.statistics.skipped_rows > 0 ? `<p>${t('bulkImport.skippedRows', { count: response.data.data.statistics.skipped_rows })}</p>` : ''}`,
           confirmButtonColor: '#2D7A3E'
         });
 
@@ -331,14 +333,14 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
           onUploadComplete(response.data.data);
         }
       } else {
-        throw new Error(response.data.error?.message || 'Import failed');
+        throw new Error(response.data.error?.message || t('bulkImport.importFailed'));
       }
     } catch (error: any) {
       setProcessingProgress(0);
       Swal.fire({
         icon: 'error',
-        title: 'Import Failed',
-        text: error.response?.data?.error?.message || error.message || 'Failed to process import',
+        title: t('bulkImport.importFailed'),
+        text: error.response?.data?.error?.message || error.message || t('bulkImport.errorProcessingError'),
         confirmButtonColor: '#2D7A3E'
       });
     } finally {
@@ -368,10 +370,10 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
         <div className="space-y-6">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-              Bulk Member Import
+              {t('bulkImport.title')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400">
-              Upload a CSV file to import multiple members at once
+              {t('bulkImport.uploadSection')}
             </p>
           </div>
 
@@ -397,17 +399,17 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
 
             <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
             <p className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
-              Drag and drop your CSV file here
+              {t('bulkImport.dragDropText')}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              or click to select a file
+              {t('bulkImport.fileFormatHint')}
             </p>
           </div>
 
           {isUploading && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Uploading...</span>
+                <span className="text-gray-600 dark:text-gray-400">{t('bulkImport.uploadButton')}...</span>
                 <span className="text-gray-600 dark:text-gray-400">{uploadProgress}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -421,14 +423,12 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
 
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">
-              CSV Format Requirements
+              {t('bulkImport.uploadSection')}
             </h3>
             <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-              <li>• Required columns: <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">member_id</code>, <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">name</code>, <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">phone_number</code></li>
-              <li>• Optional column: <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">email</code></li>
-              <li>• First row must be column headers</li>
-              <li>• Phone numbers must be valid (at least 7 digits)</li>
-              <li>• Emails must be in valid format (if provided)</li>
+              <li>• {t('bulkImport.requiredColumns')}</li>
+              <li>• {t('bulkImport.optionalColumns')}</li>
+              <li>• {t('bulkImport.fileFormatHint')}</li>
             </ul>
           </div>
         </div>
@@ -450,11 +450,13 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
 
 
 // Preview and Results sections
-const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConfirmImport }: any) => (
+const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConfirmImport }: any) => {
+  const { t } = useTranslation();
+  return (
   <div className="space-y-6">
     <div className="flex items-center justify-between mb-6">
       <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-        Import Preview
+        {t('bulkImport.previewTitle')}
       </h2>
       <button
         onClick={handleCancel}
@@ -466,7 +468,7 @@ const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConf
 
     <div className="grid grid-cols-3 gap-4">
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <p className="text-sm text-gray-600 dark:text-gray-400">Total Records</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{t('bulkImport.rowCount', { count: parsedData?.rowCount || 0 })}</p>
         <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
           {parsedData?.rowCount || 0}
         </p>
@@ -476,7 +478,7 @@ const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConf
           ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
           : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
       }`}>
-        <p className="text-sm text-gray-600 dark:text-gray-400">Validation Errors</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{t('bulkImport.errorDetails')}</p>
         <p className={`text-2xl font-bold ${
           validationErrors.length === 0
             ? 'text-green-600 dark:text-green-400'
@@ -486,7 +488,7 @@ const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConf
         </p>
       </div>
       <div className="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-        <p className="text-sm text-gray-600 dark:text-gray-400">Columns</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{t('bulkImport.uploadSection')}</p>
         <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
           {parsedData?.headers.length || 0}
         </p>
@@ -498,7 +500,7 @@ const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConf
         <div className="flex items-center gap-2 mb-3">
           <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
           <h3 className="font-semibold text-red-900 dark:text-red-300">
-            Validation Errors ({validationErrors.length})
+            {t('bulkImport.errorDetails')} ({validationErrors.length})
           </h3>
         </div>
         <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -542,7 +544,7 @@ const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConf
         </div>
         {parsedData.rowCount > 5 && (
           <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">
-            Showing 5 of {parsedData.rowCount} records
+            {t('bulkImport.rowCount', { count: parsedData.rowCount })}
           </div>
         )}
       </div>
@@ -553,7 +555,7 @@ const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConf
         onClick={handleCancel}
         className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
       >
-        Cancel
+        {t('bulkImport.cancelButton')}
       </button>
       <button
         onClick={handleConfirmImport}
@@ -565,20 +567,23 @@ const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConf
         }`}
       >
         <CheckCircle className="w-5 h-5" />
-        Confirm Import
+        {t('bulkImport.confirmImport')}
       </button>
     </div>
   </div>
-);
+  );
+};
 
-const ProcessingSection = ({ processingProgress }: any) => (
+const ProcessingSection = ({ processingProgress }: any) => {
+  const { t } = useTranslation();
+  return (
   <div className="space-y-6">
     <div className="text-center mb-8">
       <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-        Processing Import
+        {t('bulkImport.importInProgress')}
       </h2>
       <p className="text-gray-600 dark:text-gray-400">
-        Please wait while we import your members...
+        {t('bulkImport.importInProgress')}
       </p>
     </div>
 
@@ -588,7 +593,7 @@ const ProcessingSection = ({ processingProgress }: any) => (
       </div>
       <div className="space-y-4">
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">Processing members...</span>
+          <span className="text-gray-600 dark:text-gray-400">{t('bulkImport.importInProgress')}...</span>
           <span className="text-gray-600 dark:text-gray-400">{processingProgress}%</span>
         </div>
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
@@ -602,17 +607,20 @@ const ProcessingSection = ({ processingProgress }: any) => (
 
     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
       <p className="text-sm text-blue-800 dark:text-blue-200">
-        Creating accounts, generating temporary passwords, and sending SMS invitations...
+        {t('bulkImport.importInProgress')}
       </p>
     </div>
   </div>
-);
+  );
+};
 
-const ResultsSection = ({ importResult, handleCancel }: any) => (
+const ResultsSection = ({ importResult, handleCancel }: any) => {
+  const { t } = useTranslation();
+  return (
   <div className="space-y-6">
     <div className="flex items-center justify-between mb-6">
       <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-        Import Results
+        {t('bulkImport.importSuccess')}
       </h2>
       <button
         onClick={handleCancel}
@@ -624,7 +632,7 @@ const ResultsSection = ({ importResult, handleCancel }: any) => (
 
     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
       <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-        <p className="text-sm text-gray-600 dark:text-gray-400">Successful</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{t('bulkImport.successCount')}</p>
         <p className="text-3xl font-bold text-green-600 dark:text-green-400">
           {importResult.statistics?.successful_imports || 0}
         </p>
@@ -634,7 +642,7 @@ const ResultsSection = ({ importResult, handleCancel }: any) => (
           ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
           : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
       }`}>
-        <p className="text-sm text-gray-600 dark:text-gray-400">Failed</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{t('bulkImport.failureCount')}</p>
         <p className={`text-3xl font-bold ${
           (importResult.statistics?.failed_imports || 0) > 0
             ? 'text-red-600 dark:text-red-400'
@@ -648,7 +656,7 @@ const ResultsSection = ({ importResult, handleCancel }: any) => (
           ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
           : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
       }`}>
-        <p className="text-sm text-gray-600 dark:text-gray-400">Skipped</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{t('bulkImport.skippedRows')}</p>
         <p className={`text-3xl font-bold ${
           (importResult.statistics?.skipped_rows || 0) > 0
             ? 'text-yellow-600 dark:text-yellow-400'
@@ -658,7 +666,7 @@ const ResultsSection = ({ importResult, handleCancel }: any) => (
         </p>
       </div>
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{t('bulkImport.totalMembers')}</p>
         <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
           {(importResult.statistics?.successful_imports || 0) + 
            (importResult.statistics?.failed_imports || 0) + 
@@ -669,16 +677,16 @@ const ResultsSection = ({ importResult, handleCancel }: any) => (
 
     <div className="grid grid-cols-2 gap-4">
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <h3 className="font-semibold text-gray-800 dark:text-white mb-3">SMS Invitations</h3>
+        <h3 className="font-semibold text-gray-800 dark:text-white mb-3">{t('bulkImport.activationMethodSms')}</h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">Sent:</span>
+            <span className="text-gray-600 dark:text-gray-400">{t('bulkImport.successCount')}:</span>
             <span className="font-semibold text-green-600 dark:text-green-400">
               {importResult.statistics?.sms_sent_count || 0}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">Failed:</span>
+            <span className="text-gray-600 dark:text-gray-400">{t('bulkImport.failureCount')}:</span>
             <span className="font-semibold text-red-600 dark:text-red-400">
               {importResult.statistics?.sms_failed_count || 0}
             </span>
@@ -686,16 +694,16 @@ const ResultsSection = ({ importResult, handleCancel }: any) => (
         </div>
       </div>
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <h3 className="font-semibold text-gray-800 dark:text-white mb-3">Email Invitations</h3>
+        <h3 className="font-semibold text-gray-800 dark:text-white mb-3">{t('bulkImport.activationMethodEmail')}</h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">Sent:</span>
+            <span className="text-gray-600 dark:text-gray-400">{t('bulkImport.successCount')}:</span>
             <span className="font-semibold text-green-600 dark:text-green-400">
               {importResult.statistics?.email_sent_count || 0}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">Failed:</span>
+            <span className="text-gray-600 dark:text-gray-400">{t('bulkImport.failureCount')}:</span>
             <span className="font-semibold text-red-600 dark:text-red-400">
               {importResult.statistics?.email_failed_count || 0}
             </span>
@@ -709,10 +717,10 @@ const ResultsSection = ({ importResult, handleCancel }: any) => (
         <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
         <div>
           <h3 className="font-semibold text-green-900 dark:text-green-300 mb-1">
-            Import Completed Successfully
+            {t('bulkImport.importSuccess')}
           </h3>
           <p className="text-sm text-green-800 dark:text-green-200">
-            Members have been created and SMS invitations have been sent. You can now view their activation status in the Member Status Dashboard.
+            {t('bulkImport.memberStatusDashboard')}
           </p>
         </div>
       </div>
@@ -723,8 +731,9 @@ const ResultsSection = ({ importResult, handleCancel }: any) => (
         onClick={handleCancel}
         className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
       >
-        Done
+        {t('bulkImport.cancelButton')}
       </button>
     </div>
   </div>
-);
+  );
+};

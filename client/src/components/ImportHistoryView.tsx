@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronUp, ChevronDown, Eye, Loader, Calendar, User, FileText } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Swal from 'sweetalert2';
 import { importAPI } from '../services/api';
 
@@ -27,6 +28,7 @@ interface ImportHistoryViewProps {
 }
 
 export const ImportHistoryView: React.FC<ImportHistoryViewProps> = ({ onNavigate }) => {
+  const { t } = useTranslation();
   const [imports, setImports] = useState<ImportOperation[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<string>('createdAt');
@@ -45,9 +47,9 @@ export const ImportHistoryView: React.FC<ImportHistoryViewProps> = ({ onNavigate
   };
 
   const statusLabels: Record<string, string> = {
-    pending: 'Pending',
-    completed: 'Completed',
-    failed: 'Failed',
+    pending: t('bulkImport.statusPendingActivation'),
+    completed: t('bulkImport.importSuccess'),
+    failed: t('bulkImport.importFailed'),
   };
 
   const fetchImportHistory = async (page: number = 1) => {
@@ -65,7 +67,7 @@ export const ImportHistoryView: React.FC<ImportHistoryViewProps> = ({ onNavigate
       setPagination(paginationData);
     } catch (error) {
       console.error('Error fetching import history:', error);
-      Swal.fire('Error', 'Failed to fetch import history', 'error');
+      Swal.fire(t('bulkImport.importFailed'), t('bulkImport.errorProcessingError'), 'error');
     } finally {
       setLoading(false);
     }
@@ -133,12 +135,12 @@ export const ImportHistoryView: React.FC<ImportHistoryViewProps> = ({ onNavigate
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Import History</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">{t('bulkImport.importHistoryTitle')}</h2>
 
         {imports.length === 0 ? (
           <div className="text-center py-12">
             <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No import operations found</p>
+            <p className="text-gray-500">{t('bulkImport.noImports')}</p>
           </div>
         ) : (
           <>
@@ -151,7 +153,7 @@ export const ImportHistoryView: React.FC<ImportHistoryViewProps> = ({ onNavigate
                         onClick={() => handleSort('createdAt')}
                         className="flex items-center gap-2 font-semibold text-gray-700 hover:text-green-600"
                       >
-                        Date <SortIcon field="createdAt" />
+                        {t('bulkImport.importDate')} <SortIcon field="createdAt" />
                       </button>
                     </th>
                     <th className="px-4 py-3 text-left">
@@ -159,23 +161,23 @@ export const ImportHistoryView: React.FC<ImportHistoryViewProps> = ({ onNavigate
                         onClick={() => handleSort('admin_name')}
                         className="flex items-center gap-2 font-semibold text-gray-700 hover:text-green-600"
                       >
-                        Admin <SortIcon field="admin_name" />
+                        {t('bulkImport.importedBy')} <SortIcon field="admin_name" />
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">CSV File</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">Total</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700">{t('bulkImport.csvFileName')}</th>
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700">{t('bulkImport.totalMembers')}</th>
                     <th className="px-4 py-3 text-center">
                       <button
                         onClick={() => handleSort('successful_imports')}
                         className="flex items-center gap-2 font-semibold text-gray-700 hover:text-green-600 mx-auto"
                       >
-                        Success <SortIcon field="successful_imports" />
+                        {t('bulkImport.successCount')} <SortIcon field="successful_imports" />
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">Failed</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">Skipped</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">Status</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">Action</th>
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700">{t('bulkImport.failureCount')}</th>
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700">{t('bulkImport.skippedRows')}</th>
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700">{t('bulkImport.status')}</th>
+                    <th className="px-4 py-3 text-center font-semibold text-gray-700">{t('bulkImport.viewDetails')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -225,7 +227,7 @@ export const ImportHistoryView: React.FC<ImportHistoryViewProps> = ({ onNavigate
                           className="inline-flex items-center gap-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
                         >
                           <Eye className="w-4 h-4" />
-                          View
+                          {t('bulkImport.viewDetails')}
                         </button>
                       </td>
                     </tr>
@@ -237,7 +239,7 @@ export const ImportHistoryView: React.FC<ImportHistoryViewProps> = ({ onNavigate
             {/* Pagination Controls */}
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
               <div className="text-sm text-gray-600">
-                Showing page {pagination.page} of {pagination.pages} ({pagination.total} total imports)
+                {t('bulkImport.pagination', { current: pagination.page, total: pagination.pages })}
               </div>
               <div className="flex gap-2">
                 <button

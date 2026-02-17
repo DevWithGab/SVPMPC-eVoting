@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ChevronUp, ChevronDown, Eye, RotateCcw, Loader } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Swal from 'sweetalert2';
 import api from '../services/api';
 
@@ -29,6 +30,7 @@ interface MemberStatusDashboardProps {
 }
 
 export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () => {
+  const { t } = useTranslation();
   const [members, setMembers] = useState<ImportedMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,11 +57,11 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
   };
 
   const statusLabels: Record<string, string> = {
-    pending_activation: 'Pending Activation',
-    activated: 'Activated',
-    sms_failed: 'SMS Failed',
-    email_failed: 'Email Failed',
-    token_expired: 'Token Expired',
+    pending_activation: t('bulkImport.statusPendingActivation'),
+    activated: t('bulkImport.statusActivated'),
+    sms_failed: t('bulkImport.statusSmsFailed'),
+    email_failed: t('bulkImport.statusEmailFailed'),
+    token_expired: t('bulkImport.statusTokenExpired'),
   };
 
   const fetchMembers = async (page: number = 1) => {
@@ -87,7 +89,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
       setPagination(paginationData);
     } catch (error) {
       console.error('Error fetching members:', error);
-      Swal.fire('Error', 'Failed to fetch imported members', 'error');
+      Swal.fire(t('bulkImport.importFailed'), t('bulkImport.errorProcessingError'), 'error');
     } finally {
       setLoading(false);
     }
@@ -126,33 +128,33 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
       setShowDetailsModal(true);
     } catch (error) {
       console.error('Error fetching member details:', error);
-      Swal.fire('Error', 'Failed to fetch member details', 'error');
+      Swal.fire(t('bulkImport.importFailed'), t('bulkImport.errorProcessingError'), 'error');
     }
   };
 
   const handleResendInvitation = async (memberId: string) => {
     const { value: method } = await Swal.fire({
-      title: 'Resend Invitation',
-      text: 'Choose delivery method:',
+      title: t('bulkImport.resendInvitation'),
+      text: t('bulkImport.resendMethod'),
       input: 'radio',
       inputOptions: {
-        sms: 'SMS',
-        email: 'Email',
+        sms: t('bulkImport.resendSms'),
+        email: t('bulkImport.resendEmail'),
       },
       inputValue: 'sms',
       showCancelButton: true,
-      confirmButtonText: 'Resend',
+      confirmButtonText: t('bulkImport.resendInvitation'),
       confirmButtonColor: '#2D7A3E',
     });
 
     if (method) {
       try {
         await api.post(`/imports/resend-invitation/${memberId}`, { deliveryMethod: method });
-        Swal.fire('Success', 'Invitation resent successfully', 'success');
+        Swal.fire(t('bulkImport.resendSuccess'), '', 'success');
         fetchMembers(pagination.page);
       } catch (error) {
         console.error('Error resending invitation:', error);
-        Swal.fire('Error', 'Failed to resend invitation', 'error');
+        Swal.fire(t('bulkImport.importFailed'), t('bulkImport.resendFailed'), 'error');
       }
     }
   };
@@ -177,21 +179,21 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
 
   const handleBulkResend = async () => {
     if (selectedMembers.size === 0) {
-      Swal.fire('Warning', 'Please select at least one member', 'warning');
+      Swal.fire(t('bulkImport.importFailed'), t('bulkImport.selectMembers'), 'warning');
       return;
     }
 
     const { value: method } = await Swal.fire({
-      title: 'Bulk Resend Invitations',
-      html: `<p>You are about to resend invitations to <strong>${selectedMembers.size}</strong> member(s).</p><p>Choose delivery method:</p>`,
+      title: t('bulkImport.bulkResend'),
+      html: `<p>${t('bulkImport.bulkResendConfirm', { count: selectedMembers.size })}</p><p>${t('bulkImport.resendMethod')}</p>`,
       input: 'radio',
       inputOptions: {
-        sms: 'SMS',
-        email: 'Email',
+        sms: t('bulkImport.resendSms'),
+        email: t('bulkImport.resendEmail'),
       },
       inputValue: 'sms',
       showCancelButton: true,
-      confirmButtonText: 'Resend',
+      confirmButtonText: t('bulkImport.bulkResend'),
       confirmButtonColor: '#2D7A3E',
     });
 
@@ -201,7 +203,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
 
         // Show progress dialog
         Swal.fire({
-          title: 'Sending Invitations',
+          title: t('bulkImport.bulkResendInProgress'),
           html: '<div class="flex items-center justify-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div></div>',
           allowOutsideClick: false,
           didOpen: async () => {
@@ -215,13 +217,13 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
 
               // Close progress dialog and show summary
               Swal.fire({
-                title: 'Bulk Resend Complete',
+                title: t('bulkImport.bulkResendSuccess'),
                 html: `
                   <div class="text-left space-y-2">
-                    <p><strong>Total Members:</strong> ${result.totalMembers}</p>
-                    <p><strong>Successful:</strong> <span class="text-green-600">${result.successCount}</span></p>
-                    <p><strong>Failed:</strong> <span class="text-red-600">${result.failureCount}</span></p>
-                    ${result.failureCount > 0 ? `<p class="text-sm text-gray-600 mt-4"><strong>Failed Members:</strong><br/>${result.failedMembers?.map((m: any) => `${m.member_id}: ${m.error}`).join('<br/>')}</p>` : ''}
+                    <p><strong>${t('bulkImport.totalMembers')}:</strong> ${result.totalMembers}</p>
+                    <p><strong>${t('bulkImport.successCount')}:</strong> <span class="text-green-600">${result.successCount}</span></p>
+                    <p><strong>${t('bulkImport.failureCount')}:</strong> <span class="text-red-600">${result.failureCount}</span></p>
+                    ${result.failureCount > 0 ? `<p class="text-sm text-gray-600 mt-4"><strong>${t('bulkImport.failureCount')}:<br/>${result.failedMembers?.map((m: any) => `${m.member_id}: ${m.error}`).join('<br/>')}</p>` : ''}
                   </div>
                 `,
                 icon: result.failureCount === 0 ? 'success' : 'warning',
@@ -232,7 +234,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
               fetchMembers(pagination.page);
             } catch (error) {
               console.error('Error during bulk resend:', error);
-              Swal.fire('Error', 'Failed to complete bulk resend', 'error');
+              Swal.fire(t('bulkImport.importFailed'), t('bulkImport.bulkResendFailed'), 'error');
             } finally {
               setIsBulkResending(false);
             }
@@ -240,7 +242,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
         });
       } catch (error) {
         console.error('Error initiating bulk resend:', error);
-        Swal.fire('Error', 'Failed to initiate bulk resend', 'error');
+        Swal.fire(t('bulkImport.importFailed'), t('bulkImport.bulkResendFailed'), 'error');
         setIsBulkResending(false);
       }
     }
@@ -259,7 +261,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Member Status Dashboard</h2>
+        <h2 className="text-2xl font-bold text-gray-800">{t('bulkImport.memberStatusDashboard')}</h2>
       </div>
 
       {/* Filters and Search */}
@@ -270,7 +272,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
             <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by member ID or phone number..."
+              placeholder={t('bulkImport.searchByMemberId')}
               value={searchTerm}
               onChange={handleSearch}
               onKeyPress={(e) => e.key === 'Enter' && handleSearchSubmit()}
@@ -281,13 +283,13 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
             onClick={handleSearchSubmit}
             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
           >
-            Search
+            {t('bulkImport.searchByMemberId')}
           </button>
         </div>
 
         {/* Status Filter */}
         <div className="flex flex-wrap gap-2">
-          <span className="text-sm font-semibold text-gray-700 self-center">Filter by Status:</span>
+          <span className="text-sm font-semibold text-gray-700 self-center">{t('bulkImport.filterByStatus')}:</span>
           {Object.entries(statusLabels).map(([status, label]) => (
             <button
               key={status}
@@ -306,7 +308,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
               onClick={() => setStatusFilter('')}
               className="px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300"
             >
-              Clear
+              {t('bulkImport.cancelButton')}
             </button>
           )}
         </div>
@@ -316,7 +318,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
       {selectedMembers.size > 0 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
           <span className="text-sm font-medium text-blue-900">
-            {selectedMembers.size} member(s) selected
+            {t('bulkImport.selectedCount', { count: selectedMembers.size })}
           </span>
           <button
             onClick={handleBulkResend}
@@ -326,12 +328,12 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
             {isBulkResending ? (
               <>
                 <Loader className="w-4 h-4 animate-spin" />
-                Sending...
+                {t('bulkImport.bulkResendInProgress')}
               </>
             ) : (
               <>
                 <RotateCcw className="w-4 h-4" />
-                Bulk Resend Invitations
+                {t('bulkImport.bulkResend')}
               </>
             )}
           </button>
@@ -341,9 +343,9 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
       {/* Members Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading members...</div>
+          <div className="p-8 text-center text-gray-500">{t('bulkImport.importInProgress')}...</div>
         ) : members.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No imported members found</div>
+          <div className="p-8 text-center text-gray-500">{t('bulkImport.noMembers')}</div>
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -356,7 +358,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                         checked={selectedMembers.size === members.length && members.length > 0}
                         onChange={handleSelectAll}
                         className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500 cursor-pointer"
-                        title="Select all members on this page"
+                        title={t('bulkImport.selectMembers')}
                       />
                     </th>
                     <th className="px-6 py-3 text-left">
@@ -364,7 +366,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                         onClick={() => handleSort('member_id')}
                         className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
                       >
-                        Member ID
+                        {t('bulkImport.memberId')}
                         <SortIcon field="member_id" />
                       </button>
                     </th>
@@ -373,7 +375,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                         onClick={() => handleSort('name')}
                         className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
                       >
-                        Name
+                        {t('bulkImport.memberName')}
                         <SortIcon field="name" />
                       </button>
                     </th>
@@ -382,7 +384,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                         onClick={() => handleSort('phone_number')}
                         className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
                       >
-                        Phone Number
+                        {t('bulkImport.phoneNumber')}
                         <SortIcon field="phone_number" />
                       </button>
                     </th>
@@ -391,7 +393,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                         onClick={() => handleSort('activation_status')}
                         className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
                       >
-                        Status
+                        {t('bulkImport.status')}
                         <SortIcon field="activation_status" />
                       </button>
                     </th>
@@ -400,12 +402,12 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                         onClick={() => handleSort('created_at')}
                         className="flex items-center gap-2 font-semibold text-gray-700 hover:text-gray-900"
                       >
-                        Imported
+                        {t('bulkImport.importedDate')}
                         <SortIcon field="created_at" />
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-700">Activation Method</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-700">Actions</th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-700">{t('bulkImport.activationMethod')}</th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-700">{t('bulkImport.resendInvitation')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -437,7 +439,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                         <button
                           onClick={() => handleViewDetails(member.id)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
-                          title="View Details"
+                          title={t('bulkImport.viewDetails')}
                         >
                           <Eye className="w-4 h-4" />
                         </button>
@@ -445,7 +447,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                           <button
                             onClick={() => handleResendInvitation(member.id)}
                             className="p-2 text-green-600 hover:bg-green-50 rounded transition"
-                            title="Resend Invitation"
+                            title={t('bulkImport.resendInvitation')}
                           >
                             <RotateCcw className="w-4 h-4" />
                           </button>
@@ -460,8 +462,10 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
             {/* Pagination */}
             <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
               <div className="text-sm text-gray-600">
-                Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} members
+                {t('bulkImport.pagination', { 
+                  current: pagination.page, 
+                  total: pagination.pages 
+                })}
               </div>
               <div className="flex gap-2">
                 <button
@@ -504,7 +508,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
             <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
-              <h3 className="text-xl font-bold text-gray-800">Member Details</h3>
+              <h3 className="text-xl font-bold text-gray-800">{t('bulkImport.viewDetails')}</h3>
               <button
                 onClick={() => setShowDetailsModal(false)}
                 className="text-gray-500 hover:text-gray-700 text-2xl"
@@ -515,23 +519,23 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">Member ID</label>
+                  <label className="text-sm font-semibold text-gray-600">{t('bulkImport.memberId')}</label>
                   <p className="text-gray-900">{memberDetails.member_id}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">Name</label>
+                  <label className="text-sm font-semibold text-gray-600">{t('bulkImport.memberName')}</label>
                   <p className="text-gray-900">{memberDetails.name}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">Phone Number</label>
+                  <label className="text-sm font-semibold text-gray-600">{t('bulkImport.phoneNumber')}</label>
                   <p className="text-gray-900">{memberDetails.phone_number}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">Email</label>
+                  <label className="text-sm font-semibold text-gray-600">{t('bulkImport.email')}</label>
                   <p className="text-gray-900">{memberDetails.email || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">Status</label>
+                  <label className="text-sm font-semibold text-gray-600">{t('bulkImport.status')}</label>
                   <p>
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[memberDetails.activation_status]}`}>
                       {statusLabels[memberDetails.activation_status]}
@@ -539,21 +543,21 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">Activation Method</label>
+                  <label className="text-sm font-semibold text-gray-600">{t('bulkImport.activationMethod')}</label>
                   <p className="text-gray-900">{memberDetails.activation_method ? memberDetails.activation_method.toUpperCase() : '-'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">Imported Date</label>
+                  <label className="text-sm font-semibold text-gray-600">{t('bulkImport.importedDate')}</label>
                   <p className="text-gray-900">{new Date(memberDetails.imported_at).toLocaleString()}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">SMS Sent Date</label>
+                  <label className="text-sm font-semibold text-gray-600">{t('bulkImport.smsSentDate')}</label>
                   <p className="text-gray-900">
                     {memberDetails.sms_sent_at ? new Date(memberDetails.sms_sent_at).toLocaleString() : '-'}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">Temporary Password Expires</label>
+                  <label className="text-sm font-semibold text-gray-600">{t('bulkImport.emailSentDate')}</label>
                   <p className="text-gray-900">
                     {memberDetails.temporary_password_expires
                       ? new Date(memberDetails.temporary_password_expires).toLocaleString()
@@ -561,7 +565,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">Activated Date</label>
+                  <label className="text-sm font-semibold text-gray-600">{t('bulkImport.activatedDate')}</label>
                   <p className="text-gray-900">
                     {memberDetails.activated_at ? new Date(memberDetails.activated_at).toLocaleString() : '-'}
                   </p>
@@ -573,7 +577,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                 onClick={() => setShowDetailsModal(false)}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition"
               >
-                Close
+                {t('bulkImport.cancelButton')}
               </button>
               {memberDetails.activation_status === 'pending_activation' && (
                 <button
@@ -583,7 +587,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                   }}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                 >
-                  Resend Invitation
+                  {t('bulkImport.resendInvitation')}
                 </button>
               )}
             </div>
