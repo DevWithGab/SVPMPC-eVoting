@@ -236,10 +236,11 @@ const changePassword = async (req, res) => {
     }
 
     // Update activation status to activated if they had a temporary password
-    if (user.activation_status === 'pending_activation') {
+    const wasActivating = user.activation_status === 'pending_activation';
+    if (wasActivating) {
       user.activation_status = 'activated';
       user.activated_at = new Date();
-      // Don't override activation_method if it's already set
+      // Don't override activation_method if it's already set (it should be 'sms' or 'email')
       user.markModified('activation_status');
       user.markModified('activated_at');
     }
@@ -254,9 +255,25 @@ const changePassword = async (req, res) => {
       {
         member_id: user.member_id,
         activation_status: user.activation_status,
+        was_activating: wasActivating,
       },
       req
     );
+
+    // Log activation event if this was an activation
+    if (wasActivating) {
+      await logActivity(
+        userId,
+        'ACTIVATION',
+        `Member ${user.member_id} activated their account by setting a permanent password`,
+        {
+          member_id: user.member_id,
+          activation_method: user.activation_method,
+          import_id: user.import_id,
+        },
+        req
+      );
+    }
 
     res.json({
       message: 'Password changed successfully',
