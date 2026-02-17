@@ -875,5 +875,86 @@ describe('Auth Controller - Password Change Endpoint', () => {
       expect(response.user.member_id).toBe('MEM001');
       expect(response.user.activation_status).toBeDefined();
     });
+
+    it('should set activated_at timestamp when activating from pending_activation', async () => {
+      const currentPassword = 'CurrentPass123!';
+      const newPassword = 'NewPass123!';
+
+      const user = await User.create({
+        username: 'testuser',
+        email: 'user@example.com',
+        fullName: 'Test User',
+        password: currentPassword,
+        role: 'member',
+        member_id: 'MEM001',
+        activation_status: 'pending_activation',
+      });
+
+      expect(user.activated_at).toBeNull();
+
+      const req = {
+        user: { _id: user._id },
+        body: {
+          currentPassword,
+          newPassword,
+        },
+        headers: {},
+        get: jest.fn().mockReturnValue('Mozilla/5.0'),
+      };
+
+      const res = {
+        json: jest.fn().mockReturnThis(),
+        status: jest.fn().mockReturnThis(),
+      };
+
+      await changePassword(req, res);
+
+      const response = res.json.mock.calls[0][0];
+      expect(response.user.activated_at).toBeDefined();
+      expect(response.user.activated_at).not.toBeNull();
+
+      // Verify in database
+      const updatedUser = await User.findById(user._id);
+      expect(updatedUser.activated_at).toBeDefined();
+      expect(updatedUser.activated_at).not.toBeNull();
+      expect(updatedUser.activated_at.getTime()).toBeGreaterThan(user.createdAt.getTime());
+    });
+
+    it('should record activation method when provided', async () => {
+      const currentPassword = 'CurrentPass123!';
+      const newPassword = 'NewPass123!';
+
+      const user = await User.create({
+        username: 'testuser',
+        email: 'user@example.com',
+        fullName: 'Test User',
+        password: currentPassword,
+        role: 'member',
+        member_id: 'MEM001',
+        activation_status: 'pending_activation',
+        activation_method: 'sms',
+      });
+
+      const req = {
+        user: { _id: user._id },
+        body: {
+          currentPassword,
+          newPassword,
+        },
+        headers: {},
+        get: jest.fn().mockReturnValue('Mozilla/5.0'),
+      };
+
+      const res = {
+        json: jest.fn().mockReturnThis(),
+        status: jest.fn().mockReturnThis(),
+      };
+
+      await changePassword(req, res);
+
+      const updatedUser = await User.findById(user._id);
+      expect(updatedUser.activation_method).toBe('sms');
+      expect(updatedUser.activation_status).toBe('activated');
+    });
   });
 });

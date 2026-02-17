@@ -106,6 +106,10 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    activated_at: {
+      type: Date,
+      default: null,
+    },
     sms_retry_count: {
       type: Number,
       default: 0,

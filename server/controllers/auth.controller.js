@@ -238,8 +238,10 @@ const changePassword = async (req, res) => {
     // Update activation status to activated if they had a temporary password
     if (user.activation_status === 'pending_activation') {
       user.activation_status = 'activated';
+      user.activated_at = new Date();
       // Don't override activation_method if it's already set
       user.markModified('activation_status');
+      user.markModified('activated_at');
     }
 
     await user.save();
@@ -264,6 +266,7 @@ const changePassword = async (req, res) => {
         email: user.email,
         member_id: user.member_id,
         activation_status: user.activation_status,
+        activated_at: user.activated_at,
       },
     });
   } catch (error) {
