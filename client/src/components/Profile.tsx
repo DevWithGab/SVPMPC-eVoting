@@ -4,16 +4,17 @@ import type { User, PageView, SupportTicket } from '../types';
 import { 
   User as UserIcon, Shield, Clock, Award, History, 
   LogOut, MessageSquare, Send, CheckCircle2, 
-  ChevronRight, Hash, Terminal
+  ChevronRight, Hash, Terminal, Lock
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { PasswordChangeForm } from './PasswordChangeForm';
 
 interface ProfileProps {
   user: User;
   onNavigate: (page: PageView) => void;
   onLogout: () => void;
   receiptHash?: string;
-  initialTab?: 'OVERVIEW' | 'SUPPORT';
+  initialTab?: 'OVERVIEW' | 'SUPPORT' | 'PASSWORD';
 }
 
 export const Profile: React.FC<ProfileProps> = ({ 
@@ -22,7 +23,7 @@ export const Profile: React.FC<ProfileProps> = ({
   const [ticketSubject, setTicketSubject] = useState('PIN Access Issue');
   const [ticketMessage, setTicketMessage] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SUPPORT'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SUPPORT' | 'PASSWORD'>(initialTab);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
@@ -186,6 +187,7 @@ export const Profile: React.FC<ProfileProps> = ({
           <nav className="space-y-2">
             {[
               { id: 'OVERVIEW', label: 'Membership Overview', icon: History },
+              { id: 'PASSWORD', label: 'Change Password', icon: Lock },
               { id: 'SUPPORT', label: 'Support Terminal', icon: MessageSquare }
             ].map(item => (
               <button
@@ -305,6 +307,14 @@ export const Profile: React.FC<ProfileProps> = ({
                 </div>
               )}
             </div>
+          ) : activeTab === 'PASSWORD' ? (
+            <PasswordChangeForm 
+              onSuccess={() => {
+                // Optionally navigate back to overview after successful password change
+                setTimeout(() => setActiveTab('OVERVIEW'), 2000);
+              }}
+              onCancel={() => setActiveTab('OVERVIEW')}
+            />
           ) : (
             <div className="space-y-16 animate-fadeIn">
               <div className="flex justify-between items-end mb-10 border-b border-gray-100 pb-8">

@@ -250,7 +250,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - _Requirements: 8.6, 8.7, 8.8, 8.9_
 
 - [ ] 15. Frontend Password Management
-  - [ ] 15.1 Create PasswordChangeForm component
+  - [x] 15.1 Create PasswordChangeForm component
     - Add to member profile settings
     - Request current password
     - Validate new password meets requirements
