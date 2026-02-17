@@ -106,7 +106,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - _Requirements: 4.8, 4.9, 4.10, 12.13_
 
 - [ ] 6. Backend Member Status Tracking and Resend
-  - [ ] 6.1 Create member status query endpoints
+  - [x] 6.1 Create member status query endpoints
     - Get all imported members with status, dates, activation method
     - Support filtering by status
     - Support searching by member_id or phone_number

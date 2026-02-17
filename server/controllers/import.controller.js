@@ -203,9 +203,173 @@ async function getRetryStatus(req, res) {
   }
 }
 
+/**
+ * Get all imported members with status, dates, and activation method
+ * Supports filtering by status, searching by member_id or phone_number, and sorting
+ * GET /api/imports/members
+ * Query parameters:
+ *   - status: Filter by activation status (pending_activation, activated, sms_failed, email_failed, token_expired)
+ *   - search: Search by member_id or phone_number
+ *   - sortBy: Column to sort by (member_id, name, phone_number, activation_status, created_at, activated_at, sms_sent_at, temporary_password_expires)
+ *   - sortOrder: Sort order (asc or desc, default: asc)
+ *   - page: Page number for pagination (default: 1)
+ *   - limit: Number of records per page (default: 50)
+ * 
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ */
+async function getImportedMembers(req, res) {
+  try {
+    const { status, search, sortBy = 'created_at', sortOrder = 'asc', page = 1, limit = 50 } = req.query;
+
+    // Build filter query
+    const filter = { import_id: { $exists: true, $ne: null } };
+
+    // Filter by status if provided
+    if (status) {
+      const validStatuses = ['pending_activation', 'activated', 'sms_failed', 'email_failed', 'token_expired'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+        });
+      }
+      filter.activation_status = status;
+    }
+
+    // Search by member_id or phone_number if provided
+    if (search) {
+      filter.$or = [
+        { member_id: { $regex: search, $options: 'i' } },
+        { phone_number: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    // Validate sortBy parameter
+    const validSortFields = ['member_id', 'name', 'phone_number', 'activation_status', 'created_at', 'activated_at', 'sms_sent_at', 'temporary_password_expires'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'created_at';
+
+    // Validate sortOrder parameter
+    const sortOrderValue = sortOrder === 'desc' ? -1 : 1;
+
+    // Calculate pagination
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 50));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Execute query with sorting and pagination
+    const members = await User.find(filter)
+      .sort({ [sortField]: sortOrderValue })
+      .skip(skip)
+      .limit(limitNum)
+      .select('member_id fullName phone_number activation_status activation_method created_at activated_at sms_sent_at temporary_password_expires email')
+      .lean();
+
+    // Get total count for pagination
+    const totalCount = await User.countDocuments(filter);
+
+    // Format response data
+    const formattedMembers = members.map(member => ({
+      id: member._id,
+      member_id: member.member_id,
+      name: member.fullName,
+      phone_number: member.phone_number,
+      email: member.email,
+      activation_status: member.activation_status,
+      activation_method: member.activation_method,
+      imported_at: member.created_at,
+      activated_at: member.activated_at,
+      sms_sent_at: member.sms_sent_at,
+      temporary_password_expires: member.temporary_password_expires,
+    }));
+
+    return res.status(200).json({
+      message: 'Imported members retrieved successfully',
+      data: {
+        members: formattedMembers,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limitNum),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error getting imported members:', error);
+    return res.status(500).json({
+      message: 'Error retrieving imported members',
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * Get details for a specific imported member
+ * GET /api/imports/members/:memberId
+ * 
+ * @param {object} req - Express request object
+ * @param {object} res - Express response object
+ */
+async function getImportedMemberDetails(req, res) {
+  try {
+    const { memberId } = req.params;
+
+    // Find member by ID or member_id
+    const member = await User.findOne({
+      $or: [
+        { _id: memberId },
+        { member_id: memberId },
+      ],
+      import_id: { $exists: true, $ne: null },
+    }).select('-password -temporary_password_hash');
+
+    if (!member) {
+      return res.status(404).json({
+        message: 'Imported member not found',
+      });
+    }
+
+    // Get import operation details
+    const importOp = await ImportOperation.findById(member.import_id);
+
+    return res.status(200).json({
+      message: 'Member details retrieved successfully',
+      data: {
+        id: member._id,
+        member_id: member.member_id,
+        name: member.fullName,
+        email: member.email,
+        phone_number: member.phone_number,
+        activation_status: member.activation_status,
+        activation_method: member.activation_method,
+        imported_at: member.created_at,
+        activated_at: member.activated_at,
+        sms_sent_at: member.sms_sent_at,
+        email_sent_at: member.email_sent_at,
+        temporary_password_expires: member.temporary_password_expires,
+        last_password_change: member.last_password_change,
+        import_operation: importOp ? {
+          id: importOp._id,
+          admin_name: importOp.admin_name,
+          csv_file_name: importOp.csv_file_name,
+          created_at: importOp.created_at,
+        } : null,
+      },
+    });
+  } catch (error) {
+    console.error('Error getting member details:', error);
+    return res.status(500).json({
+      message: 'Error retrieving member details',
+      error: error.message,
+    });
+  }
+}
+
 module.exports = {
   retrySMS,
   retryEmail,
   bulkRetryNotifications,
   getRetryStatus,
+  getImportedMembers,
+  getImportedMemberDetails,
 };
