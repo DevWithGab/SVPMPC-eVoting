@@ -3,6 +3,7 @@ import { Upload, X, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Swal from 'sweetalert2';
 import api from '../services/api';
+import { useDarkMode } from '../context/DarkModeContext';
 
 interface BulkImportUploadProps {
   onUploadComplete?: (data: any) => void;
@@ -24,6 +25,7 @@ interface ValidationError {
 
 export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComplete, onCancel }) => {
   const { t } = useTranslation();
+  const { isDarkMode } = useDarkMode();
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -373,14 +375,14 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6">
+    <div className="w-full max-w-4xl mx-auto p-2 md:p-6 animate-fadeIn">
       {!showPreview && !showResults && !isProcessing ? (
         <div className="space-y-6">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+          <div className={`text-center mb-8 border-b pb-4 ${isDarkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+            <h2 className={`text-xl md:text-2xl font-black uppercase tracking-tight mb-2 ${isDarkMode ? 'text-coop-yellow' : 'text-gray-900'}`}>
               {t('bulkImport.title')}
             </h2>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className={`text-xs font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
               {t('bulkImport.uploadSection')}
             </p>
           </div>
@@ -400,10 +402,14 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
             tabIndex={0}
             aria-label={t('bulkImport.dragDropText')}
             aria-describedby="file-upload-hint"
-            className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+            className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 shadow-lg ${
               isDragging
-                ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                : 'border-gray-300 dark:border-gray-600 hover:border-green-400 dark:hover:border-green-500'
+                ? isDarkMode 
+                  ? 'border-coop-yellow bg-coop-yellow/10 focus:ring-coop-yellow' 
+                  : 'border-coop-green bg-green-50 focus:ring-coop-green'
+                : isDarkMode
+                  ? 'border-slate-600 hover:border-coop-yellow/50 focus:ring-coop-yellow bg-slate-800'
+                  : 'border-gray-300 hover:border-coop-green/50 focus:ring-coop-green bg-white'
             }`}
           >
             <input
@@ -416,11 +422,11 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
               aria-label={t('bulkImport.uploadButton')}
             />
 
-            <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" aria-hidden="true" />
-            <p className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <Upload className={`w-12 h-12 mx-auto mb-4 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-green'}`} aria-hidden="true" />
+            <p className={`text-lg font-bold uppercase tracking-wide mb-2 ${isDarkMode ? 'text-slate-200' : 'text-gray-700'}`}>
               {t('bulkImport.dragDropText')}
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400" id="file-upload-hint">
+            <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`} id="file-upload-hint">
               {t('bulkImport.fileFormatHint')}
             </p>
           </div>
@@ -428,26 +434,35 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
           {isUploading && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">{t('bulkImport.uploadButton')}...</span>
-                <span className="text-gray-600 dark:text-gray-400">{uploadProgress}%</span>
+                <span className={`font-bold uppercase tracking-wide ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>{t('bulkImport.uploadButton')}...</span>
+                <span className={`font-bold ${isDarkMode ? 'text-coop-yellow' : 'text-coop-green'}`}>{uploadProgress}%</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div className={`w-full rounded-full h-3 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>
                 <div
-                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  className={`h-3 rounded-full transition-all duration-300 ${isDarkMode ? 'bg-coop-yellow' : 'bg-coop-green'}`}
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
             </div>
           )}
 
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4" role="region" aria-label="Upload requirements">
-            <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">
+          <div className={`rounded-lg border-2 p-5 shadow-lg ${isDarkMode ? 'bg-slate-800 border-coop-yellow/30' : 'bg-blue-50 border-blue-300'}`} role="region" aria-label="Upload requirements">
+            <h3 className={`font-black text-xs uppercase tracking-widest mb-3 ${isDarkMode ? 'text-coop-yellow' : 'text-blue-900'}`}>
               {t('bulkImport.uploadSection')}
             </h3>
-            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-              <li>• {t('bulkImport.requiredColumns')}</li>
-              <li>• {t('bulkImport.optionalColumns')}</li>
-              <li>• {t('bulkImport.fileFormatHint')}</li>
+            <ul className={`text-sm space-y-2 ${isDarkMode ? 'text-slate-300' : 'text-blue-800'}`}>
+              <li className="flex items-start gap-2">
+                <span className={isDarkMode ? 'text-coop-yellow' : 'text-blue-600'}>•</span>
+                <span>{t('bulkImport.requiredColumns')}</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className={isDarkMode ? 'text-coop-yellow' : 'text-blue-600'}>•</span>
+                <span>{t('bulkImport.optionalColumns')}</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className={isDarkMode ? 'text-coop-yellow' : 'text-blue-600'}>•</span>
+                <span>{t('bulkImport.fileFormatHint')}</span>
+              </li>
             </ul>
           </div>
         </div>
@@ -457,11 +472,12 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
           validationErrors={validationErrors}
           handleCancel={handleCancel}
           handleConfirmImport={handleConfirmImport}
+          isDarkMode={isDarkMode}
         />
       ) : isProcessing ? (
-        <ProcessingSection processingProgress={processingProgress} />
+        <ProcessingSection processingProgress={processingProgress} isDarkMode={isDarkMode} />
       ) : showResults && importResult ? (
-        <ResultsSection importResult={importResult} handleCancel={handleCancel} />
+        <ResultsSection importResult={importResult} handleCancel={handleCancel} isDarkMode={isDarkMode} />
       ) : null}
     </div>
   );
@@ -469,47 +485,47 @@ export const BulkImportUpload: React.FC<BulkImportUploadProps> = ({ onUploadComp
 
 
 // Preview and Results sections
-const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConfirmImport }: any) => {
+const PreviewSection = ({ parsedData, validationErrors, handleCancel, handleConfirmImport, isDarkMode }: any) => {
   const { t } = useTranslation();
   return (
-  <div className="space-y-6">
-    <div className="flex items-center justify-between mb-6">
-      <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+  <div className="space-y-6 animate-fadeIn">
+    <div className={`flex items-center justify-between mb-6 pb-4 border-b ${isDarkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+      <h2 className={`text-xl md:text-2xl font-black uppercase tracking-tight ${isDarkMode ? 'text-coop-yellow' : 'text-gray-900'}`}>
         {t('bulkImport.previewTitle')}
       </h2>
       <button
         onClick={handleCancel}
-        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 rounded p-1"
+        className={`transition-all hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 rounded-lg p-2 ${isDarkMode ? 'text-slate-400 hover:text-coop-yellow focus:ring-coop-yellow' : 'text-gray-500 hover:text-gray-700 focus:ring-coop-green'}`}
         aria-label={t('bulkImport.cancelButton')}
       >
         <X className="w-6 h-6" aria-hidden="true" />
       </button>
     </div>
 
-    <div className="grid grid-cols-3 gap-4">
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4" role="region" aria-label="Row count">
-        <p className="text-sm text-gray-600 dark:text-gray-400">{t('bulkImport.rowCount', { count: parsedData?.rowCount || 0 })}</p>
-        <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`rounded-lg p-5 border-2 shadow-lg ${isDarkMode ? 'bg-slate-800 border-coop-yellow/30' : 'bg-blue-50 border-blue-300'}`} role="region" aria-label="Row count">
+        <p className={`text-xs font-black uppercase tracking-widest mb-2 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>{t('bulkImport.rowCount', { count: parsedData?.rowCount || 0 })}</p>
+        <p className={`text-3xl font-black ${isDarkMode ? 'text-coop-yellow' : 'text-blue-600'}`}>
           {parsedData?.rowCount || 0}
         </p>
       </div>
-      <div className={`rounded-lg p-4 border ${
+      <div className={`rounded-lg p-5 border-2 shadow-lg ${
         validationErrors.length === 0
-          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-          : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+          ? isDarkMode ? 'bg-slate-800 border-green-500/30' : 'bg-green-50 border-green-300'
+          : isDarkMode ? 'bg-slate-800 border-red-500/30' : 'bg-red-50 border-red-300'
       }`} role="region" aria-label="Validation errors">
-        <p className="text-sm text-gray-600 dark:text-gray-400">{t('bulkImport.errorDetails')}</p>
-        <p className={`text-2xl font-bold ${
+        <p className={`text-xs font-black uppercase tracking-widest mb-2 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>{t('bulkImport.errorDetails')}</p>
+        <p className={`text-3xl font-black ${
           validationErrors.length === 0
-            ? 'text-green-600 dark:text-green-400'
-            : 'text-red-600 dark:text-red-400'
+            ? isDarkMode ? 'text-green-400' : 'text-green-600'
+            : isDarkMode ? 'text-red-400' : 'text-red-600'
         }`}>
           {validationErrors.length}
         </p>
       </div>
-      <div className="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800 rounded-lg p-4" role="region" aria-label="Column count">
-        <p className="text-sm text-gray-600 dark:text-gray-400">{t('bulkImport.uploadSection')}</p>
-        <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
+      <div className={`rounded-lg p-5 border-2 shadow-lg ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-300'}`} role="region" aria-label="Column count">
+        <p className={`text-xs font-black uppercase tracking-widest mb-2 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>{t('bulkImport.uploadSection')}</p>
+        <p className={`text-3xl font-black ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
           {parsedData?.headers.length || 0}
         </p>
       </div>
