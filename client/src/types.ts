@@ -39,6 +39,7 @@ export interface User {
   isActive?: boolean;
   profilePicture?: string;
   address?: string;
+  needsPasswordChange?: boolean;
 }
 
 export interface Position {

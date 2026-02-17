@@ -165,16 +165,48 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setTimeout(() => {
       if (otp === '123456') {
         if (tempUser) {
-          Swal.fire({
-            title: 'Welcome!',
-            text: `Login successful, ${tempUser.name}!`,
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false,
-            position: 'top-end',
-            toast: true
-          });
-          onLogin(tempUser);
+          // If user logged in with temporary password, show password change prompt
+          if (hasTemporaryPassword) {
+            Swal.fire({
+              title: 'Set Your Password',
+              text: 'You logged in with a temporary password. Would you like to set a permanent password now?',
+              icon: 'info',
+              showCancelButton: true,
+              confirmButtonText: 'Yes, Change Password',
+              cancelButtonText: 'Skip for Now',
+              confirmButtonColor: '#2d7a3e',
+              cancelButtonColor: '#6b7280',
+            }).then((result) => {
+              if (result.isConfirmed) {
+                // User wants to change password - pass flag to parent
+                onLogin({ ...tempUser, needsPasswordChange: true });
+              } else {
+                // User skips password change
+                Swal.fire({
+                  title: 'Welcome!',
+                  text: `Login successful, ${tempUser.name}!`,
+                  icon: 'success',
+                  timer: 2000,
+                  showConfirmButton: false,
+                  position: 'top-end',
+                  toast: true
+                });
+                onLogin(tempUser);
+              }
+            });
+          } else {
+            // Regular login without temporary password
+            Swal.fire({
+              title: 'Welcome!',
+              text: `Login successful, ${tempUser.name}!`,
+              icon: 'success',
+              timer: 2000,
+              showConfirmButton: false,
+              position: 'top-end',
+              toast: true
+            });
+            onLogin(tempUser);
+          }
         }
       } else {
         setError('Invalid Verification Key.');

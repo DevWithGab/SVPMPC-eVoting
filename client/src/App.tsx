@@ -48,6 +48,12 @@ const App: React.FC = () => {
     setUser(loggedInUser);  
     localStorage.setItem('user', JSON.stringify(loggedInUser));
     
+    // If user needs to change password (logged in with temporary password), redirect to profile with password change
+    if (loggedInUser.needsPasswordChange) {
+      handleNavigate('PROFILE');
+      return;
+    }
+    
     // Check if there's a redirect destination after login
     const redirectAfterLogin = localStorage.getItem('redirectAfterLogin');
     

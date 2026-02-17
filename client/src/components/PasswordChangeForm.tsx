@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 interface PasswordChangeFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
+  isFirstTimeChange?: boolean;
 }
 
 interface PasswordRequirement {
@@ -13,7 +14,7 @@ interface PasswordRequirement {
   met: boolean;
 }
 
-export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSuccess, onCancel }) => {
+export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSuccess, onCancel, isFirstTimeChange = false }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -124,6 +125,20 @@ export const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ onSucces
       transition={{ duration: 0.3 }}
       className="space-y-8"
     >
+      {isFirstTimeChange && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-6 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-4"
+        >
+          <AlertCircle size={20} className="text-blue-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold text-blue-900 mb-1">Welcome to Your Account</p>
+            <p className="text-sm text-blue-700">You logged in with a temporary password. Please set a permanent password to fully activate your account.</p>
+          </div>
+        </motion.div>
+      )}
+
       <div className="flex justify-between items-end mb-10 border-b border-gray-100 pb-8">
         <div>
           <h3 className="text-3xl font-black text-gray-900 uppercase tracking-tighter">Change Password</h3>

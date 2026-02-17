@@ -23,7 +23,9 @@ export const Profile: React.FC<ProfileProps> = ({
   const [ticketSubject, setTicketSubject] = useState('PIN Access Issue');
   const [ticketMessage, setTicketMessage] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SUPPORT' | 'PASSWORD'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SUPPORT' | 'PASSWORD'>(
+    user.needsPasswordChange ? 'PASSWORD' : initialTab
+  );
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
@@ -193,9 +195,12 @@ export const Profile: React.FC<ProfileProps> = ({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id as any)}
-                className={`w-full flex items-center gap-4 px-6 py-4 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === item.id ? 'bg-[#4F75E2] text-white shadow-lg' : 'text-gray-400 hover:text-gray-600 hover:bg-white'}`}
+                className={`w-full flex items-center gap-4 px-6 py-4 text-[10px] font-black uppercase tracking-widest transition-all relative ${activeTab === item.id ? 'bg-[#4F75E2] text-white shadow-lg' : 'text-gray-400 hover:text-gray-600 hover:bg-white'}`}
               >
                 <item.icon size={16} /> {item.label}
+                {item.id === 'PASSWORD' && user.needsPasswordChange && (
+                  <span className="ml-auto w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                )}
               </button>
             ))}
           </nav>
@@ -309,6 +314,7 @@ export const Profile: React.FC<ProfileProps> = ({
             </div>
           ) : activeTab === 'PASSWORD' ? (
             <PasswordChangeForm 
+              isFirstTimeChange={user.needsPasswordChange}
               onSuccess={() => {
                 // Optionally navigate back to overview after successful password change
                 setTimeout(() => setActiveTab('OVERVIEW'), 2000);

@@ -273,7 +273,7 @@ This implementation plan breaks down the Bulk Member Import & Email Activation f
     - Offer to resend SMS on expiration
     - _Requirements: 4.1, 4.2, 4.3, 12.11_
   
-  - [ ] 16.2 Implement password change prompt
+  - [x] 16.2 Implement password change prompt
     - Show optional prompt after login with temporary password
     - Allow member to change password or skip
     - Redirect to password change form if chosen
