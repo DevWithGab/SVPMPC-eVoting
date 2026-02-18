@@ -7,6 +7,7 @@
 const { User, Activity, ImportOperation } = require('../models');
 const { sendSMSAndLog } = require('./smsService');
 const { sendEmailAndLog } = require('./emailService');
+const { generateTemporaryPassword, hashTemporaryPassword } = require('./passwordGenerator');
 
 /**
  * Configuration for retry logic
@@ -252,10 +253,20 @@ async function retryEmailWithBackoff({
       }
     }
 
+    // Generate new temporary password for retry
+    const newTemporaryPassword = generateTemporaryPassword();
+    const hashedPassword = await hashTemporaryPassword(newTemporaryPassword);
+
+    // Update user's temporary password
+    user.temporary_password_hash = hashedPassword;
+    user.temporary_password_expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    await user.save();
+
     // Attempt to send email
     const emailResult = await sendEmailAndLog({
       userId,
       adminId,
+      temporaryPassword: newTemporaryPassword,
       cooperativeName,
       cooperativePhone,
     });

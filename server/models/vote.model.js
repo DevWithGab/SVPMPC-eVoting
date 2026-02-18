@@ -32,8 +32,9 @@ const voteSchema = new mongoose.Schema(
   }
 );
 
-// unique constraint: one vote per (election, user)
-voteSchema.index({ electionId: 1, userId: 1 }, { unique: true });
+// Allow multiple votes per user per election (one per position)
+// Remove the old unique constraint and add a compound index for performance
+voteSchema.index({ electionId: 1, userId: 1, candidateId: 1 });
 
 const Vote = mongoose.model('Vote', voteSchema);
 module.exports = Vote;

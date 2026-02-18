@@ -112,6 +112,7 @@ async function resendInvitation({
       sendResult = await sendEmailAndLog({
         userId,
         adminId,
+        temporaryPassword: newTemporaryPassword,
         cooperativeName,
         cooperativePhone,
       });

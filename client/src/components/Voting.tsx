@@ -245,24 +245,37 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
         return;
       }
 
-      // Submit votes for each position (including abstentions)
-      const votePromises: Promise<unknown>[] = [];
+      // Submit votes SEQUENTIALLY (not in parallel) to avoid race conditions
+      const results = [];
       
       for (const position of positions) {
         const candidateIds = selections[position.id] || [];
         
-        if (candidateIds.length > 0) {
+        // Remove duplicates from selections (just in case)
+        const uniqueCandidateIds = [...new Set(candidateIds)];
+        
+        if (uniqueCandidateIds.length > 0) {
           // Submit votes for selected candidates
-          for (const candidateId of candidateIds) {
-            votePromises.push(voteAPI.castVote(candidateId, activeElectionId));
+          for (const candidateId of uniqueCandidateIds) {
+            try {
+              const result = await voteAPI.castVote(candidateId, activeElectionId);
+              results.push(result);
+            } catch (err) {
+              console.error('Failed to cast vote for candidate:', candidateId, err);
+              throw err; // Re-throw to trigger error handling
+            }
           }
         } else {
           // Submit abstain vote for this position
-          votePromises.push(voteAPI.castAbstainVote(activeElectionId, position.id));
+          try {
+            const result = await voteAPI.castAbstainVote(activeElectionId, position.id);
+            results.push(result);
+          } catch (err) {
+            console.error('Failed to cast abstain vote for position:', position.id, err);
+            throw err;
+          }
         }
       }
-
-      const results = await Promise.all(votePromises);
       
       // Generate a simple receipt hash (in production, this would come from backend)
       const receipt = `SV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;

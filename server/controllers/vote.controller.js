@@ -6,7 +6,7 @@ const castVote = async (req, res) => {
     const { candidateId, electionId } = req.body;
 
     const user = await User.findById(req.user._id);
-    const candidate = await Candidate.findById(candidateId);
+    const candidate = await Candidate.findById(candidateId).populate('positionId');
     const election = await Election.findById(electionId);
 
     if (!user || !candidate || !election) {
@@ -17,13 +17,27 @@ const castVote = async (req, res) => {
       throw new Error('Election is not active');
     }
 
-    const existingVote = await Vote.findOne({
+    // Get the position ID from the candidate
+    const positionId = candidate.positionId?._id || candidate.positionId;
+
+    // Check if user has already voted for ANY candidate in this position
+    const existingVotesForPosition = await Vote.find({
       userId: user._id,
       electionId,
+      candidateId: { $ne: null },
+    }).populate({
+      path: 'candidateId',
+      select: 'positionId'
     });
 
-    if (existingVote) {
-      throw new Error('You have already voted in this election');
+    // Check if any existing vote is for the same position
+    for (const existingVote of existingVotesForPosition) {
+      if (existingVote.candidateId) {
+        const existingPositionId = existingVote.candidateId.positionId?._id || existingVote.candidateId.positionId;
+        if (String(existingPositionId) === String(positionId)) {
+          throw new Error('You have already voted for this position');
+        }
+      }
     }
 
     const vote = await Vote.create({
@@ -65,14 +79,29 @@ const castAbstainVote = async (req, res) => {
       throw new Error('Election is not active');
     }
 
-    const existingVote = await Vote.findOne({
+    // Check if user has already voted for ANY candidate in this position
+    const existingVotesForPosition = await Vote.find({
       userId: user._id,
       electionId,
+      candidateId: { $ne: null },
+    }).populate({
+      path: 'candidateId',
+      select: 'positionId'
     });
 
-    if (existingVote) {
-      throw new Error('You have already voted in this election');
+    // Check if any existing vote is for the same position
+    for (const existingVote of existingVotesForPosition) {
+      if (existingVote.candidateId) {
+        const existingPositionId = existingVote.candidateId.positionId?._id || existingVote.candidateId.positionId;
+        if (String(existingPositionId) === String(positionId)) {
+          throw new Error('You have already voted for this position');
+        }
+      }
     }
+
+    // Check if user has already abstained for this position
+    // Note: We don't store positionId in abstain votes, so we can't check this perfectly
+    // For now, allow abstain votes (they won't conflict with the unique constraint anymore)
 
     const vote = await Vote.create({
       userId: user._id,
