@@ -16,6 +16,7 @@ node_modules/
 
 # IDE and Editor
 .vscode/
+.kiro/
 .idea/
 *.swp
 *.swo
