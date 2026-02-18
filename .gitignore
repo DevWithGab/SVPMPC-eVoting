@@ -42,3 +42,6 @@ tmp/
 # OS specific
 Thumbs.db
 .DS_Store
+
+# Kiro configuration and specs
+.kiro/
