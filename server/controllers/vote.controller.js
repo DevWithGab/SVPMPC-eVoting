@@ -20,30 +20,26 @@ const castVote = async (req, res) => {
     // Get the position ID from the candidate
     const positionId = candidate.positionId?._id || candidate.positionId;
 
-    // Check if user has already voted for ANY candidate in this position
-    const existingVotesForPosition = await Vote.find({
+    // Application-level check (fast, user-friendly error message)
+    const existingVoteForPosition = await Vote.findOne({
       userId: user._id,
       electionId,
-      candidateId: { $ne: null },
-    }).populate({
-      path: 'candidateId',
-      select: 'positionId'
+      positionId,
+      isAbstain: false,
     });
 
-    // Check if any existing vote is for the same position
-    for (const existingVote of existingVotesForPosition) {
-      if (existingVote.candidateId) {
-        const existingPositionId = existingVote.candidateId.positionId?._id || existingVote.candidateId.positionId;
-        if (String(existingPositionId) === String(positionId)) {
-          throw new Error('You have already voted for this position');
-        }
-      }
+    if (existingVoteForPosition) {
+      throw new Error('You have already voted for this position');
     }
 
+    // Vote.create will also throw a duplicate-key error (E11000) from the
+    // unique DB index if two concurrent requests slip past the check above.
     const vote = await Vote.create({
       userId: user._id,
       candidateId,
+      positionId,   // ← required for the unique-per-position DB index
       electionId,
+      isAbstain: false,
     });
 
     // Log voting activity
@@ -60,6 +56,10 @@ const castVote = async (req, res) => {
       vote,
     });
   } catch (error) {
+    // Surface MongoDB duplicate-key errors in a user-friendly way
+    if (error.code === 11000) {
+      return res.status(409).json({ message: 'You have already voted for this position' });
+    }
     res.status(400).json({ message: error.message });
   }
 };
@@ -79,35 +79,18 @@ const castAbstainVote = async (req, res) => {
       throw new Error('Election is not active');
     }
 
-    // Check if user has already voted for a candidate in this position
-    const existingCandidateVotes = await Vote.find({
+    // Application-level check: prevent double-voting or double-abstaining for same position
+    const existingVoteForPosition = await Vote.findOne({
       userId: user._id,
       electionId,
-      candidateId: { $ne: null },
-    }).populate({
-      path: 'candidateId',
-      select: 'positionId'
-    });
-
-    for (const existingVote of existingCandidateVotes) {
-      if (existingVote.candidateId) {
-        const existingPositionId = existingVote.candidateId.positionId?._id || existingVote.candidateId.positionId;
-        if (String(existingPositionId) === String(positionId)) {
-          throw new Error('You have already voted for this position');
-        }
-      }
-    }
-
-    // Check if user has already abstained for this specific position
-    const existingAbstainForPosition = await Vote.findOne({
-      userId: user._id,
-      electionId,
-      isAbstain: true,
       positionId,
     });
 
-    if (existingAbstainForPosition) {
-      throw new Error('You have already abstained for this position');
+    if (existingVoteForPosition) {
+      const msg = existingVoteForPosition.isAbstain
+        ? 'You have already abstained for this position'
+        : 'You have already voted for this position';
+      throw new Error(msg);
     }
 
     const vote = await Vote.create({
@@ -132,6 +115,10 @@ const castAbstainVote = async (req, res) => {
       vote,
     });
   } catch (error) {
+    // Surface MongoDB duplicate-key errors in a user-friendly way
+    if (error.code === 11000) {
+      return res.status(409).json({ message: 'You have already voted or abstained for this position' });
+    }
     res.status(400).json({ message: error.message });
   }
 };

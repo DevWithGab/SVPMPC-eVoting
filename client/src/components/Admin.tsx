@@ -19,7 +19,7 @@ import {
   UserPlus, Menu, Clock,
   Briefcase, Edit3, ListOrdered, FilePlus, ChevronRight, Calendar
 } from 'lucide-react';
-import { AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 
 interface AdminProps {
@@ -957,87 +957,193 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
 
           <div className={`grid lg:grid-cols-12 gap-8 pb-12 transition-colors duration-300 ${isDarkMode ? '' : ''}`}>
             <div className={`lg:col-span-8 border p-10 transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
-              <div className="flex justify-between items-center mb-12">
-                <h3 className={`text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Position Vote Distribution</h3>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full transition-colors duration-300 ${isDarkMode ? 'bg-coop-yellow' : 'bg-coop-green'}`}></div>
-                    <span className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Total Votes</span>
+              {/* ── Header ── */}
+              <div className="flex justify-between items-start mb-10">
+                <div>
+                  <h3 className={`text-[10px] font-black uppercase tracking-widest mb-1 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Election Progress</h3>
+                  <p className={`text-[9px] font-mono font-bold uppercase tracking-wider transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>Live voter turnout & position coverage</p>
+                </div>
+                {(() => {
+                  const activeElection = elections.find((e: any) => e.status === 'active' || e.status === 'completed');
+                  const activeElectionId = activeElection?._id || activeElection?.id;
+                  const electionVotes = votes?.filter((v: any) => {
+                    const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
+                    return vid === activeElectionId;
+                  }) || [];
+                  const uniqueVoters = new Set(electionVotes.map((v: any) => v.userId)).size;
+                  const totalMembers = users.length || 1;
+                  const pct = Math.round((uniqueVoters / totalMembers) * 100);
+                  return (
+                    <div className="flex items-center gap-6">
+                      {/* Gauge circle */}
+                      <div className="relative w-20 h-20">
+                        <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                          <circle cx="18" cy="18" r="15.9" fill="none" strokeWidth="3" stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
+                          <circle
+                            cx="18" cy="18" r="15.9" fill="none" strokeWidth="3"
+                            stroke={isDarkMode ? '#fbbf24' : '#2D7A3E'}
+                            strokeDasharray={`${pct} 100`}
+                            strokeLinecap="round"
+                            style={{ transition: 'stroke-dasharray 1s ease' }}
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className={`text-lg font-black leading-none transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>{pct}%</span>
+                          <span className={`text-[7px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>Turnout</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div>
+                          <p className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>Voters Cast</p>
+                          <p className={`text-2xl font-black tracking-tighter transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-gray-900'}`}>{uniqueVoters} <span className={`text-sm font-bold transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>/ {totalMembers}</span></p>
+                        </div>
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${activeElection?.status === 'active' ? 'bg-green-500/10 text-green-500' : isDarkMode ? 'bg-slate-700 text-slate-400' : 'bg-gray-100 text-gray-400'}`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${activeElection?.status === 'active' ? 'bg-green-500 animate-pulse' : isDarkMode ? 'bg-slate-600' : 'bg-gray-300'}`} />
+                          {activeElection?.status === 'active' ? 'Live' : activeElection?.status === 'completed' ? 'Final' : 'No Active Election'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* ── Area Chart: Cumulative Turnout Over Time ── */}
+              {(() => {
+                const activeElection = elections.find((e: any) => e.status === 'active' || e.status === 'completed');
+                const activeElectionId = activeElection?._id || activeElection?.id;
+                const electionVotes = (votes?.filter((v: any) => {
+                  const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
+                  return vid === activeElectionId;
+                }) || []).sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+                // Build cumulative hourly buckets
+                const buckets: { time: string; cumulative: number; newVoters: number }[] = [];
+                if (electionVotes.length > 0) {
+                  const seen = new Set<string>();
+                  const byHour: Record<string, number> = {};
+                  electionVotes.forEach((v: any) => {
+                    const userId = v.userId;
+                    if (!seen.has(userId)) {
+                      seen.add(userId);
+                      const d = new Date(v.createdAt);
+                      const key = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:00`;
+                      byHour[key] = (byHour[key] || 0) + 1;
+                    }
+                  });
+                  let cum = 0;
+                  Object.entries(byHour).forEach(([time, count]) => {
+                    cum += count;
+                    buckets.push({ time, cumulative: cum, newVoters: count });
+                  });
+                }
+
+                const hasData = buckets.length > 0;
+                const chartData = hasData ? buckets : [{ time: 'Start', cumulative: 0, newVoters: 0 }];
+
+                return (
+                  <div className="h-52 mb-10">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                        <defs>
+                          <linearGradient id="turnoutGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={isDarkMode ? '#fbbf24' : '#2D7A3E'} stopOpacity={0.25} />
+                            <stop offset="95%" stopColor={isDarkMode ? '#fbbf24' : '#2D7A3E'} stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="newGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={isDarkMode ? '#60a5fa' : '#6366f1'} stopOpacity={0.2} />
+                            <stop offset="95%" stopColor={isDarkMode ? '#60a5fa' : '#6366f1'} stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
+                        <XAxis dataKey="time" tick={{ fontSize: 8, fontWeight: 700, fill: isDarkMode ? '#64748b' : '#9ca3af', fontFamily: 'monospace' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                        <YAxis tick={{ fontSize: 8, fontWeight: 700, fill: isDarkMode ? '#64748b' : '#9ca3af' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: '0px', border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`, fontWeight: 900, fontSize: '10px', backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', color: isDarkMode ? '#e2e8f0' : '#111827' }}
+                          formatter={(value: any, name: string) => [value, name === 'cumulative' ? 'Total Voters' : 'New This Hour']}
+                        />
+                        <Area type="monotone" dataKey="newVoters" stroke={isDarkMode ? '#60a5fa' : '#6366f1'} strokeWidth={1.5} fill="url(#newGradient)" dot={false} strokeDasharray="4 2" name="newVoters" />
+                        <Area type="monotone" dataKey="cumulative" stroke={isDarkMode ? '#fbbf24' : '#2D7A3E'} strokeWidth={2.5} fill="url(#turnoutGradient)" dot={false} name="cumulative" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                    {!hasData && (
+                      <div className={`text-center text-[10px] font-black uppercase tracking-widest mt-2 transition-colors duration-300 ${isDarkMode ? 'text-slate-600' : 'text-gray-300'}`}>No votes recorded yet</div>
+                    )}
                   </div>
+                );
+              })()}
+
+              {/* ── Legend ── */}
+              <div className="flex items-center gap-6 mb-10">
+                <div className="flex items-center gap-2">
+                  <div className={`w-6 h-0.5 rounded ${isDarkMode ? 'bg-coop-yellow' : 'bg-coop-green'}`} />
+                  <span className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Cumulative Voters</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-6 h-0.5 rounded border-dashed border-b-2 ${isDarkMode ? 'border-blue-400' : 'border-indigo-500'}`} />
+                  <span className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>New Per Hour</span>
                 </div>
               </div>
-              <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={(() => {
-                    const activeElection = elections.find((e: any) => e.status === 'active' || e.status === 'completed');
-                    const chartData = positions
-                      .filter(p => activeElection && p.electionId === (activeElection.id || activeElection._id))
-                      .map(pos => {
-                        const positionCandidates = candidates.filter(c => c.positionId === pos.id);
-                        const totalVotes = positionCandidates.reduce((sum, c) => {
-                          return sum + (c.votes || 0);
-                        }, 0);
-                        return {
-                          name: pos.title.substring(0, 12),
-                          votes: totalVotes
-                        };
-                      });
-                    return chartData;
-                  })()}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#475569' : '#f3f4f6'} />
-                    <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 700, fill: isDarkMode ? '#94a3b8' : '#9ca3af', fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 9, fontWeight: 700, fill: isDarkMode ? '#94a3b8' : '#9ca3af' }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={{ borderRadius: '0px', border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`, fontWeight: 900, fontSize: '10px', backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', color: isDarkMode ? '#e2e8f0' : '#000000' }} />
-                    <Bar dataKey="votes" fill={isDarkMode ? '#fbbf24' : '#2D7A3E'} radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className={`mt-12 pt-12 border-t transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
-                <h3 className={`text-[10px] font-black uppercase tracking-widest mb-8 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Participation Status</h3>
+
+              {/* ── Per-Position Coverage ── */}
+              <div className={`pt-8 border-t transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
+                <h3 className={`text-[10px] font-black uppercase tracking-widest mb-6 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Per-Position Participation</h3>
                 {(() => {
-                  const activeElection = elections.find((e: any) => e.status === 'active');
-                  const votersInActiveElection = activeElection ? new Set(votes?.filter((v: any) => {
-                    const voteElectionId = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
-                    const activeElectionId = activeElection._id || activeElection.id;
-                    return voteElectionId === activeElectionId;
-                  }).map((v: any) => v.userId) || []).size : 0;
-                  const nonVotersInActiveElection = activeElection ? users.length - votersInActiveElection : users.length;
+                  const activeElection = elections.find((e: any) => e.status === 'active' || e.status === 'completed');
+                  const activeElectionId = activeElection?._id || activeElection?.id;
+
+                  const electionPositions = positions.filter((p: any) => {
+                    const posElId = typeof p.electionId === 'string' ? p.electionId : (p.electionId?._id || p.electionId?.id);
+                    return posElId === activeElectionId;
+                  });
+
+                  if (!activeElection || electionPositions.length === 0) {
+                    return (
+                      <div className={`text-center py-8 text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-600' : 'text-gray-300'}`}>
+                        No active election or positions found
+                      </div>
+                    );
+                  }
+
                   return (
-                    <>
-                      <div className="flex items-center justify-center h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={[
-                                { name: 'Voted', value: votersInActiveElection, fill: isDarkMode ? '#fbbf24' : '#2D7A3E' },
-                                { name: 'Not Yet Voted', value: nonVotersInActiveElection, fill: isDarkMode ? '#475569' : '#e5e7eb' }
-                              ]}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={60}
-                              outerRadius={100}
-                              paddingAngle={2}
-                              dataKey="value"
-                            >
-                              <Cell fill={isDarkMode ? '#fbbf24' : '#2D7A3E'} />
-                              <Cell fill={isDarkMode ? '#475569' : '#e5e7eb'} />
-                            </Pie>
-                            <Tooltip contentStyle={{ borderRadius: '0px', border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`, fontWeight: 900, fontSize: '10px', backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', color: isDarkMode ? '#e2e8f0' : '#000000' }} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <div className="flex gap-8 justify-center mt-6">
-                        <div className="text-center">
-                          <p className={`text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Voted</p>
-                          <p className={`text-2xl font-black mt-2 transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-green'}`}>{votersInActiveElection}</p>
-                        </div>
-                        <div className={`w-px transition-colors duration-300 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}></div>
-                        <div className="text-center">
-                          <p className={`text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Not Yet Voted</p>
-                          <p className={`text-2xl font-black mt-2 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>{nonVotersInActiveElection}</p>
-                        </div>
-                      </div>
-                    </>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
+                      {electionPositions.sort((a: any, b: any) => (a.order || 0) - (b.order || 0)).map((pos: any) => {
+                        // Count unique voters who voted for this position
+                        const posVotes = votes?.filter((v: any) => {
+                          const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
+                          const posId = typeof v.positionId === 'string' ? v.positionId : (v.positionId?._id || v.positionId?.id);
+                          return vid === activeElectionId && (posId === pos.id || posId === pos._id);
+                        }) || [];
+                        const uniqueVotersForPos = new Set(posVotes.map((v: any) => v.userId)).size;
+                        const pct = users.length > 0 ? Math.round((uniqueVotersForPos / users.length) * 100) : 0;
+                        const colorsBar = [
+                          isDarkMode ? '#fbbf24' : '#2D7A3E',
+                          isDarkMode ? '#60a5fa' : '#6366f1',
+                          isDarkMode ? '#34d399' : '#059669',
+                          isDarkMode ? '#f87171' : '#dc2626',
+                          isDarkMode ? '#a78bfa' : '#7c3aed',
+                          isDarkMode ? '#fb923c' : '#ea580c',
+                        ];
+                        const posIdx = electionPositions.indexOf(pos);
+                        const barColor = colorsBar[posIdx % colorsBar.length];
+                        return (
+                          <div key={pos.id || pos._id}>
+                            <div className="flex justify-between items-center mb-1.5">
+                              <p className={`text-[9px] font-black uppercase tracking-tight truncate max-w-[70%] transition-colors duration-300 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>{pos.title}</p>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[9px] font-mono font-bold transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>{uniqueVotersForPos}/{users.length}</span>
+                                <span className="text-[9px] font-black" style={{ color: barColor }}>{pct}%</span>
+                              </div>
+                            </div>
+                            <div className={`w-full h-2 rounded-full overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}>
+                              <div
+                                className="h-full rounded-full transition-all duration-1000 ease-out"
+                                style={{ width: `${pct}%`, backgroundColor: barColor }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   );
                 })()}
               </div>
