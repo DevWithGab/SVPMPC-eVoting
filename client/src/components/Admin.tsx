@@ -202,7 +202,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
       // Filter out old position elections (those with parentElectionId) and deduplicate by ID
       const mainElections = electionsData.filter((e: any) => !e.parentElectionId);
       const uniqueElections = Array.from(
-        new Map(mainElections.map(e => [(e._id || e.id), e])).values()
+        new Map(mainElections.map((e: any) => [(e._id || e.id), e])).values()
       ).sort((a: any, b: any) => {
         // Sort by creation date (oldest first, newest last)
         const dateA = new Date(a.createdAt || a.startDate || 0).getTime();

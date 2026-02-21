@@ -30,6 +30,7 @@ export interface Election {
 
 export interface User {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   role: UserRole;
@@ -58,6 +59,7 @@ export interface Candidate {
   name: string;
   description: string;
   positionId: string;
+  electionId?: string | { _id?: string; id?: string };
   votes: number;
   imageUrl?: string;
   photoUrl?: string;
