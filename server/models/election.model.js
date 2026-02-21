@@ -34,7 +34,11 @@ const electionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['upcoming', 'active', 'completed', 'cancelled'],
+      // 'paused' = admin manually suspended an active election
+      // 'upcoming' = scheduled but not yet started
+      // 'active'   = currently open for voting
+      // 'completed'= closed, results available
+      enum: ['upcoming', 'active', 'paused', 'completed', 'cancelled'],
       default: 'upcoming',
     },
     maxVotesPerMember: {

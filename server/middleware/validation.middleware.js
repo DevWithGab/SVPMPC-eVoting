@@ -32,7 +32,7 @@ const schemas = {
     startDate: Joi.date().iso().optional(),
     endDate: Joi.date().iso().optional(),
     maxVotesPerMember: Joi.number().integer().min(1).optional(),
-    status: Joi.string().valid('active', 'upcoming', 'completed').optional(),
+    status: Joi.string().valid('active', 'upcoming', 'paused', 'completed').optional(),
     resultsPublic: Joi.boolean().optional(),
     backgroundImage: Joi.any().optional(),
     role: Joi.string().valid('admin', 'officer').optional()

@@ -138,6 +138,9 @@ export const Voting: React.FC<{ onNavigate?: (page: PageView) => void }> = ({ on
           };
         });
 
+      // Check for elections that are active OR paused (paused still has valid vote data)
+      const pausedElections = electionsData.filter((e: any) => e.status === 'paused');
+
       // Determine voting status and election end date
       if (activeElections.length > 0) {
         interface ElectionWithDate {
@@ -149,15 +152,20 @@ export const Voting: React.FC<{ onNavigate?: (page: PageView) => void }> = ({ on
         setElectionEndDate(latestElection.endDate);
         setVotingStatus('OPEN');
         setIsElectionOver(new Date(latestElection.endDate) < new Date());
+      } else if (pausedElections.length > 0) {
+        // Admin paused the election — show the "System Lock Engaged" screen, not "Ballot Period Concluded"
+        setVotingStatus('PAUSED');
+        setIsElectionOver(false); // NOT over, just suspended
       } else {
         setIsElectionOver(true);
         setVotingStatus('PAUSED');
       }
 
-      // Check if user has already voted in any ACTIVE election
-      const activeElectionIds = activeElections.map((e: any) => e._id || e.id);
+      // Check if user has already voted in any ACTIVE or PAUSED election
+      // (paused elections still count — votes already cast are permanent)
+      const runningElectionIds = [...activeElections, ...pausedElections].map((e: any) => e._id || e.id);
       const userHasVotedInActiveElection = userVotes && userVotes.some((vote: any) =>
-        activeElectionIds.includes(vote.electionId?._id || vote.electionId)
+        runningElectionIds.includes(vote.electionId?._id || vote.electionId)
       );
       setAlreadyVoted(userHasVotedInActiveElection);
       setIsSubmitted(userHasVotedInActiveElection);
@@ -177,14 +185,21 @@ export const Voting: React.FC<{ onNavigate?: (page: PageView) => void }> = ({ on
   useEffect(() => {
     fetchData();
 
-    // Check election status every 10 seconds to catch when it's completed
+    // Check election status every 10 seconds to catch when it's paused, ended, or completed
     const intervalId = setInterval(() => {
       electionAPI.getElections().then((electionsData) => {
         const activeElections = electionsData.filter((e: any) => e.status === 'active');
+        const pausedElections = electionsData.filter((e: any) => e.status === 'paused');
 
         if (activeElections.length === 0 && !alreadyVoted) {
-          setIsElectionOver(true);
-          setVotingStatus('PAUSED');
+          if (pausedElections.length > 0) {
+            // Admin paused — show lock screen, not "election over"
+            setIsElectionOver(false);
+            setVotingStatus('PAUSED');
+          } else {
+            setIsElectionOver(true);
+            setVotingStatus('PAUSED');
+          }
         }
       }).catch(_err => { });
     }, 10000); // Every 10 seconds

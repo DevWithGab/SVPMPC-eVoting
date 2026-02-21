@@ -247,8 +247,10 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
       })));
 
 
-      // Set voting status based on active elections (reuse activeElection from above)
-      setVotingStatus(activeElection ? 'OPEN' : 'PAUSED');
+      // Set voting status based on active elections
+      // 'paused' elections should show as PAUSED on the admin dashboard
+      const hasOpenElection = electionsData.some((e: any) => e.status === 'active');
+      setVotingStatus(hasOpenElection ? 'OPEN' : 'PAUSED');
 
       // Step 1: Count total voters and voted voters per branch
       const branchStats: Record<string, { totalVoters: number; votedCount: number }> = {};
@@ -387,14 +389,9 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
       for (const election of elections) {
         const electionId = election._id || election.id;
 
-        // Skip elections that are already running or done
-        const isAlreadyActiveOrDone =
-          election.status === 'active' || election.status === 'completed';
-        if (!election.startDate || isAlreadyActiveOrDone) continue;
-
-        // Skip elections the admin manually paused
-        const wasManuallyPaused = pausedElectionsRef.current.has(electionId);
-        if (wasManuallyPaused) continue;
+        // Skip elections that are already running, done, or admin-paused
+        const skipStatuses = ['active', 'completed', 'paused', 'cancelled'];
+        if (!election.startDate || skipStatuses.includes(election.status)) continue;
 
         // Skip if we already triggered activation for this election
         const alreadyActivated = completedElectionsRef.current.has(electionId);
@@ -420,7 +417,9 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
       const now = new Date().getTime();
       for (const election of elections) {
         const electionId = election._id || election.id;
-        if (!election.endDate || election.status === 'completed') continue;
+        // Skip elections that are completed, cancelled, or admin-paused
+        const skipStatuses = ['completed', 'cancelled', 'paused'];
+        if (!election.endDate || skipStatuses.includes(election.status)) continue;
 
         const endTime = new Date(election.endDate).getTime();
         if (endTime <= now && !completedElectionsRef.current.has(electionId)) {
@@ -616,8 +615,10 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
 
   const handlePauseElection = async () => {
     try {
-      // Find election that is either active or upcoming (paused)
-      const currentElection = elections.find((e: any) => e.status === 'active' || e.status === 'upcoming');
+      // Find election that is either active or paused (admin-suspended)
+      const currentElection = elections.find((e: any) =>
+        e.status === 'active' || e.status === 'paused'
+      );
 
       if (!currentElection) {
         Swal.fire({
@@ -631,18 +632,10 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
 
       const electionId = currentElection.id || currentElection._id;
       const isCurrentlyActive = currentElection.status === 'active';
-      const newStatus = isCurrentlyActive ? 'upcoming' : 'active';
-
-
-      // Mark as paused if pausing, remove if resuming
-      if (isCurrentlyActive) {
-        pausedElectionsRef.current.add(electionId);
-      } else {
-        pausedElectionsRef.current.delete(electionId);
-      }
-
-      // Persist paused elections to localStorage
-      localStorage.setItem('pausedElections', JSON.stringify(Array.from(pausedElectionsRef.current)));
+      // Use a dedicated 'paused' status — this is the key fix.
+      // Previously we used 'upcoming', which caused the backend auto-activator
+      // to silently flip the election back to 'active' on every GET /elections call.
+      const newStatus = isCurrentlyActive ? 'paused' : 'active';
 
       await electionAPI.updateElection(electionId, { status: newStatus });
       setVotingStatus(isCurrentlyActive ? 'PAUSED' : 'OPEN');
@@ -899,8 +892,8 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
             </div>
             <div className="flex gap-4">
               {(() => {
-                // Show button for active or paused (upcoming) elections
-                const currentElection = elections.find((e: any) => e.status === 'active' || e.status === 'upcoming');
+                // Show button for active or admin-paused elections
+                const currentElection = elections.find((e: any) => e.status === 'active' || e.status === 'paused');
                 const isActive = currentElection?.status === 'active';
                 return currentElection ? (
                   <button

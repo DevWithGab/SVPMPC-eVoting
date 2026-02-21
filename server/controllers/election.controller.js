@@ -5,26 +5,28 @@ const updateElectionStatusIfNeeded = async (election) => {
   const now = new Date();
   const startDate = new Date(election.startDate);
   const endDate = new Date(election.endDate);
-  
+
   let statusChanged = false;
   let newStatus = election.status;
-  
+
   // If election should be active (current time >= startDate and status is 'upcoming')
+  // NOTE: Do NOT auto-activate 'paused' elections — only the admin can resume those.
   if (election.status === 'upcoming' && now >= startDate) {
     await Election.findByIdAndUpdate(election._id, { status: 'active' });
     election.status = 'active';
     newStatus = 'active';
     statusChanged = true;
   }
-  
+
   // If election should be completed (current time > endDate and status is 'active')
+  // NOTE: Do NOT auto-complete 'paused' elections — wait for admin to resume or end them.
   if (election.status === 'active' && now > endDate) {
     await Election.findByIdAndUpdate(election._id, { status: 'completed' });
     election.status = 'completed';
     newStatus = 'completed';
     statusChanged = true;
   }
-  
+
   // Create announcement if status changed - but only if it doesn't already exist
   if (statusChanged) {
     try {
@@ -34,7 +36,7 @@ const updateElectionStatusIfNeeded = async (election) => {
           title: `Election Started: ${election.title}`,
           content: { $regex: `The election "${election.title}" has started` }
         });
-        
+
         if (!existingAnnouncement) {
           await Announcement.create({
             title: `Election Started: ${election.title}`,
@@ -51,7 +53,7 @@ const updateElectionStatusIfNeeded = async (election) => {
           title: `Election Completed: ${election.title}`,
           content: { $regex: `The election "${election.title}" has ended` }
         });
-        
+
         if (!existingAnnouncement) {
           await Announcement.create({
             title: `Election Completed: ${election.title}`,
@@ -68,7 +70,7 @@ const updateElectionStatusIfNeeded = async (election) => {
       // Don't fail the election update if announcement creation fails
     }
   }
-  
+
   return election;
 };
 
@@ -82,7 +84,7 @@ const createElection = async (req, res) => {
     // Extract times from startDate and endDate
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
-    
+
     const formatTime = (date) => {
       return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     };
@@ -169,10 +171,10 @@ const getElections = async (req, res) => {
       elections.map(async (election) => {
         // Update status if needed (upcoming -> active, active -> completed)
         await updateElectionStatusIfNeeded(election);
-        
+
         const candidateCount = await Candidate.countDocuments({ electionId: election._id });
         const positionCount = await Position.countDocuments({ electionId: election._id });
-        
+
         return {
           ...election.toObject(),
           candidateCount,
@@ -260,7 +262,7 @@ const deleteElection = async (req, res) => {
     const candidateIds = candidates.map(c => c._id);
 
     // Delete all votes for these candidates AND for this election directly
-    await Vote.deleteMany({ 
+    await Vote.deleteMany({
       $or: [
         { candidateId: { $in: candidateIds } },
         { electionId: id }
@@ -349,7 +351,7 @@ const resetElectionCycle = async (req, res) => {
 
     // Convert wipeEntities to boolean explicitly
     const shouldWipe = wipeEntities === true || wipeEntities === 'true';
-    
+
     console.log('wipeEntities boolean check:', shouldWipe);
 
     let election = null;
@@ -364,20 +366,20 @@ const resetElectionCycle = async (req, res) => {
     let deletedVotes = { deletedCount: 0 };
     let deletedCandidates = { deletedCount: 0 };
     let deletedElections = { deletedCount: 0 };
-    
+
     if (shouldWipe) {
       // Deep reset: Delete ALL candidates, ALL votes, and ALL elections (including all categories)
       console.log('Starting hard wipe...');
       deletedCandidates = await Candidate.deleteMany({});
       console.log(`Deleted ${deletedCandidates.deletedCount} candidates`);
-      
+
       deletedVotes = await Vote.deleteMany({});
       console.log(`Deleted ${deletedVotes.deletedCount} votes`);
-      
+
       // Delete ALL elections (all categories/positions)
       deletedElections = await Election.deleteMany({});
       console.log(`Deleted ${deletedElections.deletedCount} elections`);
-      
+
       // Verify deletion
       const remainingElections = await Election.countDocuments({});
       console.log(`Remaining elections after deletion: ${remainingElections}`);
@@ -395,7 +397,7 @@ const resetElectionCycle = async (req, res) => {
       // Always set to active during reset
       election.status = 'active';
       await election.save();
-      
+
       // Mark all OTHER elections as completed
       await Election.updateMany(
         { _id: { $ne: electionId }, status: 'active' },
