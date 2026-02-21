@@ -91,7 +91,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
       setPagination(paginationData);
     } catch (error) {
       console.error('Error fetching members:', error);
-      Swal.fire(t('bulkImport.importFailed'), t('bulkImport.errorProcessingError'), 'error');
+      Swal.fire('Error', 'Failed to load member data. Please refresh the page and try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -130,7 +130,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
       setShowDetailsModal(true);
     } catch (error) {
       console.error('Error fetching member details:', error);
-      Swal.fire(t('bulkImport.importFailed'), t('bulkImport.errorProcessingError'), 'error');
+      Swal.fire('Error', 'Failed to load member details. Please try again.', 'error');
     }
   };
 
@@ -210,7 +210,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
           allowOutsideClick: false,
           didOpen: async () => {
             try {
-              const response = await api.post('/imports/bulk-resend', {
+              const response = await api.post('/imports/bulk-resend-invitations', {
                 memberIds: Array.from(selectedMembers),
                 deliveryMethod: method,
               });
@@ -312,15 +312,14 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
             <button
               key={status}
               onClick={() => handleStatusFilterChange(status)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 focus:outline-none focus:ring-2 ${
-                statusFilter === status
-                  ? isDarkMode 
-                    ? 'bg-coop-yellow text-slate-900 ring-2 ring-coop-yellow/50' 
+              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 focus:outline-none focus:ring-2 ${statusFilter === status
+                  ? isDarkMode
+                    ? 'bg-coop-yellow text-slate-900 ring-2 ring-coop-yellow/50'
                     : 'bg-coop-green text-white ring-2 ring-coop-green/50'
                   : isDarkMode
                     ? 'bg-slate-700 text-slate-300 hover:bg-slate-600 border border-slate-600'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-              } ${statusFilter === status ? 'focus:ring-offset-2' : ''}`}
+                } ${statusFilter === status ? 'focus:ring-offset-2' : ''}`}
               aria-pressed={statusFilter === status}
             >
               {label}
@@ -526,7 +525,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                       {statusLabels[member.activation_status]}
                     </span>
                   </div>
-                  
+
                   <div className={`space-y-2 text-sm ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                     <div className="flex justify-between">
                       <span className={isDarkMode ? 'text-slate-400' : 'text-gray-500'}>{t('bulkImport.phoneNumber')}:</span>
@@ -543,7 +542,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex gap-2 mt-4">
                     <button
                       onClick={() => handleViewDetails(member.id)}
@@ -595,15 +594,14 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                       <button
                         key={page}
                         onClick={() => fetchMembers(page)}
-                        className={`px-3 md:px-4 py-2 rounded-lg transition-all shadow-sm hover:shadow-md active:scale-95 text-xs font-bold ${
-                          pagination.page === page
-                            ? isDarkMode 
-                              ? 'bg-coop-yellow text-slate-900 ring-2 ring-coop-yellow/50' 
+                        className={`px-3 md:px-4 py-2 rounded-lg transition-all shadow-sm hover:shadow-md active:scale-95 text-xs font-bold ${pagination.page === page
+                            ? isDarkMode
+                              ? 'bg-coop-yellow text-slate-900 ring-2 ring-coop-yellow/50'
                               : 'bg-coop-green text-white ring-2 ring-coop-green/50'
-                            : isDarkMode 
-                              ? 'bg-slate-700 border border-slate-600 text-slate-300 hover:bg-slate-600' 
+                            : isDarkMode
+                              ? 'bg-slate-700 border border-slate-600 text-slate-300 hover:bg-slate-600'
                               : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         {page}
                       </button>
