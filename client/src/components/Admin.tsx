@@ -141,9 +141,11 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
         activityAPI.getActivities().catch(() => [])
       ]);
 
-      // Helper: resolve a MongoDB document ID that may be a nested object or a plain string
+      // Helper: resolve a MongoDB document ID that may be a nested object or a plain string.
+      // IMPORTANT: Use || not ?? because Mongoose populated objects can have _id = '' (empty string).
+      // Mongoose exposes a virtual .id (string) on populated subdocs, not ._id.
       const resolveId = (ref: any): string | undefined =>
-        ref?._id ?? ref?.id ?? ref;
+        ref?.id || ref?._id || (typeof ref === 'string' ? ref : undefined);
 
       // Helper: check if a specific user has cast a vote in a specific election
       const userHasVotedInElection = (userId: string, electionId: string): boolean =>
@@ -958,17 +960,21 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                   <p className={`text-[9px] font-mono font-bold uppercase tracking-wider transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>Live voter turnout & position coverage</p>
                 </div>
                 {(() => {
-                  const activeElection = elections.find((e: any) =>
-                    e.status === 'active' || e.status === 'paused' || e.status === 'completed'
-                  );
+                  // Priority: active > paused > completed — oldest-first sort means a single
+                  // find('active'||'completed') would pick the OLD completed election first.
+                  const activeElection =
+                    elections.find((e: any) => e.status === 'active') ??
+                    elections.find((e: any) => e.status === 'paused') ??
+                    elections.find((e: any) => e.status === 'completed');
                   const activeElectionId = activeElection?._id || activeElection?.id;
                   const electionVotes = votes?.filter((v: any) => {
                     const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
                     return vid === activeElectionId;
                   }) || [];
-                  // v.userId may be a populated object {_id, username, ...} — always resolve to string ID
+                  // v.userId is a populated object. After Mongoose JSON serialization,
+                  // the ID is exposed as .id (virtual), NOT ._id.
                   const uniqueVoters = new Set(
-                    electionVotes.map((v: any) => v.userId?._id || v.userId?.id || v.userId)
+                    electionVotes.map((v: any) => v.userId?.id || v.userId?._id || v.userId)
                   ).size;
                   const totalMembers = users.length || 1;
                   const pct = Math.round((uniqueVoters / totalMembers) * 100);
@@ -1008,9 +1014,12 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
 
               {/* ── Area Chart: Cumulative Turnout Over Time ── */}
               {(() => {
-                const activeElection = elections.find((e: any) =>
-                  e.status === 'active' || e.status === 'paused' || e.status === 'completed'
-                );
+                // Priority: active > paused > completed — oldest-first sort means a single
+                // find('active'||'completed') would pick the OLD completed election first.
+                const activeElection =
+                  elections.find((e: any) => e.status === 'active') ??
+                  elections.find((e: any) => e.status === 'paused') ??
+                  elections.find((e: any) => e.status === 'completed');
                 const activeElectionId = activeElection?._id || activeElection?.id;
                 const electionVotes = (votes?.filter((v: any) => {
                   const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
@@ -1024,7 +1033,9 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                   const seen = new Set<string>();
                   const byHour: Record<string, number> = {};
                   electionVotes.forEach((v: any) => {
-                    const userId: string = v.userId?._id || v.userId?.id || v.userId;
+                    // v.userId is a populated object. After Mongoose JSON serialization,
+                    // the ID is exposed as .id (virtual), NOT ._id.
+                    const userId: string = v.userId?.id || v.userId?._id || v.userId;
                     if (!seen.has(userId)) {
                       seen.add(userId);
                       const d = new Date(v.createdAt);
@@ -1090,9 +1101,12 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
               <div className={`pt-8 border-t transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
                 <h3 className={`text-[10px] font-black uppercase tracking-widest mb-6 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Per-Position Participation</h3>
                 {(() => {
-                  const activeElection = elections.find((e: any) =>
-                    e.status === 'active' || e.status === 'paused' || e.status === 'completed'
-                  );
+                  // Priority: active > paused > completed — oldest-first sort means a single
+                  // find('active'||'completed') would pick the OLD completed election first.
+                  const activeElection =
+                    elections.find((e: any) => e.status === 'active') ??
+                    elections.find((e: any) => e.status === 'paused') ??
+                    elections.find((e: any) => e.status === 'completed');
                   const activeElectionId = activeElection?._id || activeElection?.id;
 
                   const electionPositions = positions.filter((p: any) => {
@@ -1118,8 +1132,10 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                           const posId = typeof v.positionId === 'string' ? v.positionId : (v.positionId?._id || v.positionId?.id);
                           return vid === activeElectionId && (posId === pos.id || posId === pos._id);
                         }) || [];
+                        // v.userId is a populated object. After Mongoose JSON serialization,
+                        // the ID is exposed as .id (virtual), NOT ._id.
                         const uniqueVotersForPos = new Set(
-                          posVotes.map((v: any) => v.userId?._id || v.userId?.id || v.userId)
+                          posVotes.map((v: any) => v.userId?.id || v.userId?._id || v.userId)
                         ).size;
                         const pct = users.length > 0 ? Math.round((uniqueVotersForPos / users.length) * 100) : 0;
                         const colorsBar = [
