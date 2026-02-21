@@ -581,18 +581,26 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
   };
 
   const handleToggleResultsVisibility = async (newValue: boolean) => {
+    // Target the most recent active/paused/completed election — not always elections[0]
+    const newestFirst = [...elections].reverse();
+    const targetElection =
+      newestFirst.find((e: any) => e.status === 'active') ??
+      newestFirst.find((e: any) => e.status === 'paused') ??
+      newestFirst.find((e: any) => e.status === 'completed') ??
+      newestFirst[0];
+
+    if (!targetElection) {
+      Swal.fire('Error', 'No election found', 'error');
+      return;
+    }
+
+    // Declare electionId outside try/catch so the catch block can reference it
+    const electionId = (targetElection as any)._id || (targetElection as any).id;
+
     try {
-      // Get the first/active election to update
-      if (!elections || elections.length === 0) {
-        Swal.fire('Error', 'No election found', 'error');
-        return;
-      }
-
-      const electionId = elections[0]._id || elections[0].id;
-
-      // Update UI immediately for instant feedback
-      const updatedElections = elections.map((el, idx) =>
-        idx === 0 ? { ...el, resultsPublic: newValue } : el
+      // Update UI immediately — update only the targeted election
+      const updatedElections = elections.map((el: any) =>
+        (el._id || el.id) === electionId ? { ...el, resultsPublic: newValue } : el
       );
       setElections(updatedElections);
 
@@ -608,8 +616,8 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
       });
     } catch (error: any) {
       // Revert UI on error
-      const revertedElections = elections.map((el, idx) =>
-        idx === 0 ? { ...el, resultsPublic: !newValue } : el
+      const revertedElections = elections.map((el: any) =>
+        (el._id || el.id) === electionId ? { ...el, resultsPublic: !newValue } : el
       );
       setElections(revertedElections);
 
@@ -2021,7 +2029,14 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                 <div>
                   <label className={`text-[9px] font-black uppercase tracking-widest mb-6 block transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Access Protocol</label>
                   {(() => {
-                    const currentResultsPublic = elections.length > 0 ? Boolean((elections[0] as any).resultsPublic) : false;
+                    // Read resultsPublic from the most recent active/completed election
+                    const newestFirstSetting = [...elections].reverse();
+                    const settingElection =
+                      newestFirstSetting.find((e: any) => e.status === 'active') ??
+                      newestFirstSetting.find((e: any) => e.status === 'paused') ??
+                      newestFirstSetting.find((e: any) => e.status === 'completed') ??
+                      newestFirstSetting[0];
+                    const currentResultsPublic = settingElection ? Boolean((settingElection as any).resultsPublic) : false;
                     return (
                       <div
                         onClick={() => canManageSystem && handleToggleResultsVisibility(!currentResultsPublic)}

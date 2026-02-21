@@ -168,16 +168,18 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
         resultsPublic?: boolean;
       }
 
-      // Check access control before showing results
-      const currentElection = (electionsData as ElectionData[]).find(
-        e => e.status === 'active' || e.status === 'ongoing'
-      );
+      // Newest-first: active > paused > completed. This ensures results persist
+      // after an election ends and always shows the MOST RECENT election.
+      const newestFirst = [...electionsData as ElectionData[]].reverse();
+      const currentElection =
+        newestFirst.find(e => e.status === 'active' || e.status === 'ongoing') ??
+        newestFirst.find(e => e.status === 'paused') ??
+        newestFirst.find(e => e.status === 'completed');
 
       const userIsAdminOrOfficer = user?.role === 'admin' || user?.role === 'officer';
 
       // Default to public if the resultsPublic flag is not explicitly set to false
       const resultsArePublic = currentElection?.resultsPublic !== false;
-
 
       if (!resultsArePublic && !userIsAdminOrOfficer) {
         setResultsPublic(false);
@@ -189,11 +191,8 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
         return;
       }
 
-      // Filter to only ACTIVE elections
-      const activeElections = (electionsData as ElectionData[]).filter(e => e.status === 'active' || e.status === 'ongoing');
-
-      // If no active elections, reset the results
-      if (activeElections.length === 0) {
+      // No valid election to display — clear everything
+      if (!currentElection) {
         setPositions([]);
         setCandidates([]);
         setCandidateVotes({});
@@ -218,11 +217,15 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
 
       setResultsPublic(true);
 
-      // Capture the election status (to determine if voting has started)
-      setElectionStatus('active');
+      // Set election status for the chart display
+      setElectionStatus(
+        currentElection.status === 'active' || currentElection.status === 'ongoing'
+          ? 'active'
+          : currentElection.status || 'completed'
+      );
 
-      // Get active election IDs
-      const activeElectionIds = activeElections.map(e => e._id || e.id);
+      // Only show positions/candidates from the SINGLE most-recent election
+      const activeElectionIds = [currentElection._id || currentElection.id];
 
       // Filter positions by active election IDs
       interface PositionData {
