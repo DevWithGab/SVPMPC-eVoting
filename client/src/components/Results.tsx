@@ -2,13 +2,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import type { Candidate, Position, VotingType, User } from '../types.ts';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { 
-  Download, Activity, TrendingUp, 
-  RefreshCw, CheckCircle2, FileText, Award, 
+import {
+  Download, Activity, TrendingUp,
+  RefreshCw, CheckCircle2, FileText, Award,
   ShieldCheck, Database, Globe, Target,
   Fingerprint, Activity as PulseIcon, Loader2, Briefcase
 } from 'lucide-react';
@@ -84,7 +84,7 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
         const hour = timestamp.getHours();
         return hour < slot.hour;
       }).length;
-      
+
       return {
         time: slot.label,
         votes: votesUpToThisTime
@@ -100,7 +100,7 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
         setLoading(true);
       }
       setError(null);
-      
+
       console.log('fetchResults called, user role:', user?.role);
 
       // Fetch elections, candidates, and users with better error handling
@@ -168,13 +168,18 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
         resultsPublic?: boolean;
       }
 
-      // Check access control FIRST - before filtering by status
-      // Find the active election to check its resultsPublic setting
-      const activeElection = (electionsData as ElectionData[]).find(e => e.status === 'active' || e.status === 'ongoing');
-      const isAdmin = user?.role === 'admin' || user?.role === 'officer';
-      const isResultsPublic = activeElection?.resultsPublic !== false; // Default to true if not set
-      
-      if (!isResultsPublic && !isAdmin) {
+      // Check access control before showing results
+      const currentElection = (electionsData as ElectionData[]).find(
+        e => e.status === 'active' || e.status === 'ongoing'
+      );
+
+      const userIsAdminOrOfficer = user?.role === 'admin' || user?.role === 'officer';
+
+      // Default to public if the resultsPublic flag is not explicitly set to false
+      const resultsArePublic = currentElection?.resultsPublic !== false;
+
+
+      if (!resultsArePublic && !userIsAdminOrOfficer) {
         setResultsPublic(false);
         if (isRefresh) {
           setRefreshing(false);
@@ -263,63 +268,67 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
           return activePositionIds.includes(candidatePositionId);
         })
         .map((candidate: any) => ({
-        id: candidate._id || candidate.id,
-        name: candidate.name,
-        description: candidate.description || '',
-        positionId: typeof candidate.positionId === 'string' ? candidate.positionId : (candidate.positionId?._id || candidate.positionId?.id),
-        votes: 0, // Will be updated from results
-        imageUrl: candidate.photoUrl || '',
-        photoUrl: candidate.photoUrl
-      }));
+          id: candidate._id || candidate.id,
+          name: candidate.name,
+          description: candidate.description || '',
+          positionId: typeof candidate.positionId === 'string' ? candidate.positionId : (candidate.positionId?._id || candidate.positionId?.id),
+          votes: 0, // Will be updated from results
+          imageUrl: candidate.photoUrl || '',
+          photoUrl: candidate.photoUrl
+        }));
 
       setPositions(mappedPositions);
       setCandidates(mappedCandidates);
 
-      // Fetch results and vote timestamps for each position
+      // Fetch vote counts and voter data for each position
       const votesMap: { [candidateId: string]: number } = {};
       const allVoteTimestamps: Date[] = [];
       const uniqueVoters = new Set<string>();
 
       for (const position of mappedPositions) {
-        try {
-          // Get vote results
-          const results = await voteAPI.getElectionResults(position.electionId || position.id);
-          
-          if (results.results && Array.isArray(results.results)) {
-            results.results.forEach((result: { candidateId: string; voteCount: number }) => {
-              votesMap[result.candidateId] = (votesMap[result.candidateId] || 0) + result.voteCount;
-            });
-          }
+        const electionId = position.electionId || position.id;
 
-          // Get vote timestamps
-          try {
-            const votes = await voteAPI.getElectionVotes(position.electionId || position.id);
-            if (Array.isArray(votes)) {
-              votes.forEach((vote: { timestamp?: string; createdAt?: string; userId?: string; _id?: string }) => {
-                // Track unique voters by userId
-                if (vote.userId) {
-                  uniqueVoters.add(vote.userId);
-                }
-                // Prioritize explicit timestamp field, fallback to createdAt
-                const timestamp = vote.timestamp || vote.createdAt;
-                if (timestamp) {
-                  const date = new Date(timestamp);
-                  // Only add valid dates
-                  if (!isNaN(date.getTime())) {
-                    allVoteTimestamps.push(date);
-                  }
-                }
-              });
+        // Step 1: Get and tally vote counts for this position
+        try {
+          const results = await voteAPI.getElectionResults(electionId);
+
+          if (results.results && Array.isArray(results.results)) {
+            for (const result of results.results) {
+              votesMap[result.candidateId] = (votesMap[result.candidateId] || 0) + result.voteCount;
             }
-          } catch (err) {
-            console.error(`Failed to fetch vote timestamps for position ${position.id}:`, err);
           }
         } catch (err) {
           console.error(`Failed to fetch results for position ${position.id}:`, err);
         }
+
+        // Step 2: Get individual votes to track unique voters and timestamps
+        try {
+          const votes = await voteAPI.getElectionVotes(electionId);
+
+          if (Array.isArray(votes)) {
+            for (const vote of votes) {
+              // Track each unique voter by their user ID
+              if (vote.userId) {
+                uniqueVoters.add(vote.userId);
+              }
+
+              // Record the vote timestamp for the activity chart
+              const rawTimestamp = vote.timestamp || vote.createdAt;
+              if (rawTimestamp) {
+                const date = new Date(rawTimestamp);
+                if (!isNaN(date.getTime())) {
+                  allVoteTimestamps.push(date);
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to fetch vote timestamps for position ${position.id}:`, err);
+        }
       }
 
       setCandidateVotes(votesMap);
+
 
       // Set total voters from unique voters who cast votes
       setTotalVoters(uniqueVoters.size);
@@ -352,8 +361,8 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
     }
   }, []);
 
-  const participationRate = totalVoters > 0 
-    ? (Object.values(candidateVotes).reduce((sum: number, votes: number) => sum + votes, 0) / totalVoters) * 100 
+  const participationRate = totalVoters > 0
+    ? (Object.values(candidateVotes).reduce((sum: number, votes: number) => sum + votes, 0) / totalVoters) * 100
     : 0;
 
   useEffect(() => {
@@ -362,7 +371,7 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
     const refreshInterval = setInterval(() => {
       fetchResults(true);
     }, 8000);
-    
+
     return () => {
       clearInterval(refreshInterval);
     };
@@ -413,7 +422,7 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
           <p className={`text-lg font-medium mb-12 leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
             The live results scoreboard is currently restricted to system administrators. Please check back later or contact the election committee.
           </p>
-          <button 
+          <button
             onClick={() => window.location.href = '/'}
             className="bg-coop-darkGreen text-white px-12 py-4 rounded-none font-black text-[11px] uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl active:scale-95"
           >
@@ -428,9 +437,9 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
   return (
     <div className={`min-h-screen pt-20 sm:pt-32 pb-20 sm:pb-32 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-[#f8fafc]'}`}>
       <div className="container mx-auto px-3 sm:px-6 lg:px-8 max-w-7xl">
-        
+
         {/* Cinematic Results Header */}
-        <motion.header 
+        <motion.header
           className="relative mb-16 sm:mb-20"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -438,15 +447,15 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
         >
           {/* Gridline Background */}
           <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{ backgroundImage: `linear-gradient(0deg, ${isDarkMode ? '#94a3b8' : '#000'} 1px, transparent 1px), linear-gradient(90deg, ${isDarkMode ? '#94a3b8' : '#000'} 1px, transparent 1px)`, backgroundSize: '35px 35px' }}></div>
-          
+
           <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 sm:gap-10 lg:gap-12">
-            <motion.div 
+            <motion.div
               className="w-full lg:max-w-3xl"
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
-              <motion.div 
+              <motion.div
                 className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -455,16 +464,16 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
                 <img src="/SVMPC_LOGO.png" alt="SVMPC Logo" className="h-6 sm:h-8 w-auto" />
                 <span className={`text-[8px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.5em] ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Global Governance Terminal</span>
               </motion.div>
-              <motion.h1 
+              <motion.h1
                 className={`text-3xl sm:text-5xl md:text-6xl lg:text-8xl font-black tracking-tighter leading-[0.85] uppercase mb-4 sm:mb-8 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
-                The Live<br/>
+                The Live<br />
                 <span className="text-coop-green">Scoreboard</span>
               </motion.h1>
-              <motion.p 
+              <motion.p
                 className={`text-sm sm:text-base md:text-xl font-medium leading-relaxed max-w-xl border-l-4 pl-3 sm:pl-8 ${isDarkMode ? 'text-slate-300 border-coop-yellow/30' : 'text-gray-500 border-coop-green/10'}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -474,50 +483,50 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
               </motion.p>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               className="flex flex-col w-full lg:w-auto gap-3 sm:gap-4"
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-               <motion.div 
-                 className={`border p-3 sm:p-6 shadow-xl flex items-center gap-3 sm:gap-8 group transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}
-                 whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
-                 initial={{ opacity: 0, y: 10 }}
-                 animate={{ opacity: 1, y: 0 }}
-                 transition={{ duration: 0.5, delay: 0.4 }}
-               >
-                  <div className="flex-1 lg:flex-none">
-                    <p className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Session Status</p>
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <div className="w-1.5 sm:w-2 h-1.5 sm:h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]"></div>
-                      <span className={`text-[7px] sm:text-xs font-black uppercase ${isDarkMode ? 'text-slate-200' : 'text-coop-darkGreen'}`}>Live Feed</span>
-                    </div>
+              <motion.div
+                className={`border p-3 sm:p-6 shadow-xl flex items-center gap-3 sm:gap-8 group transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}
+                whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+              >
+                <div className="flex-1 lg:flex-none">
+                  <p className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Session Status</p>
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className="w-1.5 sm:w-2 h-1.5 sm:h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]"></div>
+                    <span className={`text-[7px] sm:text-xs font-black uppercase ${isDarkMode ? 'text-slate-200' : 'text-coop-darkGreen'}`}>Live Feed</span>
                   </div>
-                  <div className={`w-px h-6 sm:h-10 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}></div>
-                  <div className="flex-1 lg:flex-none">
-                    <p className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Last Updated</p>
-                    <p className="text-[7px] sm:text-xs font-black text-coop-green uppercase">{lastUpdated.toLocaleTimeString()}</p>
-                  </div>
-               </motion.div>
-               <motion.div 
-                 className={`border p-3 sm:p-6 shadow-xl flex items-center gap-3 sm:gap-8 group transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}
-                 whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
-                 initial={{ opacity: 0, y: 10 }}
-                 animate={{ opacity: 1, y: 0 }}
-                 transition={{ duration: 0.5, delay: 0.5 }}
-               >
-                  <div className="flex-1 lg:flex-none">
-                    <p className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Total Ballots Cast</p>
-                    <p className={`text-lg sm:text-2xl font-black ${isDarkMode ? 'text-slate-200' : 'text-coop-darkGreen'}`}><AnimatedCounter value={Object.values(candidateVotes).reduce((sum, votes) => sum + votes, 0)} /></p>
-                  </div>
-                  <div className={`w-px h-6 sm:h-10 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}></div>
-                  <div className="flex-1 lg:flex-none">
-                    <p className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Active Members</p>
-                    <p className="text-lg sm:text-2xl font-black text-coop-green"><AnimatedCounter value={totalVoters} /></p>
-                  </div>
-               </motion.div>
-               <motion.button 
+                </div>
+                <div className={`w-px h-6 sm:h-10 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}></div>
+                <div className="flex-1 lg:flex-none">
+                  <p className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Last Updated</p>
+                  <p className="text-[7px] sm:text-xs font-black text-coop-green uppercase">{lastUpdated.toLocaleTimeString()}</p>
+                </div>
+              </motion.div>
+              <motion.div
+                className={`border p-3 sm:p-6 shadow-xl flex items-center gap-3 sm:gap-8 group transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}
+                whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+              >
+                <div className="flex-1 lg:flex-none">
+                  <p className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Total Ballots Cast</p>
+                  <p className={`text-lg sm:text-2xl font-black ${isDarkMode ? 'text-slate-200' : 'text-coop-darkGreen'}`}><AnimatedCounter value={Object.values(candidateVotes).reduce((sum, votes) => sum + votes, 0)} /></p>
+                </div>
+                <div className={`w-px h-6 sm:h-10 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}></div>
+                <div className="flex-1 lg:flex-none">
+                  <p className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Active Members</p>
+                  <p className="text-lg sm:text-2xl font-black text-coop-green"><AnimatedCounter value={totalVoters} /></p>
+                </div>
+              </motion.div>
+              <motion.button
                 onClick={() => fetchResults(true)}
                 disabled={refreshing}
                 className="bg-coop-darkGreen text-white px-4 sm:px-8 py-3 sm:py-4 font-black text-[8px] sm:text-[10px] uppercase tracking-widest hover:bg-black transition-all shadow-xl flex items-center justify-center gap-2 sm:gap-3 active:scale-95 min-h-[48px] sm:min-h-[72px] w-full lg:w-auto"
@@ -526,10 +535,10 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.6 }}
-               >
-                 {refreshing ? <RefreshCw className="animate-spin hidden sm:inline" size={14} /> : <Activity size={14} className="text-coop-yellow hidden sm:inline" />}
-                 <span>Refresh Results</span>
-               </motion.button>
+              >
+                {refreshing ? <RefreshCw className="animate-spin hidden sm:inline" size={14} /> : <Activity size={14} className="text-coop-yellow hidden sm:inline" />}
+                <span>Refresh Results</span>
+              </motion.button>
             </motion.div>
           </div>
         </motion.header>
@@ -540,7 +549,7 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
             <div className="absolute top-0 right-0 p-8 opacity-[0.03] select-none pointer-events-none group-hover:opacity-[0.07] transition-opacity">
               <TrendingUp size={200} />
             </div>
-            
+
             <div className="flex flex-col sm:flex-row justify-between items-start gap-8 mb-12">
               <div>
                 <h3 className={`text-3xl font-black uppercase tracking-tighter ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>Engagement Curve</h3>
@@ -560,16 +569,16 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
                   <AreaChart data={trafficData}>
                     <defs>
                       <linearGradient id="curveFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#2D7A3E" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#2D7A3E" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#2D7A3E" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#2D7A3E" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="time" tick={{fontSize: 9, fontWeight: 900, fill: '#cbd5e1'}} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="time" tick={{ fontSize: 9, fontWeight: 900, fill: '#cbd5e1' }} axisLine={false} tickLine={false} />
                     <YAxis hide />
-                    <Tooltip 
-                      contentStyle={{borderRadius: '0px', border: '1px solid #e2e8f0', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1)', fontWeight: 900, fontSize: '10px'}}
-                      cursor={{stroke: '#2D7A3E', strokeWidth: 2}}
+                    <Tooltip
+                      contentStyle={{ borderRadius: '0px', border: '1px solid #e2e8f0', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1)', fontWeight: 900, fontSize: '10px' }}
+                      cursor={{ stroke: '#2D7A3E', strokeWidth: 2 }}
                     />
                     <Area type="monotone" dataKey="votes" stroke="#2D7A3E" strokeWidth={5} fill="url(#curveFill)" animationDuration={2000} />
                   </AreaChart>
@@ -614,16 +623,16 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
                 <span>Active: {totalVoters.toLocaleString()} Members</span>
                 <span>Votes: {Object.values(candidateVotes).reduce((sum, votes) => sum + votes, 0).toLocaleString()}</span>
               </div>
-              <button 
+              <button
                 onClick={async () => {
                   const totalVotes = Object.values(candidateVotes).reduce((sum, votes) => sum + votes, 0);
-                  const doc = <ResultsPDF 
+                  const doc = <ResultsPDF
                     totalVotes={totalVotes}
                     totalVoters={totalVoters}
                     participationRate={participationRate}
-                    candidates={candidates.map(c => ({ 
-                      id: c.id, 
-                      name: c.name, 
+                    candidates={candidates.map(c => ({
+                      id: c.id,
+                      name: c.name,
                       votes: candidateVotes[c.id] || 0
                     }))}
                     positions={[{ id: '1', title: 'Overall Results' }]}
@@ -696,47 +705,45 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
                   </div>
 
                   {pos.type === 'PROPOSAL' ? (
-                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
-                       {posCandidates.map((c, idx) => {
-                          const pct = totalVotes > 0 ? (c.votes / totalVotes) * 100 : 0;
-                          const isApprove = c.name.toLowerCase().includes('approve') || c.name.toLowerCase().includes('yes');
-                          const isReject = c.name.toLowerCase().includes('reject') || c.name.toLowerCase().includes('no');
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+                      {posCandidates.map((c, idx) => {
+                        const pct = totalVotes > 0 ? (c.votes / totalVotes) * 100 : 0;
+                        const isApprove = c.name.toLowerCase().includes('approve') || c.name.toLowerCase().includes('yes');
+                        const isReject = c.name.toLowerCase().includes('reject') || c.name.toLowerCase().includes('no');
 
-                          return (
-                            <div key={c.id} className={`border p-4 sm:p-6 md:p-10 shadow-sm relative overflow-hidden group transition-all hover:-translate-y-1 transition-colors duration-300 ${
-                              idx === 0 ? isDarkMode ? 'bg-slate-800 border-coop-green ring-1 ring-coop-green ring-inset' : 'bg-white border-coop-green ring-1 ring-coop-green ring-inset' : isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'
+                        return (
+                          <div key={c.id} className={`border p-4 sm:p-6 md:p-10 shadow-sm relative overflow-hidden group transition-all hover:-translate-y-1 transition-colors duration-300 ${idx === 0 ? isDarkMode ? 'bg-slate-800 border-coop-green ring-1 ring-coop-green ring-inset' : 'bg-white border-coop-green ring-1 ring-coop-green ring-inset' : isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'
                             }`}>
-                              <div className="absolute top-0 left-0 w-full h-1 bg-gray-50 group-hover:bg-coop-green transition-colors"></div>
-                              
-                              <div className="flex justify-between items-start mb-4 sm:mb-6 md:mb-10 gap-2">
-                                 <div className={`w-10 sm:w-12 h-10 sm:h-12 flex items-center justify-center text-white text-center ${
-                                   isApprove ? 'bg-green-500 shadow-[0_0_15px_#22c55e]' : 
-                                   isReject ? 'bg-red-500 shadow-[0_0_15px_#ef4444]' : 'bg-gray-800'
-                                 }`}>
-                                   {idx === 0 ? <CheckCircle2 size={18} className="hidden sm:block" /> : <Activity size={16} className="hidden sm:block" />}
-                                   {idx === 0 ? <CheckCircle2 size={14} className="sm:hidden block" /> : <Activity size={14} className="sm:hidden block" />}
-                                 </div>
-                                 <div className="text-right">
-                                    <p className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Tally</p>
-                                    <p className={`text-xl sm:text-2xl md:text-3xl font-black ${isDarkMode ? 'text-slate-200' : 'text-coop-darkGreen'}`}>{c.votes.toLocaleString()}</p>
-                                 </div>
-                              </div>
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gray-50 group-hover:bg-coop-green transition-colors"></div>
 
-                              <h4 className={`text-sm sm:text-lg md:text-2xl font-black uppercase tracking-tighter mb-2 sm:mb-4 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>{c.name}</h4>
-                              
-                              <div className="space-y-2 sm:space-y-4">
-                                 <div className={`flex justify-between text-[7px] sm:text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
-                                    <span>Vote Density</span>
-                                    <span className="text-coop-green">{pct.toFixed(1)}%</span>
-                                 </div>
-                                 <div className={`h-1 sm:h-1.5 w-full rounded-none overflow-hidden ${isDarkMode ? 'bg-slate-700' : 'bg-gray-50'}`}>
-                                    <div className="h-full bg-coop-green transition-all duration-1000" style={{ width: `${pct}%` }}></div>
-                                 </div>
+                            <div className="flex justify-between items-start mb-4 sm:mb-6 md:mb-10 gap-2">
+                              <div className={`w-10 sm:w-12 h-10 sm:h-12 flex items-center justify-center text-white text-center ${isApprove ? 'bg-green-500 shadow-[0_0_15px_#22c55e]' :
+                                isReject ? 'bg-red-500 shadow-[0_0_15px_#ef4444]' : 'bg-gray-800'
+                                }`}>
+                                {idx === 0 ? <CheckCircle2 size={18} className="hidden sm:block" /> : <Activity size={16} className="hidden sm:block" />}
+                                {idx === 0 ? <CheckCircle2 size={14} className="sm:hidden block" /> : <Activity size={14} className="sm:hidden block" />}
+                              </div>
+                              <div className="text-right">
+                                <p className={`text-[7px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5 sm:mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Tally</p>
+                                <p className={`text-xl sm:text-2xl md:text-3xl font-black ${isDarkMode ? 'text-slate-200' : 'text-coop-darkGreen'}`}>{c.votes.toLocaleString()}</p>
                               </div>
                             </div>
-                          );
-                       })}                    
-                     </div>
+
+                            <h4 className={`text-sm sm:text-lg md:text-2xl font-black uppercase tracking-tighter mb-2 sm:mb-4 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>{c.name}</h4>
+
+                            <div className="space-y-2 sm:space-y-4">
+                              <div className={`flex justify-between text-[7px] sm:text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
+                                <span>Vote Density</span>
+                                <span className="text-coop-green">{pct.toFixed(1)}%</span>
+                              </div>
+                              <div className={`h-1 sm:h-1.5 w-full rounded-none overflow-hidden ${isDarkMode ? 'bg-slate-700' : 'bg-gray-50'}`}>
+                                <div className="h-full bg-coop-green transition-all duration-1000" style={{ width: `${pct}%` }}></div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
                       {posCandidates.map((c, idx) => {
@@ -744,7 +751,7 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
                         const isLeader = idx === 0;
 
                         return (
-                          <div key={c.id} className={`group relative border p-4 sm:p-6 md:p-8 shadow-sm transition-all duration-500 hover:shadow-2xl hover:border-coop-green transition-colors ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'} ${isLeader ? 'ring-2 ring-coop-green' : ''}` }>
+                          <div key={c.id} className={`group relative border p-4 sm:p-6 md:p-8 shadow-sm transition-all duration-500 hover:shadow-2xl hover:border-coop-green transition-colors ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'} ${isLeader ? 'ring-2 ring-coop-green' : ''}`}>
                             {isLeader && (
                               <div className="absolute -top-4 -right-4 bg-coop-yellow text-coop-green px-4 py-2 font-black text-[9px] uppercase tracking-widest shadow-xl rotate-6 group-hover:rotate-0 transition-all z-20 flex items-center gap-2">
                                 <Award size={14} /> Current Leader
@@ -753,14 +760,14 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
 
                             <div className="flex items-center gap-6 mb-10">
                               <div className="relative isolate">
-                                 <div className={`w-20 h-20 border-2 border-white shadow-xl overflow-hidden relative z-10 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}>
-                                    {c.imageUrl ? (
-                                      <img src={c.imageUrl} className={`w-full h-full object-cover grayscale transition-all duration-700 ${isLeader ? 'grayscale-0' : 'group-hover:grayscale-0'}`} alt={c.name} />
-                                    ) : (
-                                      <div className={`w-full h-full flex items-center justify-center ${isDarkMode ? 'text-slate-600' : 'text-gray-300'}`}><Target size={32} /></div>
-                                    )}
-                                 </div>
-                                 <div className="absolute -top-3 -left-3 w-10 h-10 bg-coop-green/10 -z-10 blur-xl"></div>
+                                <div className={`w-20 h-20 border-2 border-white shadow-xl overflow-hidden relative z-10 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}>
+                                  {c.imageUrl ? (
+                                    <img src={c.imageUrl} className={`w-full h-full object-cover grayscale transition-all duration-700 ${isLeader ? 'grayscale-0' : 'group-hover:grayscale-0'}`} alt={c.name} />
+                                  ) : (
+                                    <div className={`w-full h-full flex items-center justify-center ${isDarkMode ? 'text-slate-600' : 'text-gray-300'}`}><Target size={32} /></div>
+                                  )}
+                                </div>
+                                <div className="absolute -top-3 -left-3 w-10 h-10 bg-coop-green/10 -z-10 blur-xl"></div>
                               </div>
                               <div className="grow">
                                 <h4 className={`text-xl font-black uppercase tracking-tighter leading-none mb-2 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>{c.name}</h4>
@@ -770,23 +777,23 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
 
                             <div className="space-y-6">
                               <div className="flex justify-between items-end">
-                                 <div>
-                                    <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Total Unit Ballots</p>
-                                    <p className={`text-4xl font-black leading-none ${isDarkMode ? 'text-slate-200' : 'text-coop-darkGreen'}`}><AnimatedCounter value={c.votes} /></p>
-                                 </div>
-                                 <div className="text-right">
-                                    <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Density</p>
-                                    <p className="text-lg font-black text-coop-green">{pct.toFixed(1)}%</p>
-                                 </div>
+                                <div>
+                                  <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Total Unit Ballots</p>
+                                  <p className={`text-4xl font-black leading-none ${isDarkMode ? 'text-slate-200' : 'text-coop-darkGreen'}`}><AnimatedCounter value={c.votes} /></p>
+                                </div>
+                                <div className="text-right">
+                                  <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>Density</p>
+                                  <p className="text-lg font-black text-coop-green">{pct.toFixed(1)}%</p>
+                                </div>
                               </div>
                               <div className={`h-1.5 w-full rounded-none overflow-hidden ${isDarkMode ? 'bg-slate-700' : 'bg-gray-50'}`}>
-                                 <div className={`h-full bg-coop-green transition-all duration-1000 ${isLeader ? 'shadow-[0_0_10px_#2D7A3E]' : ''}`} style={{ width: `${pct}%` }}></div>
+                                <div className={`h-full bg-coop-green transition-all duration-1000 ${isLeader ? 'shadow-[0_0_10px_#2D7A3E]' : ''}`} style={{ width: `${pct}%` }}></div>
                               </div>
                             </div>
-                            
+
                             <div className={`mt-8 pt-6 border-t flex justify-between items-center text-[8px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'border-slate-700 text-slate-400' : 'border-gray-50 text-gray-300'}`}>
-                               <span>Audit Hash Validated</span>
-                               <Fingerprint size={12} className="text-coop-green" />
+                              <span>Audit Hash Validated</span>
+                              <Fingerprint size={12} className="text-coop-green" />
                             </div>
                           </div>
                         );
@@ -801,23 +808,23 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
 
         {/* System Ledger Disclaimer Footer */}
         <section className={`mt-32 border-t pt-20 flex flex-col md:flex-row justify-between items-center gap-12 text-center md:text-left transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
-           <div>
-              <div className="flex items-center gap-3 mb-4 justify-center md:justify-start">
-                 <ShieldCheck className="text-coop-green" size={20} />
-                 <span className={`text-[10px] font-black uppercase tracking-[0.4em] ${isDarkMode ? 'text-slate-300' : 'text-coop-darkGreen'}`}>Cryptographic Integrity Protocol</span>
-              </div>
-              <p className={`text-sm font-medium max-w-lg leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
-                All live results shown are preliminary until the official audit period is concluded by the Board of Election Tellers and the Saint Vincent Secretariat. Digital hashes are updated every cycle for immutable verification.
-              </p>
-           </div>
-           <div className="flex flex-wrap gap-4 justify-center">
-              <button className={`px-8 py-4 border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-                 <Database size={16} /> Technical Audit Log
-              </button>
-              <button className={`px-8 py-4 border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-                 <FileText size={16} /> Official Proclamation Template
-              </button>
-           </div>
+          <div>
+            <div className="flex items-center gap-3 mb-4 justify-center md:justify-start">
+              <ShieldCheck className="text-coop-green" size={20} />
+              <span className={`text-[10px] font-black uppercase tracking-[0.4em] ${isDarkMode ? 'text-slate-300' : 'text-coop-darkGreen'}`}>Cryptographic Integrity Protocol</span>
+            </div>
+            <p className={`text-sm font-medium max-w-lg leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
+              All live results shown are preliminary until the official audit period is concluded by the Board of Election Tellers and the Saint Vincent Secretariat. Digital hashes are updated every cycle for immutable verification.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <button className={`px-8 py-4 border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+              <Database size={16} /> Technical Audit Log
+            </button>
+            <button className={`px-8 py-4 border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+              <FileText size={16} /> Official Proclamation Template
+            </button>
+          </div>
         </section>
 
         {/* Node Identity Marker */}

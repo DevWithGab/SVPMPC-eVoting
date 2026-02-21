@@ -16,10 +16,20 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchElections = async () => {
+    // Builds the full URL for an election's background image.
+    // The API returns a relative path, so we prepend the server base URL.
+    const getBackgroundImageUrl = (imagePath: string | null): string | null => {
+      if (!imagePath) return null;
+      const serverBaseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+      return `${serverBaseUrl}${imagePath}`;
+    };
+
     try {
       setRefreshing(true);
+
       const data = await electionAPI.getElections();
-      
+
+      // Step 1: Shape each raw API object into a clean election object
       const processedElections = (data || []).map((election: any) => ({
         id: election._id || election.id,
         title: election.title,
@@ -31,14 +41,17 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
         candidateCount: election.candidateCount || 0,
         positionCount: election.positionCount || 0,
         partylistCount: election.partylistCount || 0,
-        backgroundImage: election.backgroundImage ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000'}${election.backgroundImage}` : null,
+        backgroundImage: getBackgroundImageUrl(election.backgroundImage),
       }));
-      
+
       setElections(processedElections);
-      // Auto-expand completed elections
-      const completedElections = processedElections.filter((e: any) => e.status?.toUpperCase() === 'COMPLETED');
-      if (completedElections.length > 0) {
-        setExpanded(completedElections[0].id);
+
+      // Step 2: Auto-expand the first completed election if one exists
+      const firstCompletedElection = processedElections.find(
+        (e: any) => e.status?.toUpperCase() === 'COMPLETED'
+      );
+      if (firstCompletedElection) {
+        setExpanded(firstCompletedElection.id);
       }
     } catch (error) {
       setElections([]);
@@ -48,14 +61,15 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
     }
   };
 
+
   useEffect(() => {
     fetchElections();
-    
+
     // Auto-refresh elections every 30 seconds to catch status changes
     const interval = setInterval(() => {
       fetchElections();
     }, 30000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -84,7 +98,7 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                 <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.5em] ${isDarkMode ? 'text-coop-yellow' : 'text-gray-400'}`}>Active Registry Cycles</span>
               </div>
               <h1 className={`text-3xl sm:text-5xl md:text-7xl font-black tracking-tighter leading-[0.85] uppercase mb-4 sm:mb-8 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>
-                Election<br/>
+                Election<br />
                 <span className="text-coop-green">Dashboard</span>
               </h1>
               <p className={`text-sm sm:text-2xl font-medium leading-relaxed max-w-2xl border-l-4 pl-4 sm:pl-8 ${isDarkMode ? 'text-slate-300 border-coop-yellow/30' : 'text-gray-500 border-coop-green/10'}`}>
@@ -115,15 +129,15 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                 className="group"
               >
                 {/* === CARD HEADER (Directory Style: Green Overlay) === */}
-                <div 
+                <div
                   className="relative h-[450px] cursor-pointer overflow-hidden rounded-lg"
                   onClick={() => setExpanded(expanded === election.id ? null : election.id)}
                 >
                   {/* Image Layer */}
                   <div className="absolute inset-0 bg-gray-900">
                     {election.backgroundImage && (
-                      <img 
-                        src={election.backgroundImage} 
+                      <img
+                        src={election.backgroundImage}
                         className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000 ease-out"
                         alt={election.title}
                         onError={(e) => {
@@ -143,7 +157,7 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
 
                   {/* Content Overlay */}
                   <div className="absolute inset-0 p-10 md:p-14 flex flex-col justify-between">
-                    
+
                     {/* Top Row */}
                     <div className="flex justify-between items-start">
                       <span className="text-6xl font-black text-white/10 group-hover:text-white/20 transition-colors font-mono tracking-tighter">
@@ -158,9 +172,8 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                     {/* Bottom Row: Title & Meta */}
                     <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
                       <div className="flex items-center gap-3 mb-4 flex-wrap">
-                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md border border-white/20 shadow-lg ${
-                          election.status?.toUpperCase() === 'ACTIVE' ? 'bg-coop-yellow text-coop-darkGreen' : 'bg-white/10 text-white'
-                        }`}>
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md border border-white/20 shadow-lg ${election.status?.toUpperCase() === 'ACTIVE' ? 'bg-coop-yellow text-coop-darkGreen' : 'bg-white/10 text-white'
+                          }`}>
                           {election.status?.toUpperCase()} Phase
                         </span>
                         <span className="text-[10px] font-mono text-white/60 uppercase tracking-widest">
@@ -179,11 +192,10 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                 </div>
 
                 {/* === EXPANDED CONTENT (DETAILS) === */}
-                <div className={`transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden ${
-                  expanded === election.id ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
-                } ${isDarkMode ? 'bg-slate-800' : 'bg-white'}`}>
+                <div className={`transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden ${expanded === election.id ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+                  } ${isDarkMode ? 'bg-slate-800' : 'bg-white'}`}>
                   <div className={`p-8 md:p-14 grid lg:grid-cols-12 gap-12 md:gap-20 border-t transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
-                    
+
                     {/* Left Column: Timeline */}
                     <div className="lg:col-span-8">
                       <h4 className={`text-xs font-black uppercase tracking-widest mb-10 flex items-center gap-2 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
@@ -194,7 +206,7 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                         <div className="space-y-8">
                           {(() => {
                             let timeline = election.timeline || [];
-                            
+
                             if (timeline.length > 0 && !timeline.some((e: any) => e.title?.toUpperCase().includes('PRE'))) {
                               const startDateObj = new Date(election.startDate);
                               const preElectionPhase = {
@@ -207,17 +219,17 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                               };
                               timeline = [preElectionPhase, ...timeline];
                             }
-                            
+
                             const preElectionPhase = timeline.find((e: any) => e.title?.toUpperCase().includes('PRE'));
                             const votingPhase = timeline.find((e: any) => e.title?.toUpperCase().includes('VOTING'));
                             const appealPhase = timeline.find((e: any) => e.title?.toUpperCase().includes('APPEAL'));
                             const phases = [preElectionPhase, votingPhase, appealPhase].filter(Boolean);
-                            
+
                             return phases.length > 0 ? (
                               phases.map((event: any, i: number) => {
                                 let isCompleted = false;
                                 let isEventActive = false;
-                                
+
                                 if (i === 0) {
                                   isEventActive = election.status?.toUpperCase() === 'UPCOMING';
                                   isCompleted = election.status?.toUpperCase() === 'ACTIVE' || election.status?.toUpperCase() === 'COMPLETED';
@@ -228,13 +240,12 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                                   isEventActive = election.status?.toUpperCase() === 'COMPLETED';
                                   isCompleted = false;
                                 }
-                                
+
                                 return (
                                   <div key={i} className="relative flex items-center gap-8 group/timeline">
-                                    <div className={`relative z-10 w-11 h-11 rounded-full border-[3px] flex items-center justify-center shrink-0 transition-all shadow-sm ${
-                                      isEventActive ? isDarkMode ? 'bg-slate-700 border-coop-yellow text-coop-yellow scale-110 shadow-yellow-500/20' : 'bg-white border-coop-green text-coop-green scale-110 shadow-coop-green/20' : 
+                                    <div className={`relative z-10 w-11 h-11 rounded-full border-[3px] flex items-center justify-center shrink-0 transition-all shadow-sm ${isEventActive ? isDarkMode ? 'bg-slate-700 border-coop-yellow text-coop-yellow scale-110 shadow-yellow-500/20' : 'bg-white border-coop-green text-coop-green scale-110 shadow-coop-green/20' :
                                       isCompleted ? 'bg-coop-green border-coop-green text-white' : isDarkMode ? 'bg-slate-700 border-slate-600 text-slate-500' : 'bg-gray-50 border-gray-200 text-gray-300'
-                                    }`}>
+                                      }`}>
                                       {isCompleted ? <Check size={20} strokeWidth={3} /> : <div className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${isEventActive ? isDarkMode ? 'bg-coop-yellow animate-pulse' : 'bg-coop-green animate-pulse' : isDarkMode ? 'bg-slate-600' : 'bg-gray-300'}`} />}
                                     </div>
                                     <div className={`transition-opacity duration-300 ${isEventActive ? 'opacity-100' : 'opacity-60 group-hover/timeline:opacity-100'}`}>
@@ -267,8 +278,8 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                         <p className={`text-sm leading-relaxed mb-6 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                           Review the official list of candidates, partylists, and positions before entering the voting booth.
                         </p>
-                        
-                        <button 
+
+                        <button
                           onClick={() => onNavigate('POSITIONS', election.id)}
                           className={`w-full p-4 rounded-xl flex items-center justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all group/btn text-left mb-3 border ${isDarkMode ? 'bg-slate-800 border-slate-600 hover:border-coop-yellow/50' : 'bg-white border-gray-200 hover:border-coop-green/50'}`}
                         >
@@ -279,7 +290,7 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                           <ArrowRight size={14} className={`transition-colors duration-300 ${isDarkMode ? 'text-slate-600 group-hover/btn:text-coop-yellow' : 'text-gray-300 group-hover/btn:text-coop-green'}`} />
                         </button>
 
-                        <button 
+                        <button
                           onClick={() => onNavigate('POSITIONS', election.id)}
                           className={`w-full p-4 rounded-xl flex items-center justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all group/btn text-left border ${isDarkMode ? 'bg-slate-800 border-slate-600 hover:border-coop-yellow/50' : 'bg-white border-gray-200 hover:border-coop-green/50'}`}
                         >
@@ -292,7 +303,7 @@ export const Elections: React.FC<ElectionsProps> = ({ onNavigate }) => {
                       </div>
 
                       {election.status?.toUpperCase() === 'ACTIVE' ? (
-                        <button 
+                        <button
                           onClick={() => onNavigate('VOTING')}
                           className={`w-full p-5 rounded-2xl flex items-center justify-between shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all group/vote mt-auto overflow-hidden relative ${isDarkMode ? 'bg-coop-yellow text-slate-900 shadow-yellow-500/20 hover:bg-coop-yellow/90' : 'bg-coop-green text-white shadow-coop-green/20 hover:bg-coop-darkGreen'}`}
                         >
