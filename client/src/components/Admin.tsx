@@ -141,17 +141,27 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
         activityAPI.getActivities().catch(() => [])
       ]);
 
-      // Get the active election to check votes for current election only
-      const activeElection = electionsData.find((e: any) => e.status === 'active') || electionsData.find((e: any) => e.status === 'completed');
-      const activeElectionId = activeElection?._id || activeElection?.id;
+      // Helper: resolve a MongoDB document ID that may be a nested object or a plain string
+      const resolveId = (ref: any): string | undefined =>
+        ref?._id ?? ref?.id ?? ref;
+
+      // Helper: check if a specific user has cast a vote in a specific election
+      const userHasVotedInElection = (userId: string, electionId: string): boolean =>
+        votesData.some((v: any) =>
+          resolveId(v.userId) === userId && resolveId(v.electionId) === electionId
+        );
+
+      // Get the active election to check votes for the current election only
+      const activeElection =
+        electionsData.find((e: any) => e.status === 'active') ??
+        electionsData.find((e: any) => e.status === 'completed');
+      const activeElectionId = resolveId(activeElection);
 
       const mappedUsers: User[] = usersData.map((u: any) => {
-        const userId = u._id || u.id;
-        const hasVoted = activeElectionId ? votesData.some((v: any) => {
-          const voteUserId = v.userId?._id || v.userId?.id || v.userId;
-          const voteElectionId = v.electionId?._id || v.electionId?.id || v.electionId;
-          return voteUserId === userId && voteElectionId === activeElectionId;
-        }) : false;
+        const userId = resolveId(u) ?? '';
+        const hasVoted = activeElectionId
+          ? userHasVotedInElection(userId, activeElectionId)
+          : false;
 
         return {
           id: userId,
@@ -166,58 +176,69 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
         };
       });
 
+      const byAscendingOrder = (a: any, b: any) => (a.order ?? 0) - (b.order ?? 0);
+
       const mappedPositions: Position[] = positionsData
-        .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+        .sort(byAscendingOrder)
         .map((p: any) => ({
-          id: p._id || p.id,
-          electionId: p.electionId?._id || p.electionId?.id || p.electionId,
+          id: resolveId(p) ?? '',
+          electionId: resolveId(p.electionId),
           title: p.title,
-          description: p.description || '',
+          description: p.description ?? '',
           maxVotes: 1,
-          order: p.order || 0,
+          order: p.order ?? 0,
           type: 'OFFICER' as const,
           status: 'active'
         }));
 
-      // Calculate vote counts for candidates
-      const voteCounts: Record<string, number> = {};
-      votesData.forEach((vote: any) => {
-        voteCounts[vote.candidateId] = (voteCounts[vote.candidateId] || 0) + 1;
-      });
+      // Tally how many votes each candidate received
+      const voteCountByCandidateId = votesData.reduce(
+        (tally: Record<string, number>, vote: any) => {
+          tally[vote.candidateId] = (tally[vote.candidateId] ?? 0) + 1;
+          return tally;
+        },
+        {} as Record<string, number>
+      );
 
-      const mappedCandidates: Candidate[] = candidatesData.map((c: any) => ({
-        id: c._id || c.id,
-        name: c.name,
-        description: c.description || '',
-        positionId: c.positionId?._id || c.positionId?.id || c.positionId,
-        votes: voteCounts[c._id || c.id] || 0,
-        imageUrl: c.photoUrl,
-        photoUrl: c.photoUrl
-      }));
+      const mappedCandidates: Candidate[] = candidatesData.map((c: any) => {
+        const candidateId = resolveId(c) ?? '';
+        return {
+          id: candidateId,
+          name: c.name,
+          description: c.description ?? '',
+          positionId: resolveId(c.positionId),
+          votes: voteCountByCandidateId[candidateId] ?? 0,
+          imageUrl: c.photoUrl,
+          photoUrl: c.photoUrl
+        };
+      });
 
       setUsers(mappedUsers);
       setPositions(mappedPositions);
       setCandidates(mappedCandidates);
       setVotes(votesData);
-      // Filter out old position elections (those with parentElectionId) and deduplicate by ID
-      const mainElections = electionsData.filter((e: any) => !e.parentElectionId);
-      const uniqueElections = Array.from(
-        new Map(mainElections.map((e: any) => [(e._id || e.id), e])).values()
-      ).sort((a: any, b: any) => {
-        // Sort by creation date (oldest first, newest last)
-        const dateA = new Date(a.createdAt || a.startDate || 0).getTime();
-        const dateB = new Date(b.createdAt || b.startDate || 0).getTime();
-        return dateA - dateB;
-      });
+      // Exclude sub-elections (those linked to a parent) and deduplicate by ID
+      const topLevelElections = electionsData.filter((e: any) => !e.parentElectionId);
+      const electionById = new Map(topLevelElections.map((e: any) => [resolveId(e), e]));
+
+      const resolveElectionDate = (e: any): number =>
+        new Date(e.createdAt ?? e.startDate ?? 0).getTime();
+
+      const byOldestFirst = (a: any, b: any) => resolveElectionDate(a) - resolveElectionDate(b);
+
+      const uniqueElections = Array.from(electionById.values()).sort(byOldestFirst);
+
       setElections(uniqueElections);
+
       setRules(rulesData.map((r: any) => ({
-        id: r._id || r.id,
+        id: resolveId(r) ?? '',
         title: r.title,
         content: r.content,
         order: r.order
       })));
+
       setAnnouncements(announcementsData.map((ann: any) => ({
-        id: ann._id || ann.id,
+        id: resolveId(ann) ?? '',
         title: ann.title,
         content: ann.content,
         priority: ann.priority,
@@ -225,65 +246,95 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
         author: ann.author
       })));
 
+
       // Set voting status based on active elections (reuse activeElection from above)
       setVotingStatus(activeElection ? 'OPEN' : 'PAUSED');
 
-      // Calculate branch turnout from voter data
-      const branchStats: Record<string, { voters: number; participated: number }> = {};
-      mappedUsers.forEach((u) => {
-        const branch = u.address || 'Not Provided';
+      // Step 1: Count total voters and voted voters per branch
+      const branchStats: Record<string, { totalVoters: number; votedCount: number }> = {};
+
+      for (const user of mappedUsers) {
+        const branch = user.address || 'Not Provided';
+
+        // Initialize branch entry if it doesn't exist yet
         if (!branchStats[branch]) {
-          branchStats[branch] = { voters: 0, participated: 0 };
+          branchStats[branch] = { totalVoters: 0, votedCount: 0 };
         }
-        branchStats[branch].voters++;
-        if (u.hasVoted) {
-          branchStats[branch].participated++;
+
+        branchStats[branch].totalVoters++;
+
+        if (user.hasVoted) {
+          branchStats[branch].votedCount++;
         }
+      }
+
+      // Step 2: Convert branch stats into the format the chart expects
+      const branchChartData = Object.entries(branchStats).map(([branchName, stats]) => {
+        const participationRate =
+          stats.totalVoters > 0
+            ? Math.round((stats.votedCount / stats.totalVoters) * 100)
+            : 0;
+
+        return {
+          name: branchName,
+          voters: stats.totalVoters,
+          participation: participationRate
+        };
       });
 
-      const calculatedBranchData = Object.entries(branchStats)
-        .map(([name, stats]) => ({
-          name,
-          voters: stats.voters,
-          participation: stats.voters > 0 ? Math.round((stats.participated / stats.voters) * 100) : 0
-        }))
-        .sort((a, b) => b.participation - a.participation);
+      // Step 3: Sort by participation rate, highest first
+      branchChartData.sort((a, b) => b.participation - a.participation);
 
-      setBranchData(calculatedBranchData);
+      setBranchData(branchChartData);
+
+
+
+      // Converts a UTC date string into the "YYYY-MM-DDTHH:mm" format
+      // that the datetime-local input field requires
+      const formatToDatetimeLocal = (utcDateString: string): string => {
+        const utcDate = new Date(utcDateString);
+        const tzOffsetMs = utcDate.getTimezoneOffset() * 60000;
+        const localDate = new Date(utcDate.getTime() - tzOffsetMs);
+
+        const year = localDate.getFullYear();
+        const month = String(localDate.getMonth() + 1).padStart(2, '0');
+        const day = String(localDate.getDate()).padStart(2, '0');
+        const hours = String(localDate.getHours()).padStart(2, '0');
+        const minutes = String(localDate.getMinutes()).padStart(2, '0');
+
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      };
 
       if (activeElection) {
-        // Format date to datetime-local format (YYYY-MM-DDTHH:mm)
         if (activeElection.endDate) {
-          // Parse UTC ISO string and convert to local time
-          const utcDate = new Date(activeElection.endDate);
-          // To convert UTC to local: Local = UTC - tzOffset (which is negative, so effectively add)
-          const tzOffset = utcDate.getTimezoneOffset() * 60000;
-          const localDate = new Date(utcDate.getTime() - tzOffset);
-
-          const year = localDate.getFullYear();
-          const month = String(localDate.getMonth() + 1).padStart(2, '0');
-          const day = String(localDate.getDate()).padStart(2, '0');
-          const hours = String(localDate.getHours()).padStart(2, '0');
-          const minutes = String(localDate.getMinutes()).padStart(2, '0');
-          const dateStr = `${year}-${month}-${day}T${hours}:${minutes}`;
-          setElectionEndDate(dateStr);
-          setOriginalEndDate(dateStr);
+          const endDateForInput = formatToDatetimeLocal(activeElection.endDate);
+          setElectionEndDate(endDateForInput);
+          setOriginalEndDate(endDateForInput);
         }
         setHasEndDateChanged(false);
       }
 
-      const mappedLogs = activitiesData.map((activity: any) => ({
-        id: activity._id || activity.id,
-        timestamp: new Date(activity.createdAt).toLocaleString('en-US', {
+      const mappedLogs = activitiesData.map((activity: any) => {
+        const activityUser = activity.userId;
+        const displayName = activityUser?.fullName || activityUser?.username || 'Unknown User';
+        const userRole = activityUser?.role || 'member';
+
+        const timestamp = new Date(activity.createdAt).toLocaleString('en-US', {
           year: 'numeric', month: '2-digit', day: '2-digit',
           hour: '2-digit', minute: '2-digit', second: '2-digit'
-        }),
-        user: activity.userId?.fullName || activity.userId?.username || 'Unknown User',
-        role: activity.userId?.role || 'member',
-        action: activity.description || activity.action
-      }));
+        });
+
+        return {
+          id: resolveId(activity) ?? '',
+          timestamp,
+          user: displayName,
+          role: userRole,
+          action: activity.description || activity.action
+        };
+      });
 
       setLogs(mappedLogs);
+
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -327,27 +378,39 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
     }
   }, [fetchAllData, elections, user.name]);
 
-  // Update countdown timer every second for any election with future start date
+  // Check every 5 seconds if any upcoming election has passed its start date,
+  // and auto-activate it if so
   useEffect(() => {
-    const checkElectionStatus = () => {
-      // Check if any election has reached its start date and auto-activate it
+    const activateElectionsWhoseStartDateHasPassed = () => {
       const now = new Date().getTime();
-      elections.forEach((election) => {
+
+      for (const election of elections) {
         const electionId = election._id || election.id;
-        if (!election.startDate || election.status === 'active' || election.status === 'completed') return;
-        // Skip if this election was manually paused (status = 'upcoming' but marked as paused)
-        if (pausedElectionsRef.current.has(electionId)) return;
+
+        // Skip elections that are already running or done
+        const isAlreadyActiveOrDone =
+          election.status === 'active' || election.status === 'completed';
+        if (!election.startDate || isAlreadyActiveOrDone) continue;
+
+        // Skip elections the admin manually paused
+        const wasManuallyPaused = pausedElectionsRef.current.has(electionId);
+        if (wasManuallyPaused) continue;
+
+        // Skip if we already triggered activation for this election
+        const alreadyActivated = completedElectionsRef.current.has(electionId);
+        if (alreadyActivated) continue;
 
         const startTime = new Date(election.startDate).getTime();
-        if (startTime <= now && !completedElectionsRef.current.has(electionId)) {
-          // Election has reached its start date - auto-activate
+        const hasStartTimePassed = startTime <= now;
+
+        if (hasStartTimePassed) {
           activateElectionAutomatically(electionId);
         }
-      });
+      }
     };
 
-    checkElectionStatus();
-    const interval = setInterval(checkElectionStatus, 5000); // Check every 5 seconds
+    activateElectionsWhoseStartDateHasPassed();
+    const interval = setInterval(activateElectionsWhoseStartDateHasPassed, 5000); // Check every 5 seconds
     return () => clearInterval(interval);
   }, [elections, activateElectionAutomatically]);
 
