@@ -131,7 +131,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
     try {
       setLoading(true);
       const [usersData, electionsData, positionsData, candidatesData, rulesData, announcementsData, votesData, activitiesData] = await Promise.all([
-        userAPI.getUsers().catch(() => []),
+        userAPI.getUsers().catch((err) => { console.error('[fetchAllData] getUsers failed:', err?.response?.status, err?.message); return []; }),
         electionAPI.getElections().catch(() => []),
         positionAPI.getPositions().catch(() => []),
         candidateAPI.getCandidates().catch(() => []),
@@ -217,6 +217,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
       });
 
       setUsers(mappedUsers);
+      console.log('[fetchAllData] usersData.length:', usersData.length, '| mappedUsers.length:', mappedUsers.length);
       setPositions(mappedPositions);
       setCandidates(mappedCandidates);
       setVotes(votesData);
@@ -1014,8 +1015,11 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                   const uniqueVoters = new Set(
                     electionVotes.map((v: any) => v.userId?.id || v.userId?._id || v.userId)
                   ).size;
-                  const totalMembers = users.length || 1;
-                  const pct = Math.round((uniqueVoters / totalMembers) * 100);
+                  // Use actual registered voter count directly — no fallback math
+                  const totalMembers = users.length;
+                  const pct = totalMembers > 0
+                    ? Math.min(Math.round((uniqueVoters / totalMembers) * 100), 100)
+                    : 0;
                   return (
                     <div className="flex items-center gap-6">
                       {/* Gauge circle */}
@@ -1038,7 +1042,12 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                       <div className="space-y-2">
                         <div>
                           <p className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>Voters Cast</p>
-                          <p className={`text-2xl font-black tracking-tighter transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-gray-900'}`}>{uniqueVoters} <span className={`text-sm font-bold transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>/ {totalMembers}</span></p>
+                          <p className={`text-2xl font-black tracking-tighter transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-gray-900'}`}>
+                            {uniqueVoters}{' '}
+                            <span className={`text-sm font-bold transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>
+                              / {totalMembers}
+                            </span>
+                          </p>
                         </div>
                         <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${activeElection?.status === 'active' ? 'bg-green-500/10 text-green-500' : isDarkMode ? 'bg-slate-700 text-slate-400' : 'bg-gray-100 text-gray-400'}`}>
                           <div className={`w-1.5 h-1.5 rounded-full ${activeElection?.status === 'active' ? 'bg-green-500 animate-pulse' : isDarkMode ? 'bg-slate-600' : 'bg-gray-300'}`} />
@@ -1177,7 +1186,10 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                         const uniqueVotersForPos = new Set(
                           posVotes.map((v: any) => v.userId?.id || v.userId?._id || v.userId)
                         ).size;
-                        const pct = users.length > 0 ? Math.round((uniqueVotersForPos / users.length) * 100) : 0;
+                        // Use actual total members directly as denominator
+                        const pct = users.length > 0
+                          ? Math.min(Math.round((uniqueVotersForPos / users.length) * 100), 100)
+                          : 0;
                         const colorsBar = [
                           isDarkMode ? '#fbbf24' : '#2D7A3E',
                           isDarkMode ? '#60a5fa' : '#6366f1',
@@ -1193,7 +1205,9 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                             <div className="flex justify-between items-center mb-1.5">
                               <p className={`text-[9px] font-black uppercase tracking-tight truncate max-w-[70%] transition-colors duration-300 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>{pos.title}</p>
                               <div className="flex items-center gap-2">
-                                <span className={`text-[9px] font-mono font-bold transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>{uniqueVotersForPos}/{users.length}</span>
+                                <span className={`text-[9px] font-mono font-bold transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
+                                  {uniqueVotersForPos}/{users.length}
+                                </span>
                                 <span className="text-[9px] font-black" style={{ color: barColor }}>{pct}%</span>
                               </div>
                             </div>
