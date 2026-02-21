@@ -17,6 +17,11 @@ const voteSchema = new mongoose.Schema(
       ref: 'Candidate',
       default: null,
     },
+    positionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Position',
+      default: null,
+    },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
