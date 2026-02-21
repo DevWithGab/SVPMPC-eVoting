@@ -151,9 +151,10 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
           resolveId(v.userId) === userId && resolveId(v.electionId) === electionId
         );
 
-      // Get the active election to check votes for the current election only
+      // Get the current election to check votes against (active, paused, or most-recent completed)
       const activeElection =
         electionsData.find((e: any) => e.status === 'active') ??
+        electionsData.find((e: any) => e.status === 'paused') ??
         electionsData.find((e: any) => e.status === 'completed');
       const activeElectionId = resolveId(activeElection);
 
@@ -957,13 +958,18 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                   <p className={`text-[9px] font-mono font-bold uppercase tracking-wider transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>Live voter turnout & position coverage</p>
                 </div>
                 {(() => {
-                  const activeElection = elections.find((e: any) => e.status === 'active' || e.status === 'completed');
+                  const activeElection = elections.find((e: any) =>
+                    e.status === 'active' || e.status === 'paused' || e.status === 'completed'
+                  );
                   const activeElectionId = activeElection?._id || activeElection?.id;
                   const electionVotes = votes?.filter((v: any) => {
                     const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
                     return vid === activeElectionId;
                   }) || [];
-                  const uniqueVoters = new Set(electionVotes.map((v: any) => v.userId)).size;
+                  // v.userId may be a populated object {_id, username, ...} — always resolve to string ID
+                  const uniqueVoters = new Set(
+                    electionVotes.map((v: any) => v.userId?._id || v.userId?.id || v.userId)
+                  ).size;
                   const totalMembers = users.length || 1;
                   const pct = Math.round((uniqueVoters / totalMembers) * 100);
                   return (
@@ -1002,7 +1008,9 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
 
               {/* ── Area Chart: Cumulative Turnout Over Time ── */}
               {(() => {
-                const activeElection = elections.find((e: any) => e.status === 'active' || e.status === 'completed');
+                const activeElection = elections.find((e: any) =>
+                  e.status === 'active' || e.status === 'paused' || e.status === 'completed'
+                );
                 const activeElectionId = activeElection?._id || activeElection?.id;
                 const electionVotes = (votes?.filter((v: any) => {
                   const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
@@ -1010,12 +1018,13 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                 }) || []).sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
                 // Build cumulative hourly buckets
+                // v.userId is a populated object — resolve to string ID for proper Set deduplication
                 const buckets: { time: string; cumulative: number; newVoters: number }[] = [];
                 if (electionVotes.length > 0) {
                   const seen = new Set<string>();
                   const byHour: Record<string, number> = {};
                   electionVotes.forEach((v: any) => {
-                    const userId = v.userId;
+                    const userId: string = v.userId?._id || v.userId?.id || v.userId;
                     if (!seen.has(userId)) {
                       seen.add(userId);
                       const d = new Date(v.createdAt);
@@ -1081,7 +1090,9 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
               <div className={`pt-8 border-t transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
                 <h3 className={`text-[10px] font-black uppercase tracking-widest mb-6 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Per-Position Participation</h3>
                 {(() => {
-                  const activeElection = elections.find((e: any) => e.status === 'active' || e.status === 'completed');
+                  const activeElection = elections.find((e: any) =>
+                    e.status === 'active' || e.status === 'paused' || e.status === 'completed'
+                  );
                   const activeElectionId = activeElection?._id || activeElection?.id;
 
                   const electionPositions = positions.filter((p: any) => {
@@ -1101,12 +1112,15 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
                       {electionPositions.sort((a: any, b: any) => (a.order || 0) - (b.order || 0)).map((pos: any) => {
                         // Count unique voters who voted for this position
+                        // v.userId is a populated object — resolve to string ID for proper deduplication
                         const posVotes = votes?.filter((v: any) => {
                           const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
                           const posId = typeof v.positionId === 'string' ? v.positionId : (v.positionId?._id || v.positionId?.id);
                           return vid === activeElectionId && (posId === pos.id || posId === pos._id);
                         }) || [];
-                        const uniqueVotersForPos = new Set(posVotes.map((v: any) => v.userId)).size;
+                        const uniqueVotersForPos = new Set(
+                          posVotes.map((v: any) => v.userId?._id || v.userId?.id || v.userId)
+                        ).size;
                         const pct = users.length > 0 ? Math.round((uniqueVotersForPos / users.length) * 100) : 0;
                         const colorsBar = [
                           isDarkMode ? '#fbbf24' : '#2D7A3E',
@@ -1145,42 +1159,38 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
               <div>
                 <h3 className={`text-[10px] font-black uppercase tracking-widest mb-8 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Branch Turnout Analysis</h3>
                 <div className="space-y-6">
-                  {(() => {
-                    const activeElection = elections.find((e: any) => e.status === 'active');
-                    return Object.entries(
-                      users.reduce((acc: Record<string, { total: number; voted: number }>, u: User) => {
-                        const branch = u.address?.split(',')[0] || 'Unknown';
-                        if (!acc[branch]) acc[branch] = { total: 0, voted: 0 };
-                        acc[branch].total += 1;
-                        // Only count votes for active election
-                        if (activeElection) {
-                          const userVotedInActiveElection = votes?.some((v: any) => {
-                            const voteElectionId = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
-                            const activeElectionId = activeElection._id || activeElection.id;
-                            return v.userId === u._id && voteElectionId === activeElectionId;
-                          });
-                          if (userVotedInActiveElection) acc[branch].voted += 1;
-                        }
-                        return acc;
-                      }, {})
-                    ).map(([branch, data]) => {
-                      const percentage = data.total > 0 ? (data.voted / data.total) * 100 : 0;
-                      return (
-                        <div key={branch}>
-                          <div className="flex justify-between items-center mb-2">
-                            <p className={`text-[10px] font-black uppercase tracking-tight transition-colors duration-300 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>{branch}</p>
-                            <p className={`text-[9px] font-black transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-green'}`}>{percentage.toFixed(0)}%</p>
-                          </div>
-                          <div className={`w-full h-2 rounded-full overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}>
-                            <div className={`h-full transition-all ${isDarkMode ? 'bg-coop-yellow' : 'bg-coop-green'}`} style={{ width: `${percentage}%` }}></div>
+                  {branchData.length === 0 ? (
+                    <p className={`text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-600' : 'text-gray-300'}`}>
+                      No data available
+                    </p>
+                  ) : (
+                    branchData.map((branch) => (
+                      <div key={branch.name}>
+                        <div className="flex justify-between items-center mb-2">
+                          <p className={`text-[10px] font-black uppercase tracking-tight transition-colors duration-300 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
+                            {branch.name}
+                          </p>
+                          <div className="flex items-center gap-3">
+                            <span className={`text-[9px] font-mono transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>
+                              {Math.round(branch.voters * branch.participation / 100)}/{branch.voters}
+                            </span>
+                            <span className={`text-[9px] font-black transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-green'}`}>
+                              {branch.participation}%
+                            </span>
                           </div>
                         </div>
-                      );
-                    });
-                  })()}
+                        <div className={`w-full h-2 rounded-full overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}>
+                          <div
+                            className={`h-full rounded-full transition-all duration-700 ease-out ${isDarkMode ? 'bg-coop-yellow' : 'bg-coop-green'}`}
+                            style={{ width: `${branch.participation}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
-              <div className={`mt-12 pt-12 border-t transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
+              <div className={`mt-auto pt-8 border-t transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
                 <h3 className={`text-[10px] font-black uppercase tracking-widest mb-8 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>System Integrity Logs</h3>
                 <div className="space-y-4">
                   {logs.slice(0, 3).map((log, i) => (
@@ -1191,45 +1201,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-            </div>
-            <div className={`lg:col-span-4 border p-10 flex flex-col gap-10 transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
-              <div>
-                <h3 className={`text-[10px] font-black uppercase tracking-widest mb-8 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Branch Turnout Analysis</h3>
-                <div className="space-y-6">
-                  {(() => {
-                    const activeElection = elections.find((e: any) => e.status === 'active');
-                    return Object.entries(
-                      users.reduce((acc: Record<string, { total: number; voted: number }>, u: User) => {
-                        const branch = u.address?.split(',')[0] || 'Unknown';
-                        if (!acc[branch]) acc[branch] = { total: 0, voted: 0 };
-                        acc[branch].total += 1;
-                        if (activeElection) {
-                          const userVotedInActiveElection = votes?.some((v: any) => {
-                            const voteElectionId = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
-                            const activeElectionId = activeElection._id || activeElection.id;
-                            return v.userId === u._id && voteElectionId === activeElectionId;
-                          });
-                          if (userVotedInActiveElection) acc[branch].voted += 1;
-                        }
-                        return acc;
-                      }, {})
-                    ).map(([branch, data]) => {
-                      const percentage = data.total > 0 ? (data.voted / data.total) * 100 : 0;
-                      return (
-                        <div key={branch}>
-                          <div className="flex justify-between items-center mb-2">
-                            <p className={`text-[10px] font-black uppercase tracking-tight transition-colors duration-300 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>{branch}</p>
-                            <p className={`text-[9px] font-black transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-green'}`}>{percentage.toFixed(0)}%</p>
-                          </div>
-                          <div className={`w-full h-2 rounded-full overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}>
-                            <div className={`h-full transition-all ${isDarkMode ? 'bg-coop-yellow' : 'bg-coop-green'}`} style={{ width: `${percentage}%` }}></div>
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
                 </div>
               </div>
             </div>
