@@ -915,40 +915,76 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {(() => {
-              const activeElection = elections.find((e: any) => e.status === 'active');
-              const activeCandidatesCount = activeElection
-                ? candidates.filter(c => {
-                  const candElectionId = typeof c.electionId === 'string' ? c.electionId : (c.electionId?._id || c.electionId?.id || c.positionId);
-                  const activeElectionId = activeElection._id || activeElection.id;
-                  return candElectionId === activeElectionId;
+              // Search newest-first: active election → paused → most-recent completed.
+              // This way stat cards persist the last election's numbers after it ends,
+              // and naturally reset to the new election when a fresh active one starts.
+              const newestFirst = [...elections].reverse();
+              const currentElection =
+                newestFirst.find((e: any) => e.status === 'active') ??
+                newestFirst.find((e: any) => e.status === 'paused') ??
+                newestFirst.find((e: any) => e.status === 'completed');
+
+              const currentElectionId = currentElection?._id || currentElection?.id;
+              const currentStatus = currentElection?.status;
+
+              // Candidates for the current election (active or most-recent completed)
+              const currentCandidatesCount = currentElection
+                ? candidates.filter((c: any) => {
+                  const candElectionId = typeof c.electionId === 'string'
+                    ? c.electionId
+                    : (c.electionId?._id || c.electionId?.id || c.positionId);
+                  return candElectionId === currentElectionId;
                 }).length
                 : 0;
 
-              // Count committed ballots only for active election
-              const committedBallots = activeElection
-                ? (votes?.filter(v => {
-                  const voteElectionId = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
-                  const activeElectionId = activeElection._id || activeElection.id;
-                  return voteElectionId === activeElectionId;
+              // Ballots cast in the current election (persists after election ends)
+              const committedBallots = currentElection
+                ? (votes?.filter((v: any) => {
+                  const voteElectionId = typeof v.electionId === 'string'
+                    ? v.electionId
+                    : (v.electionId?._id || v.electionId?.id);
+                  return voteElectionId === currentElectionId;
                 }).length || 0)
                 : 0;
 
-              return [
-                { label: 'Authorized Voters', val: users.length, icon: Users },
-                { label: 'Committed Ballots', val: committedBallots, icon: CheckCircle },
-                { label: 'Active Election', val: activeElection ? 1 : 0, icon: Layers },
-                { label: 'Candidates Running', val: activeCandidatesCount, icon: UserCheck }
+              // Status badge label & colour for the "Election Status" card
+              const statusLabel =
+                currentStatus === 'active' ? 'Live' :
+                  currentStatus === 'paused' ? 'Paused' :
+                    currentStatus === 'completed' ? 'Final' : 'None';
+              const statusColor =
+                currentStatus === 'active' ? 'text-green-500' :
+                  currentStatus === 'paused' ? (isDarkMode ? 'text-coop-yellow' : 'text-amber-500') :
+                    currentStatus === 'completed' ? (isDarkMode ? 'text-slate-400' : 'text-gray-400') :
+                      (isDarkMode ? 'text-slate-600' : 'text-gray-300');
+
+              const stats = [
+                { label: 'Authorized Voters', val: users.length, icon: Users, badge: null },
+                { label: 'Committed Ballots', val: committedBallots, icon: CheckCircle, badge: null },
+                { label: 'Election Status', val: currentElection ? 1 : 0, icon: Layers, badge: { label: statusLabel, color: statusColor } },
+                { label: 'Candidates Running', val: currentCandidatesCount, icon: UserCheck, badge: null },
               ];
-            })().map((stat) => (
-              <div key={stat.label} className={`border p-8 hover:border-coop-green transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
-                <div className="flex justify-between items-start mb-6">
-                  <stat.icon size={18} className={`transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`} />
-                  <span className={`text-[10px] font-mono transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>0.0{stat.val % 9}</span>
+
+              return stats.map((stat) => (
+                <div key={stat.label} className={`border p-8 hover:border-coop-green transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
+                  <div className="flex justify-between items-start mb-6">
+                    <stat.icon size={18} className={`transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`} />
+                    {stat.badge ? (
+                      <span className={`text-[9px] font-black uppercase tracking-widest ${stat.badge.color} flex items-center gap-1`}>
+                        {stat.badge.label === 'Live' && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+                        )}
+                        {stat.badge.label}
+                      </span>
+                    ) : (
+                      <span className={`text-[10px] font-mono transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>0.0{stat.val % 9}</span>
+                    )}
+                  </div>
+                  <p className={`text-[10px] font-black uppercase tracking-widest mb-2 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>{stat.label}</p>
+                  <p className={`text-4xl font-black tracking-tighter transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-gray-900'}`}>{stat.val.toLocaleString()}</p>
                 </div>
-                <p className={`text-[10px] font-black uppercase tracking-widest mb-2 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>{stat.label}</p>
-                <p className={`text-4xl font-black tracking-tighter transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-gray-900'}`}>{stat.val.toLocaleString()}</p>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
 
           <div className={`grid lg:grid-cols-12 gap-8 pb-12 transition-colors duration-300 ${isDarkMode ? '' : ''}`}>
@@ -960,12 +996,14 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                   <p className={`text-[9px] font-mono font-bold uppercase tracking-wider transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>Live voter turnout & position coverage</p>
                 </div>
                 {(() => {
-                  // Priority: active > paused > completed — oldest-first sort means a single
-                  // find('active'||'completed') would pick the OLD completed election first.
+                  // Search newest-first so the MOST RECENT election is always selected.
+                  // elections[] is sorted oldest-first, so we reverse before searching.
+                  // Without this, find(completed) after an election ends picks the OLD empty election.
+                  const newestFirst = [...elections].reverse();
                   const activeElection =
-                    elections.find((e: any) => e.status === 'active') ??
-                    elections.find((e: any) => e.status === 'paused') ??
-                    elections.find((e: any) => e.status === 'completed');
+                    newestFirst.find((e: any) => e.status === 'active') ??
+                    newestFirst.find((e: any) => e.status === 'paused') ??
+                    newestFirst.find((e: any) => e.status === 'completed');
                   const activeElectionId = activeElection?._id || activeElection?.id;
                   const electionVotes = votes?.filter((v: any) => {
                     const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
@@ -1014,12 +1052,13 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
 
               {/* ── Area Chart: Cumulative Turnout Over Time ── */}
               {(() => {
-                // Priority: active > paused > completed — oldest-first sort means a single
-                // find('active'||'completed') would pick the OLD completed election first.
+                // Search newest-first so the MOST RECENT election is always selected.
+                // elections[] is sorted oldest-first, so we reverse before searching.
+                const newestFirst = [...elections].reverse();
                 const activeElection =
-                  elections.find((e: any) => e.status === 'active') ??
-                  elections.find((e: any) => e.status === 'paused') ??
-                  elections.find((e: any) => e.status === 'completed');
+                  newestFirst.find((e: any) => e.status === 'active') ??
+                  newestFirst.find((e: any) => e.status === 'paused') ??
+                  newestFirst.find((e: any) => e.status === 'completed');
                 const activeElectionId = activeElection?._id || activeElection?.id;
                 const electionVotes = (votes?.filter((v: any) => {
                   const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
@@ -1101,12 +1140,13 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
               <div className={`pt-8 border-t transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
                 <h3 className={`text-[10px] font-black uppercase tracking-widest mb-6 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Per-Position Participation</h3>
                 {(() => {
-                  // Priority: active > paused > completed — oldest-first sort means a single
-                  // find('active'||'completed') would pick the OLD completed election first.
+                  // Search newest-first so the MOST RECENT election is always selected.
+                  // elections[] is sorted oldest-first, so we reverse before searching.
+                  const newestFirst = [...elections].reverse();
                   const activeElection =
-                    elections.find((e: any) => e.status === 'active') ??
-                    elections.find((e: any) => e.status === 'paused') ??
-                    elections.find((e: any) => e.status === 'completed');
+                    newestFirst.find((e: any) => e.status === 'active') ??
+                    newestFirst.find((e: any) => e.status === 'paused') ??
+                    newestFirst.find((e: any) => e.status === 'completed');
                   const activeElectionId = activeElection?._id || activeElection?.id;
 
                   const electionPositions = positions.filter((p: any) => {
