@@ -51,11 +51,11 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
   const [isBulkResending, setIsBulkResending] = useState(false);
 
   const statusColors: Record<string, string> = {
-    pending_activation: 'bg-yellow-100 text-yellow-800',
-    activated: 'bg-green-100 text-green-800',
-    sms_failed: 'bg-red-100 text-red-800',
-    email_failed: 'bg-orange-100 text-orange-800',
-    token_expired: 'bg-gray-100 text-gray-800',
+    pending_activation: isDarkMode ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-800' : 'bg-yellow-100 text-yellow-800 border border-yellow-200',
+    activated: isDarkMode ? 'bg-green-900/30 text-green-400 border border-green-800' : 'bg-green-100 text-green-800 border border-green-200',
+    sms_failed: isDarkMode ? 'bg-red-900/30 text-red-400 border border-red-800' : 'bg-red-100 text-red-800 border border-red-200',
+    email_failed: isDarkMode ? 'bg-orange-900/30 text-orange-400 border border-orange-800' : 'bg-orange-100 text-orange-800 border border-orange-200',
+    token_expired: isDarkMode ? 'bg-slate-700 text-slate-400 border border-slate-600' : 'bg-gray-100 text-gray-800 border border-gray-200',
   };
 
   const statusLabels: Record<string, string> = {
@@ -251,11 +251,11 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
   };
 
   const SortIcon = ({ field }: { field: string }) => {
-    if (sortBy !== field) return <ChevronUp className="w-4 h-4 text-gray-400" />;
+    if (sortBy !== field) return <ChevronDown className={`w-4 h-4 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`} />;
     return sortOrder === 'asc' ? (
-      <ChevronUp className="w-4 h-4 text-green-600" />
+      <ChevronUp className={`w-4 h-4 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-green'}`} />
     ) : (
-      <ChevronDown className="w-4 h-4 text-green-600" />
+      <ChevronDown className={`w-4 h-4 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-green'}`} />
     );
   };
 
@@ -264,7 +264,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
       {/* Header with enhanced styling */}
       <div className={`border-b pb-4 ${isDarkMode ? 'border-slate-700' : 'border-gray-200'}`}>
         <div className="flex items-center gap-3 mb-2">
-          <div className={`w-10 h-10 flex items-center justify-center font-black transition-colors duration-300 ${isDarkMode ? 'bg-coop-yellow text-slate-900' : 'bg-coop-green text-white'}`}>
+          <div className={`w-10 h-10 flex items-center justify-center rounded-lg font-black transition-colors duration-300 ${isDarkMode ? 'bg-coop-yellow text-slate-900' : 'bg-coop-green text-white'}`}>
             <UserCheck size={20} />
           </div>
           <div>
@@ -467,7 +467,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                       <td className={`px-6 py-4 text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-gray-900'}`}>{member.name}</td>
                       <td className={`px-6 py-4 text-sm ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>{member.phone_number}</td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[member.activation_status]}`}>
+                        <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase ${statusColors[member.activation_status]}`}>
                           {statusLabels[member.activation_status]}
                         </span>
                       </td>
@@ -521,7 +521,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                         <p className={`text-xs font-semibold ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>{member.member_id}</p>
                       </div>
                     </div>
-                    <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase shadow-sm ${statusColors[member.activation_status]}`}>
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase ${statusColors[member.activation_status]}`}>
                       {statusLabels[member.activation_status]}
                     </span>
                   </div>
@@ -661,7 +661,7 @@ export const MemberStatusDashboard: React.FC<MemberStatusDashboardProps> = () =>
                 <div className={`p-4 rounded-lg border transition-colors duration-300 ${isDarkMode ? 'bg-slate-900/50 border-slate-700' : 'bg-gray-50 border-gray-200'}`}>
                   <label className={`text-xs font-black uppercase tracking-widest block mb-2 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>{t('bulkImport.status')}</label>
                   <p>
-                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase shadow-sm ${statusColors[memberDetails.activation_status]}`}>
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase ${statusColors[memberDetails.activation_status]}`}>
                       {statusLabels[memberDetails.activation_status]}
                     </span>
                   </p>
