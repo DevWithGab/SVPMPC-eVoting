@@ -14,131 +14,174 @@ export const CandidatesDirectory: React.FC<CandidatesDirectoryProps> = ({ onNavi
   const [hasActiveElection, setHasActiveElection] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const electionsData = await electionAPI.getElections();
-        const activeElection = electionsData.find((e: any) => e.status === 'active');
-        
-        if (!activeElection) {
-          setHasActiveElection(false);
-          setCandidates([]);
-          setLoading(false);
-          return;
-        }
-        
-        setHasActiveElection(true);
-        
-        const candidatesData = await candidateAPI.getCandidates();
-        
-        const filteredCandidates = Array.isArray(candidatesData)
-          ? candidatesData.filter(candidate => {
-              const candElectionId = candidate.electionId?._id || candidate.electionId;
-              return candElectionId === (activeElection._id || activeElection.id);
-            })
-          : [];
-        
-        setCandidates(filteredCandidates);
-      } catch (err: any) {
-        setError(err?.message || 'Failed to load');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    loadCandidates();
   }, []);
 
-  if (error && !loading) {
-    return (
-      <div className="min-h-screen pt-32 pb-32 px-4 bg-[#fcfcfd] flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <p className="text-coop-darkGreen font-black text-xl mb-4">Error Loading Candidates</p>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => onNavigate('ELECTIONS')}
-            className="px-6 py-3 bg-coop-green text-white font-black rounded hover:bg-coop-darkGreen transition-colors"
-          >
-            Back to Elections
-          </button>
-        </div>
-      </div>
-    );
+  async function loadCandidates() {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Find active election
+      const elections = await electionAPI.getElections();
+      const activeElection = elections.find((election: any) => election.status === 'active');
+      
+      if (!activeElection) {
+        setHasActiveElection(false);
+        setCandidates([]);
+        return;
+      }
+      
+      // Get candidates for active election
+      setHasActiveElection(true);
+      const allCandidates = await candidateAPI.getCandidates();
+      const activeCandidates = filterCandidatesByElection(allCandidates, activeElection);
+      
+      setCandidates(activeCandidates);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load candidates');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function filterCandidatesByElection(candidates: any[], election: any) {
+    if (!Array.isArray(candidates)) return [];
+    
+    const electionId = election._id || election.id;
+    return candidates.filter(candidate => {
+      const candidateElectionId = candidate.electionId?._id || candidate.electionId;
+      return candidateElectionId === electionId;
+    });
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen pt-32 pb-32 px-4 bg-[#fcfcfd] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-3 border-coop-green/20 border-t-coop-green rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-coop-darkGreen font-black">Loading candidates...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
+  }
+
+  if (error) {
+    return <ErrorScreen error={error} onNavigate={onNavigate} />;
   }
 
   return (
     <div className="min-h-screen pt-32 pb-32 px-4 bg-[#fcfcfd]">
       <div className="container mx-auto max-w-7xl">
+        <PageHeader />
         
-        {/* Header */}
-        <header className="mb-20 animate-slideUp">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-12">
-            <div className="max-w-3xl">
-              <h1 className="text-6xl md:text-8xl font-black text-coop-darkGreen tracking-tighter leading-[0.85] uppercase mb-8">
-                <span className="text-coop-green">Candidates</span>
-              </h1>
-              <p className="text-xl text-gray-500 font-medium leading-relaxed max-w-xl border-l-4 border-coop-green/10 pl-8">
-                Review all nominees running in the current election cycle.
-              </p>
-            </div>
-          </div>
-        </header>
-
         {!hasActiveElection || candidates.length === 0 ? (
-          <div className="text-center py-20 bg-white border border-gray-100">
-            {!hasActiveElection ? (
-              <>
-                <p className="text-gray-500 font-medium text-lg">No active election</p>
-                <p className="text-gray-500 font-medium text-lg">No candidates to show</p>
-              </>
-            ) : (
-              <p className="text-gray-500 font-medium text-lg">No candidates found for this election.</p>
-            )}
-          </div>
+          <EmptyState hasActiveElection={hasActiveElection} />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {candidates.map((candidate) => (
-              <div key={candidate._id || candidate.id} className="border border-gray-100 rounded-lg overflow-hidden hover:border-coop-green transition-colors group">
-                {/* Candidate Photo */}
-                <div className="aspect-square bg-gray-100 overflow-hidden">
-                  {candidate.photoUrl ? (
-                    <img 
-                      src={candidate.photoUrl} 
-                      alt={candidate.name}
-                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
-                      <Users size={48} className="text-gray-300" />
-                    </div>
-                  )}
-                </div>
-                
-                {/* Candidate Info */}
-                <div className="p-4">
-                  <h3 className="font-black text-coop-darkGreen text-lg mb-2 uppercase tracking-tight">{candidate.name}</h3>
-                  {candidate.description && (
-                    <p className="text-gray-600 text-sm line-clamp-2">{candidate.description}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <CandidateGrid candidates={candidates} />
         )}
       </div>
     </div>
   );
 };
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen pt-32 pb-32 px-4 bg-[#fcfcfd] flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-12 h-12 border-3 border-coop-green/20 border-t-coop-green rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-coop-darkGreen font-black">Loading candidates...</p>
+      </div>
+    </div>
+  );
+}
+
+function ErrorScreen({ error, onNavigate }: { error: string; onNavigate: (page: PageView) => void }) {
+  return (
+    <div className="min-h-screen pt-32 pb-32 px-4 bg-[#fcfcfd] flex items-center justify-center">
+      <div className="text-center max-w-md">
+        <p className="text-coop-darkGreen font-black text-xl mb-4">Error Loading Candidates</p>
+        <p className="text-gray-600 mb-6">{error}</p>
+        <button
+          onClick={() => onNavigate('ELECTIONS')}
+          className="px-6 py-3 bg-coop-green text-white font-black rounded hover:bg-coop-darkGreen transition-colors"
+        >
+          Back to Elections
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PageHeader() {
+  return (
+    <header className="mb-20 animate-slideUp">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-12">
+        <div className="max-w-3xl">
+          <h1 className="text-6xl md:text-8xl font-black text-coop-darkGreen tracking-tighter leading-[0.85] uppercase mb-8">
+            <span className="text-coop-green">Candidates</span>
+          </h1>
+          <p className="text-xl text-gray-500 font-medium leading-relaxed max-w-xl border-l-4 border-coop-green/10 pl-8">
+            Review all nominees running in the current election cycle.
+          </p>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function EmptyState({ hasActiveElection }: { hasActiveElection: boolean }) {
+  return (
+    <div className="text-center py-20 bg-white border border-gray-100">
+      {!hasActiveElection ? (
+        <>
+          <p className="text-gray-500 font-medium text-lg">No active election</p>
+          <p className="text-gray-500 font-medium text-lg">No candidates to show</p>
+        </>
+      ) : (
+        <p className="text-gray-500 font-medium text-lg">No candidates found for this election.</p>
+      )}
+    </div>
+  );
+}
+
+function CandidateGrid({ candidates }: { candidates: any[] }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {candidates.map((candidate) => (
+        <CandidateCard key={candidate._id || candidate.id} candidate={candidate} />
+      ))}
+    </div>
+  );
+}
+
+function CandidateCard({ candidate }: { candidate: any }) {
+  return (
+    <div className="border border-gray-100 rounded-lg overflow-hidden hover:border-coop-green transition-colors group">
+      <CandidatePhoto photoUrl={candidate.photoUrl} name={candidate.name} />
+      <CandidateInfo name={candidate.name} description={candidate.description} />
+    </div>
+  );
+}
+
+function CandidatePhoto({ photoUrl, name }: { photoUrl?: string; name: string }) {
+  return (
+    <div className="aspect-square bg-gray-100 overflow-hidden">
+      {photoUrl ? (
+        <img 
+          src={photoUrl} 
+          alt={name}
+          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
+          <Users size={48} className="text-gray-300" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CandidateInfo({ name, description }: { name: string; description?: string }) {
+  return (
+    <div className="p-4">
+      <h3 className="font-black text-coop-darkGreen text-lg mb-2 uppercase tracking-tight">{name}</h3>
+      {description && (
+        <p className="text-gray-600 text-sm line-clamp-2">{description}</p>
+      )}
+    </div>
+  );
+}
