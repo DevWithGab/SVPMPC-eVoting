@@ -1047,22 +1047,40 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
 
                       const buckets: { name: string; votes: number }[] = [];
                       if (electionVotes.length > 0) {
-                        const seen = new Set<string>();
-                        const byHour: Record<string, number> = {};
+                        // Get the election start date or use the first vote date
+                        const electionStart = activeElection?.startDate 
+                          ? new Date(activeElection.startDate) 
+                          : new Date(electionVotes[0].createdAt);
+                        electionStart.setHours(0, 0, 0, 0);
+                        
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        
+                        // Count votes by day
+                        const byDay: Record<number, number> = {};
                         electionVotes.forEach((v: any) => {
-                          const userId: string = v.userId?.id || v.userId?._id || v.userId;
-                          if (!seen.has(userId)) {
-                            seen.add(userId);
-                            const d = new Date(v.createdAt);
-                            const key = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:00`;
-                            byHour[key] = (byHour[key] || 0) + 1;
+                          const voteDate = new Date(v.createdAt);
+                          voteDate.setHours(0, 0, 0, 0);
+                          const dayDiff = Math.floor((voteDate.getTime() - electionStart.getTime()) / (1000 * 60 * 60 * 24));
+                          if (dayDiff >= 0) {
+                            byDay[dayDiff] = (byDay[dayDiff] || 0) + 1;
                           }
                         });
-                        let cum = 0;
-                        Object.entries(byHour).forEach(([time, count]) => {
-                          cum += count;
-                          buckets.push({ name: time, votes: cum });
-                        });
+                        
+                        // Calculate current day number
+                        const currentDayNum = Math.floor((today.getTime() - electionStart.getTime()) / (1000 * 60 * 60 * 24));
+                        
+                        // Build 7 days of data (or up to current day if less than 7)
+                        const maxDays = Math.min(7, currentDayNum + 1);
+                        let cumulative = 0;
+                        for (let i = 0; i < maxDays; i++) {
+                          cumulative += byDay[i] || 0;
+                          const isToday = i === currentDayNum;
+                          buckets.push({ 
+                            name: isToday ? 'Today' : `Day ${i + 1}`, 
+                            votes: cumulative 
+                          });
+                        }
                       }
 
                       const voterTurnoutData = buckets.length > 0 ? buckets : [{ name: 'Start', votes: 0 }];
@@ -1282,20 +1300,40 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                         return vid === activeElectionId;
                       }) || []).sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-                      const hourlyData: { time: string; count: number }[] = [];
-                      if (electionVotes.length > 0) {
-                        const byHour: Record<string, number> = {};
-                        electionVotes.forEach((v: any) => {
-                          const d = new Date(v.createdAt);
-                          const key = `${d.getHours()}:00`;
-                          byHour[key] = (byHour[key] || 0) + 1;
-                        });
-                        Object.entries(byHour).forEach(([time, count]) => {
-                          hourlyData.push({ time, count });
-                        });
-                      }
+                      // Define fixed time slots from 8am to 12am
+                      const timeSlots = [
+                        { hour: 8, label: '8am' },
+                        { hour: 9, label: '9am' },
+                        { hour: 10, label: '10am' },
+                        { hour: 11, label: '11am' },
+                        { hour: 12, label: '12pm' },
+                        { hour: 13, label: '1pm' },
+                        { hour: 14, label: '2pm' },
+                        { hour: 15, label: '3pm' },
+                        { hour: 16, label: '4pm' },
+                        { hour: 17, label: '5pm' },
+                        { hour: 18, label: '6pm' },
+                        { hour: 19, label: '7pm' },
+                        { hour: 20, label: '8pm' },
+                        { hour: 21, label: '9pm' },
+                        { hour: 22, label: '10pm' },
+                        { hour: 23, label: '11pm' },
+                        { hour: 0, label: '12am' },
+                      ];
 
-                      const chartData = hourlyData.length > 0 ? hourlyData : [{ time: '0:00', count: 0 }];
+                      // Count votes by hour from backend data
+                      const byHour: Record<number, number> = {};
+                      electionVotes.forEach((v: any) => {
+                        const d = new Date(v.createdAt);
+                        const hour = d.getHours();
+                        byHour[hour] = (byHour[hour] || 0) + 1;
+                      });
+
+                      // Build chart data with all time slots, using actual counts
+                      const chartData = timeSlots.map(slot => ({
+                        time: slot.label,
+                        count: byHour[slot.hour] || 0
+                      }));
 
                       return (
                         <ResponsiveContainer width="100%" height="100%">
