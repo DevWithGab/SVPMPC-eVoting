@@ -283,25 +283,29 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
       setPositions(mappedPositions);
       setCandidates(mappedCandidates);
 
-      // Fetch vote counts and voter data for each position
+      // Fetch vote counts and voter data - only once per unique election
       const votesMap: { [candidateId: string]: number } = {};
       const allVoteTimestamps: Date[] = [];
       const uniqueVoters = new Set<string>();
 
-      for (const position of mappedPositions) {
-        const electionId = position.electionId || position.id;
+      // Get unique election IDs to avoid duplicate API calls
+      const uniqueElectionIds = [...new Set(
+        mappedPositions.map(p => p.electionId).filter((id): id is string => Boolean(id))
+      )];
 
-        // Step 1: Get and tally vote counts for this position
+      for (const electionId of uniqueElectionIds) {
+        // Step 1: Get and tally vote counts for this election (once per election)
         try {
           const results = await voteAPI.getElectionResults(electionId);
 
           if (results.results && Array.isArray(results.results)) {
             for (const result of results.results) {
-              votesMap[result.candidateId] = (votesMap[result.candidateId] || 0) + result.voteCount;
+              // Set the vote count directly instead of accumulating
+              votesMap[result.candidateId] = result.voteCount;
             }
           }
         } catch (err) {
-          console.error(`Failed to fetch results for position ${position.id}:`, err);
+          console.error(`Failed to fetch results for election ${electionId}:`, err);
         }
 
         // Step 2: Get individual votes to track unique voters and timestamps
@@ -326,7 +330,7 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
             }
           }
         } catch (err) {
-          console.error(`Failed to fetch vote timestamps for position ${position.id}:`, err);
+          console.error(`Failed to fetch vote timestamps for election ${electionId}:`, err);
         }
       }
 
