@@ -85,7 +85,7 @@ export const Profile: React.FC<ProfileProps> = ({
     try {
       setLoadingHistory(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/votes', {
+      const response = await fetch('/api/votes/user', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
