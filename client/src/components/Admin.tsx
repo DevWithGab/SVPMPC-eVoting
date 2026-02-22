@@ -17,9 +17,12 @@ import {
   FileText, Camera, Upload,
   Terminal, LogOut, Megaphone, BookOpen,
   UserPlus, Menu, Clock,
-  Briefcase, Edit3, ListOrdered, FilePlus, ChevronRight, Calendar
+  Briefcase, Edit3, ListOrdered, FilePlus, ChevronRight, Calendar,
+  MapPin, TrendingUp
 } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LineChart, Line } from 'recharts';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Badge } from './ui/badge';
 
 
 interface AdminProps {
@@ -996,291 +999,341 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
             })()}
           </div>
 
-          <div className={`grid lg:grid-cols-12 gap-8 pb-12 transition-colors duration-300 ${isDarkMode ? '' : ''}`}>
-            <div className={`lg:col-span-8 border p-10 transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
-              {/* ── Header ── */}
-              <div className="flex justify-between items-start mb-10">
-                <div>
-                  <h3 className={`text-[10px] font-black uppercase tracking-widest mb-1 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Election Progress</h3>
-                  <p className={`text-[9px] font-mono font-bold uppercase tracking-wider transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>Live voter turnout & position coverage</p>
-                </div>
-                {(() => {
-                  // Search newest-first so the MOST RECENT election is always selected.
-                  // elections[] is sorted oldest-first, so we reverse before searching.
-                  // Without this, find(completed) after an election ends picks the OLD empty election.
-                  const newestFirst = [...elections].reverse();
-                  const activeElection =
-                    newestFirst.find((e: any) => e.status === 'active') ??
-                    newestFirst.find((e: any) => e.status === 'paused') ??
-                    newestFirst.find((e: any) => e.status === 'completed');
-                  const activeElectionId = activeElection?._id || activeElection?.id;
-                  const electionVotes = votes?.filter((v: any) => {
-                    const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
-                    return vid === activeElectionId;
-                  }) || [];
-                  // v.userId is a populated object. After Mongoose JSON serialization,
-                  // the ID is exposed as .id (virtual), NOT ._id.
-                  const uniqueVoters = new Set(
-                    electionVotes.map((v: any) => v.userId?.id || v.userId?._id || v.userId)
-                  ).size;
-                  // Use actual registered voter count directly — no fallback math
-                  const totalMembers = users.length;
-                  const pct = totalMembers > 0
-                    ? Math.min(Math.round((uniqueVoters / totalMembers) * 100), 100)
-                    : 0;
-                  return (
-                    <div className="flex items-center gap-6">
-                      {/* Gauge circle */}
-                      <div className="relative w-20 h-20">
-                        <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                          <circle cx="18" cy="18" r="15.9" fill="none" strokeWidth="3" stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
-                          <circle
-                            cx="18" cy="18" r="15.9" fill="none" strokeWidth="3"
-                            stroke={isDarkMode ? '#fbbf24' : '#2D7A3E'}
-                            strokeDasharray={`${pct} 100`}
-                            strokeLinecap="round"
-                            style={{ transition: 'stroke-dasharray 1s ease' }}
-                          />
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className={`text-lg font-black leading-none transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-darkGreen'}`}>{pct}%</span>
-                          <span className={`text-[7px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>Turnout</span>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div>
-                          <p className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>Voters Cast</p>
-                          <p className={`text-2xl font-black tracking-tighter transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-gray-900'}`}>
-                            {uniqueVoters}{' '}
-                            <span className={`text-sm font-bold transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>
-                              / {totalMembers}
-                            </span>
-                          </p>
-                        </div>
-                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${activeElection?.status === 'active' ? 'bg-green-500/10 text-green-500' : isDarkMode ? 'bg-slate-700 text-slate-400' : 'bg-gray-100 text-gray-400'}`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${activeElection?.status === 'active' ? 'bg-green-500 animate-pulse' : isDarkMode ? 'bg-slate-600' : 'bg-gray-300'}`} />
-                          {activeElection?.status === 'active' ? 'Live' : activeElection?.status === 'completed' ? 'Final' : 'No Active Election'}
-                        </div>
-                      </div>
+          {/* New Card-Based Charts Section */}
+          <div className="space-y-6">
+            {/* Voter Turnout Trend & Overall Participation */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className={`lg:col-span-2 shadow-sm ${isDarkMode ? 'bg-slate-800 border-slate-700' : ''}`}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Voter Turnout Trend</CardTitle>
+                      <CardDescription className="text-sm text-muted-foreground">
+                        {(() => {
+                          const newestFirst = [...elections].reverse();
+                          const activeElection =
+                            newestFirst.find((e: any) => e.status === 'active') ??
+                            newestFirst.find((e: any) => e.status === 'paused') ??
+                            newestFirst.find((e: any) => e.status === 'completed');
+                          return activeElection?.title || 'No active election';
+                        })()}
+                      </CardDescription>
                     </div>
-                  );
-                })()}
-              </div>
-
-              {/* ── Area Chart: Cumulative Turnout Over Time ── */}
-              {(() => {
-                // Search newest-first so the MOST RECENT election is always selected.
-                // elections[] is sorted oldest-first, so we reverse before searching.
-                const newestFirst = [...elections].reverse();
-                const activeElection =
-                  newestFirst.find((e: any) => e.status === 'active') ??
-                  newestFirst.find((e: any) => e.status === 'paused') ??
-                  newestFirst.find((e: any) => e.status === 'completed');
-                const activeElectionId = activeElection?._id || activeElection?.id;
-                const electionVotes = (votes?.filter((v: any) => {
-                  const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
-                  return vid === activeElectionId;
-                }) || []).sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-
-                // Build cumulative hourly buckets
-                // v.userId is a populated object — resolve to string ID for proper Set deduplication
-                const buckets: { time: string; cumulative: number; newVoters: number }[] = [];
-                if (electionVotes.length > 0) {
-                  const seen = new Set<string>();
-                  const byHour: Record<string, number> = {};
-                  electionVotes.forEach((v: any) => {
-                    // v.userId is a populated object. After Mongoose JSON serialization,
-                    // the ID is exposed as .id (virtual), NOT ._id.
-                    const userId: string = v.userId?.id || v.userId?._id || v.userId;
-                    if (!seen.has(userId)) {
-                      seen.add(userId);
-                      const d = new Date(v.createdAt);
-                      const key = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:00`;
-                      byHour[key] = (byHour[key] || 0) + 1;
-                    }
-                  });
-                  let cum = 0;
-                  Object.entries(byHour).forEach(([time, count]) => {
-                    cum += count;
-                    buckets.push({ time, cumulative: cum, newVoters: count });
-                  });
-                }
-
-                const hasData = buckets.length > 0;
-                const chartData = hasData ? buckets : [{ time: 'Start', cumulative: 0, newVoters: 0 }];
-
-                return (
-                  <div className="h-52 mb-10">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                        <defs>
-                          <linearGradient id="turnoutGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={isDarkMode ? '#fbbf24' : '#2D7A3E'} stopOpacity={0.25} />
-                            <stop offset="95%" stopColor={isDarkMode ? '#fbbf24' : '#2D7A3E'} stopOpacity={0} />
-                          </linearGradient>
-                          <linearGradient id="newGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={isDarkMode ? '#60a5fa' : '#6366f1'} stopOpacity={0.2} />
-                            <stop offset="95%" stopColor={isDarkMode ? '#60a5fa' : '#6366f1'} stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
-                        <XAxis dataKey="time" tick={{ fontSize: 8, fontWeight: 700, fill: isDarkMode ? '#64748b' : '#9ca3af', fontFamily: 'monospace' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                        <YAxis tick={{ fontSize: 8, fontWeight: 700, fill: isDarkMode ? '#64748b' : '#9ca3af' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                        <Tooltip
-                          contentStyle={{ borderRadius: '0px', border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`, fontWeight: 900, fontSize: '10px', backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', color: isDarkMode ? '#e2e8f0' : '#111827' }}
-                          formatter={(value: any, name: string) => [value, name === 'cumulative' ? 'Total Voters' : 'New This Hour']}
-                        />
-                        <Area type="monotone" dataKey="newVoters" stroke={isDarkMode ? '#60a5fa' : '#6366f1'} strokeWidth={1.5} fill="url(#newGradient)" dot={false} strokeDasharray="4 2" name="newVoters" />
-                        <Area type="monotone" dataKey="cumulative" stroke={isDarkMode ? '#fbbf24' : '#2D7A3E'} strokeWidth={2.5} fill="url(#turnoutGradient)" dot={false} name="cumulative" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                    {!hasData && (
-                      <div className={`text-center text-[10px] font-black uppercase tracking-widest mt-2 transition-colors duration-300 ${isDarkMode ? 'text-slate-600' : 'text-gray-300'}`}>No votes recorded yet</div>
-                    )}
+                    {(() => {
+                      const newestFirst = [...elections].reverse();
+                      const activeElection =
+                        newestFirst.find((e: any) => e.status === 'active') ??
+                        newestFirst.find((e: any) => e.status === 'paused') ??
+                        newestFirst.find((e: any) => e.status === 'completed');
+                      return activeElection?.status === 'active' ? (
+                        <Badge variant="outline" className="font-mono text-xs">LIVE</Badge>
+                      ) : null;
+                    })()}
                   </div>
-                );
-              })()}
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px] w-full mt-4">
+                    {(() => {
+                      const newestFirst = [...elections].reverse();
+                      const activeElection =
+                        newestFirst.find((e: any) => e.status === 'active') ??
+                        newestFirst.find((e: any) => e.status === 'paused') ??
+                        newestFirst.find((e: any) => e.status === 'completed');
+                      const activeElectionId = activeElection?._id || activeElection?.id;
+                      const electionVotes = (votes?.filter((v: any) => {
+                        const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
+                        return vid === activeElectionId;
+                      }) || []).sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-              {/* ── Legend ── */}
-              <div className="flex items-center gap-6 mb-10">
-                <div className="flex items-center gap-2">
-                  <div className={`w-6 h-0.5 rounded ${isDarkMode ? 'bg-coop-yellow' : 'bg-coop-green'}`} />
-                  <span className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Cumulative Voters</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className={`w-6 h-0.5 rounded border-dashed border-b-2 ${isDarkMode ? 'border-blue-400' : 'border-indigo-500'}`} />
-                  <span className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>New Per Hour</span>
-                </div>
-              </div>
+                      const buckets: { name: string; votes: number }[] = [];
+                      if (electionVotes.length > 0) {
+                        const seen = new Set<string>();
+                        const byHour: Record<string, number> = {};
+                        electionVotes.forEach((v: any) => {
+                          const userId: string = v.userId?.id || v.userId?._id || v.userId;
+                          if (!seen.has(userId)) {
+                            seen.add(userId);
+                            const d = new Date(v.createdAt);
+                            const key = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:00`;
+                            byHour[key] = (byHour[key] || 0) + 1;
+                          }
+                        });
+                        let cum = 0;
+                        Object.entries(byHour).forEach(([time, count]) => {
+                          cum += count;
+                          buckets.push({ name: time, votes: cum });
+                        });
+                      }
 
-              {/* ── Per-Position Coverage ── */}
-              <div className={`pt-8 border-t transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
-                <h3 className={`text-[10px] font-black uppercase tracking-widest mb-6 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Per-Position Participation</h3>
-                {(() => {
-                  // Search newest-first so the MOST RECENT election is always selected.
-                  // elections[] is sorted oldest-first, so we reverse before searching.
-                  const newestFirst = [...elections].reverse();
-                  const activeElection =
-                    newestFirst.find((e: any) => e.status === 'active') ??
-                    newestFirst.find((e: any) => e.status === 'paused') ??
-                    newestFirst.find((e: any) => e.status === 'completed');
-                  const activeElectionId = activeElection?._id || activeElection?.id;
+                      const voterTurnoutData = buckets.length > 0 ? buckets : [{ name: 'Start', votes: 0 }];
 
-                  const electionPositions = positions.filter((p: any) => {
-                    const posElId = typeof p.electionId === 'string' ? p.electionId : (p.electionId?._id || p.electionId?.id);
-                    return posElId === activeElectionId;
-                  });
+                      return (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={voterTurnoutData}>
+                            <defs>
+                              <linearGradient id="colorVotes" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                            <XAxis 
+                              dataKey="name" 
+                              axisLine={false} 
+                              tickLine={false} 
+                              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                              dy={10}
+                            />
+                            <YAxis 
+                              axisLine={false} 
+                              tickLine={false} 
+                              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                borderRadius: '12px', 
+                                border: '1px solid hsl(var(--border))',
+                                backgroundColor: 'hsl(var(--card))',
+                                boxShadow: 'var(--shadow-lg)'
+                              }}
+                            />
+                            <Area 
+                              type="monotone" 
+                              dataKey="votes" 
+                              stroke="hsl(var(--chart-1))" 
+                              strokeWidth={3}
+                              fillOpacity={1} 
+                              fill="url(#colorVotes)" 
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      );
+                    })()}
+                  </div>
+                </CardContent>
+              </Card>
 
-                  if (!activeElection || electionPositions.length === 0) {
+              <Card className={`shadow-sm ${isDarkMode ? 'bg-slate-800 border-slate-700' : ''}`}>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold">Overall Participation</CardTitle>
+                  <CardDescription className="text-sm text-muted-foreground">Total progress toward goal</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center pt-4">
+                  {(() => {
+                    const newestFirst = [...elections].reverse();
+                    const activeElection =
+                      newestFirst.find((e: any) => e.status === 'active') ??
+                      newestFirst.find((e: any) => e.status === 'paused') ??
+                      newestFirst.find((e: any) => e.status === 'completed');
+                    const activeElectionId = activeElection?._id || activeElection?.id;
+                    const electionVotes = votes?.filter((v: any) => {
+                      const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
+                      return vid === activeElectionId;
+                    }) || [];
+                    const uniqueVoters = new Set(
+                      electionVotes.map((v: any) => v.userId?.id || v.userId?._id || v.userId)
+                    ).size;
+                    const totalMembers = users.length;
+                    const pct = totalMembers > 0 ? Math.min(Math.round((uniqueVoters / totalMembers) * 100), 100) : 0;
+                    const remaining = totalMembers - uniqueVoters;
+
+                    const COLORS = ['hsl(var(--chart-1))', '#E5E7EB'];
+                    const participationData = [
+                      { name: 'Voted', value: uniqueVoters },
+                      { name: 'Remaining', value: remaining }
+                    ];
+
                     return (
-                      <div className={`text-center py-8 text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-600' : 'text-gray-300'}`}>
-                        No active election or positions found
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
-                      {electionPositions.sort((a: any, b: any) => (a.order || 0) - (b.order || 0)).map((pos: any) => {
-                        // Count unique voters who voted for this position
-                        // v.userId is a populated object — resolve to string ID for proper deduplication
-                        const posVotes = votes?.filter((v: any) => {
-                          const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
-                          const posId = typeof v.positionId === 'string' ? v.positionId : (v.positionId?._id || v.positionId?.id);
-                          return vid === activeElectionId && (posId === pos.id || posId === pos._id);
-                        }) || [];
-                        // v.userId is a populated object. After Mongoose JSON serialization,
-                        // the ID is exposed as .id (virtual), NOT ._id.
-                        const uniqueVotersForPos = new Set(
-                          posVotes.map((v: any) => v.userId?.id || v.userId?._id || v.userId)
-                        ).size;
-                        // Use actual total members directly as denominator
-                        const pct = users.length > 0
-                          ? Math.min(Math.round((uniqueVotersForPos / users.length) * 100), 100)
-                          : 0;
-                        const colorsBar = [
-                          isDarkMode ? '#fbbf24' : '#2D7A3E',
-                          isDarkMode ? '#60a5fa' : '#6366f1',
-                          isDarkMode ? '#34d399' : '#059669',
-                          isDarkMode ? '#f87171' : '#dc2626',
-                          isDarkMode ? '#a78bfa' : '#7c3aed',
-                          isDarkMode ? '#fb923c' : '#ea580c',
-                        ];
-                        const posIdx = electionPositions.indexOf(pos);
-                        const barColor = colorsBar[posIdx % colorsBar.length];
-                        return (
-                          <div key={pos.id || pos._id}>
-                            <div className="flex justify-between items-center mb-1.5">
-                              <p className={`text-[9px] font-black uppercase tracking-tight truncate max-w-[70%] transition-colors duration-300 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>{pos.title}</p>
-                              <div className="flex items-center gap-2">
-                                <span className={`text-[9px] font-mono font-bold transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>
-                                  {uniqueVotersForPos}/{users.length}
-                                </span>
-                                <span className="text-[9px] font-black" style={{ color: barColor }}>{pct}%</span>
-                              </div>
-                            </div>
-                            <div className={`w-full h-2 rounded-full overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}>
-                              <div
-                                className="h-full rounded-full transition-all duration-1000 ease-out"
-                                style={{ width: `${pct}%`, backgroundColor: barColor }}
+                      <>
+                        <div className="h-[220px] w-full relative">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={participationData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={70}
+                                outerRadius={90}
+                                paddingAngle={8}
+                                dataKey="value"
+                                stroke="none"
+                                cornerRadius={6}
+                              >
+                                {participationData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip 
+                                contentStyle={{ 
+                                  borderRadius: '12px', 
+                                  border: '1px solid hsl(var(--border))',
+                                  backgroundColor: 'hsl(var(--card))' 
+                                }} 
                               />
-                            </div>
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-10">
+                            <span className="text-4xl font-bold" style={{ color: 'hsl(var(--chart-1))' }}>{pct}%</span>
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mt-1">Turnout</span>
                           </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 w-full mt-6">
+                          <div className="flex flex-col items-center p-3 rounded-xl" style={{ backgroundColor: 'hsl(var(--chart-1) / 0.1)' }}>
+                            <span className="text-2xl font-bold" style={{ color: 'hsl(var(--chart-1))' }}>{uniqueVoters}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Voted</span>
+                          </div>
+                          <div className="flex flex-col items-center p-3 rounded-xl bg-muted/50">
+                            <span className="text-2xl font-bold">{remaining}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Remaining</span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
             </div>
-            <div className={`lg:col-span-4 border p-10 flex flex-col gap-10 transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
-              <div>
-                <h3 className={`text-[10px] font-black uppercase tracking-widest mb-8 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Branch Turnout Analysis</h3>
-                <div className="space-y-6">
-                  {branchData.length === 0 ? (
-                    <p className={`text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? 'text-slate-600' : 'text-gray-300'}`}>
-                      No data available
-                    </p>
-                  ) : (
-                    branchData.map((branch) => (
-                      <div key={branch.name}>
-                        <div className="flex justify-between items-center mb-2">
-                          <p className={`text-[10px] font-black uppercase tracking-tight transition-colors duration-300 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
-                            {branch.name}
-                          </p>
-                          <div className="flex items-center gap-3">
-                            <span className={`text-[9px] font-mono transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>
-                              {Math.round(branch.voters * branch.participation / 100)}/{branch.voters}
-                            </span>
-                            <span className={`text-[9px] font-black transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-coop-green'}`}>
-                              {branch.participation}%
-                            </span>
-                          </div>
-                        </div>
-                        <div className={`w-full h-2 rounded-full overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`}>
-                          <div
-                            className={`h-full rounded-full transition-all duration-700 ease-out ${isDarkMode ? 'bg-coop-yellow' : 'bg-coop-green'}`}
-                            style={{ width: `${branch.participation}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-              <div className={`mt-auto pt-8 border-t transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
-                <h3 className={`text-[10px] font-black uppercase tracking-widest mb-8 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>System Integrity Logs</h3>
-                <div className="space-y-4">
-                  {logs.slice(0, 3).map((log, i) => (
-                    <div key={i} className="flex gap-3 group">
-                      <div className={`text-[9px] font-mono shrink-0 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-300'}`}>{log.timestamp.split(',')[1]}</div>
-                      <div className={`text-[10px] font-bold truncate uppercase tracking-tight transition-colors duration-300 group-hover:text-coop-green ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                        {log.action}
-                      </div>
+
+            {/* Branch Distribution & Hourly Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className={`shadow-sm ${isDarkMode ? 'bg-slate-800 border-slate-700' : ''}`}>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5" style={{ color: 'hsl(var(--chart-1))' }} />
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Branch Distribution</CardTitle>
+                      <CardDescription className="text-sm text-muted-foreground">Vote distribution by cooperative branch</CardDescription>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[250px] w-full">
+                    {(() => {
+                      const branchChartData = branchData.map((branch: any, index: number) => {
+                        const colors = [
+                          'hsl(var(--chart-1))',
+                          'hsl(var(--chart-2))',
+                          'hsl(var(--chart-3))',
+                          'hsl(var(--chart-4))',
+                          'hsl(var(--chart-5))'
+                        ];
+                        return {
+                          name: branch.name,
+                          value: Math.round(branch.voters * branch.participation / 100),
+                          color: colors[index % colors.length]
+                        };
+                      });
+
+                      return (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={branchChartData} layout="vertical">
+                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="hsl(var(--border))" />
+                            <XAxis type="number" hide />
+                            <YAxis 
+                              dataKey="name" 
+                              type="category" 
+                              axisLine={false} 
+                              tickLine={false}
+                              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                              width={80}
+                            />
+                            <Tooltip 
+                              cursor={{ fill: 'transparent' }}
+                              contentStyle={{ 
+                                borderRadius: '12px', 
+                                border: '1px solid hsl(var(--border))',
+                                backgroundColor: 'hsl(var(--card))' 
+                              }}
+                            />
+                            <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={32}>
+                              {branchChartData.map((entry: any, index: number) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      );
+                    })()}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className={`shadow-sm ${isDarkMode ? 'bg-slate-800 border-slate-700' : ''}`}>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" style={{ color: 'hsl(var(--chart-1))' }} />
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Hourly Activity</CardTitle>
+                      <CardDescription className="text-sm text-muted-foreground">Voting intensity throughout the day</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[250px] w-full">
+                    {(() => {
+                      const newestFirst = [...elections].reverse();
+                      const activeElection =
+                        newestFirst.find((e: any) => e.status === 'active') ??
+                        newestFirst.find((e: any) => e.status === 'paused') ??
+                        newestFirst.find((e: any) => e.status === 'completed');
+                      const activeElectionId = activeElection?._id || activeElection?.id;
+                      const electionVotes = (votes?.filter((v: any) => {
+                        const vid = typeof v.electionId === 'string' ? v.electionId : (v.electionId?._id || v.electionId?.id);
+                        return vid === activeElectionId;
+                      }) || []).sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+                      const hourlyData: { time: string; count: number }[] = [];
+                      if (electionVotes.length > 0) {
+                        const byHour: Record<string, number> = {};
+                        electionVotes.forEach((v: any) => {
+                          const d = new Date(v.createdAt);
+                          const key = `${d.getHours()}:00`;
+                          byHour[key] = (byHour[key] || 0) + 1;
+                        });
+                        Object.entries(byHour).forEach(([time, count]) => {
+                          hourlyData.push({ time, count });
+                        });
+                      }
+
+                      const chartData = hourlyData.length > 0 ? hourlyData : [{ time: '0:00', count: 0 }];
+
+                      return (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                            <XAxis 
+                              dataKey="time" 
+                              axisLine={false} 
+                              tickLine={false}
+                              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                            />
+                            <YAxis 
+                              axisLine={false} 
+                              tickLine={false}
+                              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                borderRadius: '12px', 
+                                border: '1px solid hsl(var(--border))',
+                                backgroundColor: 'hsl(var(--card))' 
+                              }}
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="count" 
+                              stroke="hsl(var(--chart-1))" 
+                              strokeWidth={3}
+                              dot={{ fill: 'hsl(var(--chart-1))', strokeWidth: 2, r: 4 }}
+                              activeDot={{ r: 6, strokeWidth: 0 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      );
+                    })()}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
 
