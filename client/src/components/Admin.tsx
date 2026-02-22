@@ -13,7 +13,7 @@ import {
   LayoutDashboard, UserCheck, ShieldCheck, Activity, Search,
   CheckCircle, X, Trash2,
   Database, Lock, PlusCircle, ShieldAlert,
-  Layers,
+  Layers, CheckSquare, AlertTriangle,
   FileText, Camera, Upload,
   Terminal, LogOut, Megaphone, BookOpen,
   UserPlus, Menu, Clock,
@@ -939,18 +939,14 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
               const currentElectionId = currentElection?._id || currentElection?.id;
               const currentStatus = currentElection?.status;
 
-              // Candidates for the current election (active or most-recent completed)
-              const currentCandidatesCount = currentElection
-                ? candidates.filter((c: any) => {
-                  const candElectionId = typeof c.electionId === 'string'
-                    ? c.electionId
-                    : (c.electionId?._id || c.electionId?.id || c.positionId);
-                  return candElectionId === currentElectionId;
-                }).length
-                : 0;
+              // Count active elections
+              const activeElectionsCount = elections.filter((e: any) => e.status === 'active').length;
+
+              // Total members
+              const totalMembers = users.length;
 
               // Ballots cast in the current election (persists after election ends)
-              const committedBallots = currentElection
+              const votesCast = currentElection
                 ? (votes?.filter((v: any) => {
                   const voteElectionId = typeof v.electionId === 'string'
                     ? v.electionId
@@ -959,6 +955,9 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                 }).length || 0)
                 : 0;
 
+              // Calculate turnout percentage
+              const turnoutPct = totalMembers > 0 ? Math.round((votesCast / totalMembers) * 100) : 0;
+
               // Status badge label & colour for the "Election Status" card
               const statusLabel =
                 currentStatus === 'active' ? 'Live' :
@@ -966,34 +965,75 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                     currentStatus === 'completed' ? 'Final' : 'None';
               const statusColor =
                 currentStatus === 'active' ? 'text-green-500' :
-                  currentStatus === 'paused' ? (isDarkMode ? 'text-coop-yellow' : 'text-amber-500') :
-                    currentStatus === 'completed' ? (isDarkMode ? 'text-slate-400' : 'text-gray-400') :
-                      (isDarkMode ? 'text-slate-600' : 'text-gray-300');
+                  currentStatus === 'paused' ? 'text-amber-500' :
+                    currentStatus === 'completed' ? 'text-blue-500' : 'text-gray-400';
+              const statusIconBg =
+                currentStatus === 'active' ? 'bg-green-100' :
+                  currentStatus === 'paused' ? 'bg-amber-100' :
+                    currentStatus === 'completed' ? 'bg-blue-100' : 'bg-gray-100';
+              const statusIconColor =
+                currentStatus === 'active' ? 'text-green-600' :
+                  currentStatus === 'paused' ? 'text-amber-600' :
+                    currentStatus === 'completed' ? 'text-blue-600' : 'text-gray-600';
 
               const stats = [
-                { label: 'Authorized Voters', val: users.length, icon: Users, badge: null },
-                { label: 'Committed Ballots', val: committedBallots, icon: CheckCircle, badge: null },
-                { label: 'Election Status', val: currentElection ? 1 : 0, icon: Layers, badge: { label: statusLabel, color: statusColor } },
-                { label: 'Candidates Running', val: currentCandidatesCount, icon: UserCheck, badge: null },
+                { 
+                  label: 'Active Elections', 
+                  val: activeElectionsCount, 
+                  icon: CheckSquare, 
+                  iconBg: 'bg-green-100', 
+                  iconColor: 'text-green-600',
+                  subtitle: activeElectionsCount > 0 ? '↗ Live tracking enabled' : 'No active elections',
+                  subtitleColor: 'text-green-600'
+                },
+                { 
+                  label: 'Total Members', 
+                  val: totalMembers, 
+                  icon: Users, 
+                  iconBg: 'bg-purple-100', 
+                  iconColor: 'text-purple-600',
+                  subtitle: '100% registry completeness',
+                  subtitleColor: isDarkMode ? 'text-slate-400' : 'text-gray-500'
+                },
+                { 
+                  label: 'Votes Cast', 
+                  val: votesCast, 
+                  icon: CheckCircle, 
+                  iconBg: 'bg-green-100', 
+                  iconColor: 'text-green-600',
+                  subtitle: `${turnoutPct}% turnout`,
+                  subtitleColor: isDarkMode ? 'text-slate-400' : 'text-gray-500'
+                },
+                { 
+                  label: 'Election Status', 
+                  val: statusLabel, 
+                  icon: Layers, 
+                  iconBg: statusIconBg, 
+                  iconColor: statusIconColor,
+                  subtitle: currentElection?.title || 'No election selected',
+                  subtitleColor: statusColor,
+                  isText: true,
+                  showPulse: currentStatus === 'active'
+                },
               ];
 
-              return stats.map((stat) => (
-                <div key={stat.label} className={`border p-8 hover:border-coop-green transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
-                  <div className="flex justify-between items-start mb-6">
-                    <stat.icon size={18} className={`transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`} />
-                    {stat.badge ? (
-                      <span className={`text-[9px] font-black uppercase tracking-widest ${stat.badge.color} flex items-center gap-1`}>
-                        {stat.badge.label === 'Live' && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
-                        )}
-                        {stat.badge.label}
-                      </span>
-                    ) : (
-                      <span className={`text-[10px] font-mono transition-colors duration-300 ${isDarkMode ? 'text-slate-500' : 'text-gray-300'}`}>0.0{stat.val % 9}</span>
-                    )}
+              return stats.map((stat: any) => (
+                <div key={stat.label} className={`rounded-xl border p-6 transition-all duration-300 hover:shadow-md ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+                  <div className="flex justify-between items-start mb-4">
+                    <p className={`text-sm font-medium transition-colors duration-300 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>{stat.label}</p>
+                    <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-slate-700' : stat.iconBg}`}>
+                      <stat.icon size={18} className={isDarkMode ? 'text-slate-300' : stat.iconColor} />
+                    </div>
                   </div>
-                  <p className={`text-[10px] font-black uppercase tracking-widest mb-2 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>{stat.label}</p>
-                  <p className={`text-4xl font-black tracking-tighter transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-gray-900'}`}>{stat.val.toLocaleString()}</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    {stat.showPulse && (
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    )}
+                    <p className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {stat.isText ? stat.val : (typeof stat.val === 'number' ? stat.val.toLocaleString() : stat.val)}
+                    </p>
+                  </div>
+                  <p className={`text-sm ${stat.subtitleColor} truncate`}>{stat.subtitle}</p>
                 </div>
               ));
             })()}
