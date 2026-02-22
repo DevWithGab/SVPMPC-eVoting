@@ -21,18 +21,14 @@ export const Rules: React.FC = () => {
     fetchRules();
   }, []);
 
-  const fetchRules = async () => {
+  async function fetchRules() {
     try {
       setLoading(true);
       setError(null);
+      
       const rulesData = await ruleAPI.getRules();
-      // Normalize MongoDB _id to id
-      const normalizedRules = (rulesData || []).map((rule: any) => ({
-        id: rule.id || rule._id,
-        title: rule.title,
-        content: rule.content,
-        order: rule.order || 0
-      }));
+      const normalizedRules = normalizeRules(rulesData);
+      
       setRules(normalizedRules);
     } catch (err) {
       console.error('Failed to fetch rules:', err);
@@ -40,7 +36,18 @@ export const Rules: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  function normalizeRules(rulesData: any[]): Rule[] {
+    if (!rulesData) return [];
+    
+    return rulesData.map((rule: any) => ({
+      id: rule.id || rule._id,
+      title: rule.title,
+      content: rule.content,
+      order: rule.order || 0
+    }));
+  }
 
   const closeRuleModal = () => setSelectedRule(null);
   if (loading) {
