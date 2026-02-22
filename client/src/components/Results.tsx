@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
 import { ResultsPDF } from '../utils/pdfGenerator';
-import { electionAPI, candidateAPI, voteAPI, positionAPI } from '../services/api';
+import { ProclamationTemplate } from '../utils/proclamationTemplate';
+import { electionAPI, candidateAPI, voteAPI, positionAPI, documentAPI } from '../services/api';
 import { useDarkMode } from '../context/DarkModeContext';
 
 const AnimatedCounter: React.FC<{ value: number; prefix?: string }> = ({ value, prefix = "" }) => {
@@ -823,7 +824,23 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
             <button className={`px-8 py-4 border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
               <Database size={16} /> Technical Audit Log
             </button>
-            <button className={`px-8 py-4 border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+            <button 
+              onClick={async () => {
+                try {
+                  const doc = <ProclamationTemplate isTemplate={true} />;
+                  const pdfBlob = await pdf(doc).toBlob();
+                  const url = URL.createObjectURL(pdfBlob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `SVMPC-Official-Proclamation-Template-${new Date().toISOString().split('T')[0]}.pdf`;
+                  link.click();
+                  URL.revokeObjectURL(url);
+                } catch (error) {
+                  console.error('Error downloading proclamation template:', error);
+                }
+              }}
+              className={`px-8 py-4 border text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 hover:scale-105 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            >
               <FileText size={16} /> Official Proclamation Template
             </button>
           </div>

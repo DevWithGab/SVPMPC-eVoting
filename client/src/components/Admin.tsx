@@ -9,7 +9,7 @@ import { ImportHistoryView } from './ImportHistoryView';
 import { ImportDetailView } from './ImportDetailView';
 import { MemberStatusDashboard } from './MemberStatusDashboard';
 import {
-  Settings, Users,
+  Settings, Users, Download,
   LayoutDashboard, UserCheck, ShieldCheck, Activity, Search,
   CheckCircle, X, Trash2,
   Database, Lock, PlusCircle, ShieldAlert,
@@ -1279,6 +1279,75 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Official Documents Section */}
+          <div className={`border p-8 transition-colors duration-300 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100'}`}>
+            <div className={`mb-6 border-b pb-6 transition-colors duration-300 ${isDarkMode ? 'border-slate-700' : 'border-gray-100'}`}>
+              <h3 className={`text-xl font-black uppercase tracking-tight transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow' : 'text-gray-900'}`}>Official Document Templates</h3>
+              <p className={`text-[9px] font-black uppercase tracking-widest mt-2 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>Professional cooperative documents</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <button
+                onClick={async () => {
+                  try {
+                    const { ProclamationTemplate } = await import('../utils/proclamationTemplate');
+                    const { pdf } = await import('@react-pdf/renderer');
+                    const doc = React.createElement(ProclamationTemplate, { isTemplate: true });
+                    const pdfBlob = await pdf(doc).toBlob();
+                    const url = URL.createObjectURL(pdfBlob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `SVMPC-Official-Proclamation-Template-${new Date().toISOString().split('T')[0]}.pdf`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                  } catch (error) {
+                    console.error('Error downloading proclamation template:', error);
+                    Swal.fire('Error', 'Failed to download proclamation template', 'error');
+                  }
+                }}
+                className={`p-6 border-2 border-dashed text-left transition-all hover:scale-105 group ${isDarkMode ? 'border-slate-600 hover:border-coop-yellow bg-slate-700/50' : 'border-gray-200 hover:border-coop-green bg-gray-50/50'}`}
+              >
+                <div className="flex items-start gap-4 mb-4">
+                  <div className={`w-10 h-10 flex items-center justify-center transition-colors ${isDarkMode ? 'bg-coop-yellow text-slate-900 group-hover:bg-coop-yellow/80' : 'bg-coop-green text-white group-hover:bg-coop-darkGreen'}`}>
+                    <FileText size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className={`text-sm font-black uppercase tracking-tight transition-colors duration-300 ${isDarkMode ? 'text-coop-yellow group-hover:text-white' : 'text-gray-900'}`}>Proclamation Template</h4>
+                    <p className={`text-[10px] font-medium mt-1 transition-colors duration-300 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Official cooperative proclamation document</p>
+                  </div>
+                </div>
+                <div className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors ${isDarkMode ? 'text-slate-400 group-hover:text-coop-yellow' : 'text-gray-400 group-hover:text-coop-green'}`}>
+                  <Download size={12} />
+                  Download PDF Template
+                </div>
+              </button>
+              
+              {/* Placeholder for future templates */}
+              <div className={`p-6 border-2 border-dashed opacity-50 ${isDarkMode ? 'border-slate-600 bg-slate-700/30' : 'border-gray-200 bg-gray-50/30'}`}>
+                <div className="flex items-start gap-4 mb-4">
+                  <div className={`w-10 h-10 flex items-center justify-center ${isDarkMode ? 'bg-slate-600 text-slate-400' : 'bg-gray-200 text-gray-400'}`}>
+                    <FileText size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className={`text-sm font-black uppercase tracking-tight ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>Certificate Template</h4>
+                    <p className={`text-[10px] font-medium mt-1 ${isDarkMode ? 'text-slate-600' : 'text-gray-400'}`}>Coming soon</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className={`p-6 border-2 border-dashed opacity-50 ${isDarkMode ? 'border-slate-600 bg-slate-700/30' : 'border-gray-200 bg-gray-50/30'}`}>
+                <div className="flex items-start gap-4 mb-4">
+                  <div className={`w-10 h-10 flex items-center justify-center ${isDarkMode ? 'bg-slate-600 text-slate-400' : 'bg-gray-200 text-gray-400'}`}>
+                    <FileText size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className={`text-sm font-black uppercase tracking-tight ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>Resolution Template</h4>
+                    <p className={`text-[10px] font-medium mt-1 ${isDarkMode ? 'text-slate-600' : 'text-gray-400'}`}>Coming soon</p>
+                  </div>
                 </div>
               </div>
             </div>

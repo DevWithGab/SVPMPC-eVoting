@@ -374,6 +374,67 @@ export const Staff: React.FC<StaffProps> = ({
                 </div>
               ))}
             </div>
+            
+            {/* Official Document Templates Section */}
+            <div className="mt-16">
+              <div className="mb-8 border-b border-gray-100 pb-6">
+                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Official Document Templates</h3>
+                <p className="mono-label text-gray-400 mt-2">Professional cooperative document templates</p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="p-6 bg-white border border-gray-100 hover:border-[#4F75E2] transition-colors group cursor-pointer">
+                  <div className="flex justify-between items-start mb-6">
+                    <FileText size={20} className="text-gray-300 group-hover:text-[#4F75E2] transition-colors" />
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { ProclamationTemplate } = await import('../utils/proclamationTemplate');
+                          const { pdf } = await import('@react-pdf/renderer');
+                          const React = await import('react');
+                          const doc = React.createElement(ProclamationTemplate, { isTemplate: true });
+                          const pdfBlob = await pdf(doc).toBlob();
+                          const url = URL.createObjectURL(pdfBlob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = `SVMPC-Official-Proclamation-Template-${new Date().toISOString().split('T')[0]}.pdf`;
+                          link.click();
+                          URL.revokeObjectURL(url);
+                        } catch (error) {
+                          console.error('Error downloading proclamation template:', error);
+                        }
+                      }}
+                      className="text-gray-300 hover:text-[#4F75E2] transition-colors"
+                    >
+                      <Download size={16} />
+                    </button>
+                  </div>
+                  <h4 className="font-black text-gray-900 uppercase tracking-tight text-sm mb-2">Proclamation Template</h4>
+                  <p className="text-xs text-gray-400 leading-relaxed font-medium mb-8">Professional proclamation document template for official announcements</p>
+                  <div className="flex items-center gap-3 text-[9px] font-black text-[#4F75E2] uppercase tracking-[0.3em]">
+                    Download PDF Template <FileText size={14} />
+                  </div>
+                </div>
+                
+                {/* Placeholder templates */}
+                <div className="p-6 bg-gray-50 border border-gray-100 opacity-50">
+                  <div className="flex justify-between items-start mb-6">
+                    <FileText size={20} className="text-gray-300" />
+                    <div className="text-gray-300"><Download size={16} /></div>
+                  </div>
+                  <h4 className="font-black text-gray-400 uppercase tracking-tight text-sm mb-2">Certificate Template</h4>
+                  <p className="text-xs text-gray-400 leading-relaxed font-medium mb-8">Coming soon</p>
+                </div>
+                
+                <div className="p-6 bg-gray-50 border border-gray-100 opacity-50">
+                  <div className="flex justify-between items-start mb-6">
+                    <FileText size={20} className="text-gray-300" />
+                    <div className="text-gray-300"><Download size={16} /></div>
+                  </div>
+                  <h4 className="font-black text-gray-400 uppercase tracking-tight text-sm mb-2">Resolution Template</h4>
+                  <p className="text-xs text-gray-400 leading-relaxed font-medium mb-8">Coming soon</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       );

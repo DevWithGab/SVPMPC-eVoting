@@ -534,4 +534,21 @@ export const importAPI = {
   },
 };
 
+export const documentAPI = {
+  getProclamationTemplate: async () => {
+    const response = await api.get('/documents/proclamation-template');
+    return response.data;
+  },
+  
+  generateProclamation: async (data: {
+    electionId?: string;
+    title?: string;
+    customContent?: string;
+    issuedPlace?: string;
+  }) => {
+    const response = await api.post('/documents/proclamation', data);
+    return response.data;
+  },
+};
+
 export default api;
