@@ -3,172 +3,248 @@ import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/render
 
 const COLORS = {
   primary: '#2D7A3E',
+  darkGreen: '#1a4d2e',
   accent: '#F2E416',
   bg: '#FFFFFF',
   text: '#1F2937',
-  lightBg: '#F9FAFB',
-  border: '#E5E7EB',
-  accentLight: '#FEF9E7',
-  primaryLight: '#E8F5E9',
+  lightGray: '#F3F4F6',
+  mediumGray: '#9CA3AF',
+  border: '#D1D5DB',
+  seal: '#1F2937',
 };
 
 const styles = StyleSheet.create({
   page: {
-    padding: 40,
+    padding: 50,
     backgroundColor: COLORS.bg,
     fontFamily: 'Helvetica',
   },
-  header: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
+  
+  // Official Header Section
+  officialHeader: {
+    textAlign: 'center',
     marginBottom: 30,
     paddingBottom: 20,
-    borderBottomWidth: 2,
+    borderBottomWidth: 3,
     borderBottomColor: COLORS.primary,
   },
-  logo: {
-    width: 40,
-    height: 40,
-    marginRight: 15,
-  },
-  headerText: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  subtitle: {
+  republicText: {
     fontSize: 9,
     color: COLORS.text,
-    marginTop: 2,
+    marginBottom: 3,
+    letterSpacing: 1,
   },
-  timestamp: {
+  organizationName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.darkGreen,
+    marginBottom: 2,
+    letterSpacing: 0.5,
+  },
+  organizationSubtitle: {
     fontSize: 8,
-    color: COLORS.text,
-    textAlign: 'right',
+    color: COLORS.mediumGray,
+    marginBottom: 15,
+    letterSpacing: 2,
   },
-  mainTitle: {
-    fontSize: 28,
+  documentTitle: {
+    fontSize: 14,
     fontWeight: 'bold',
     color: COLORS.primary,
-    marginBottom: 20,
+    marginTop: 10,
+    letterSpacing: 1,
   },
-  statsContainer: {
+  
+  // Document Info Bar
+  infoBar: {
     display: 'flex',
     flexDirection: 'row',
-    marginBottom: 35,
-    gap: 18,
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.lightGray,
+    padding: 12,
+    marginBottom: 25,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
   },
-  statBox: {
-    flex: 1,
-    backgroundColor: COLORS.primaryLight,
-    padding: 22,
-    borderRadius: 6,
-    borderLeftWidth: 6,
-    borderLeftColor: COLORS.accent,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    position: 'relative',
+  infoItem: {
+    display: 'flex',
+    flexDirection: 'column',
   },
-  statBoxAccent: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 60,
-    height: 60,
-    backgroundColor: COLORS.accentLight,
-    borderRadius: 6,
-    opacity: 0.5,
-  },
-  statLabel: {
+  infoLabel: {
     fontSize: 7,
-    color: COLORS.primary,
-    marginBottom: 10,
-    fontWeight: 'bold',
-    letterSpacing: 0.6,
+    color: COLORS.mediumGray,
+    marginBottom: 3,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  statValue: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 10,
-    lineHeight: 1.2,
-  },
-  statSubtext: {
-    fontSize: 7,
+  infoValue: {
+    fontSize: 9,
     color: COLORS.text,
-    fontStyle: 'italic',
-    opacity: 0.8,
-  },
-  sectionTitle: {
-    fontSize: 12,
     fontWeight: 'bold',
-    color: COLORS.primary,
-    marginTop: 25,
+  },
+  
+  // Statistics Grid
+  statsGrid: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 30,
+  },
+  statCard: {
+    flex: 1,
+    border: '1px solid #D1D5DB',
+    padding: 15,
+    backgroundColor: COLORS.bg,
+  },
+  statHeader: {
+    fontSize: 7,
+    color: COLORS.mediumGray,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.darkGreen,
+    marginBottom: 4,
+  },
+  statFooter: {
+    fontSize: 7,
+    color: COLORS.mediumGray,
+    fontStyle: 'italic',
+  },
+  
+  // Section Headers
+  sectionHeader: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: COLORS.darkGreen,
+    marginTop: 20,
     marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingBottom: 6,
+    paddingLeft: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
+    backgroundColor: COLORS.lightGray,
+    padding: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  
+  // Table Styles
+  table: {
+    marginBottom: 20,
   },
   tableHeader: {
     display: 'flex',
     flexDirection: 'row',
-    backgroundColor: COLORS.lightBg,
-    padding: 10,
-    marginBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.darkGreen,
+    padding: 8,
+    borderTopWidth: 2,
+    borderTopColor: COLORS.darkGreen,
   },
-  tableHeaderCell: {
+  tableHeaderText: {
     fontSize: 8,
     fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  rankCol: {
-    width: '10%',
-  },
-  nameCol: {
-    width: '55%',
-  },
-  votesCol: {
-    width: '20%',
-    textAlign: 'right',
-  },
-  percentCol: {
-    width: '15%',
-    textAlign: 'right',
+    color: COLORS.bg,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   tableRow: {
     display: 'flex',
     flexDirection: 'row',
-    padding: 10,
+    padding: 8,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
-    alignItems: 'center',
   },
   tableRowWinner: {
-    backgroundColor: COLORS.lightBg,
+    backgroundColor: '#F0FDF4',
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
   },
   tableCell: {
     fontSize: 9,
     color: COLORS.text,
   },
-  tableCellWinner: {
+  tableCellBold: {
+    fontSize: 9,
+    color: COLORS.darkGreen,
     fontWeight: 'bold',
-    color: COLORS.primary,
   },
-  footer: {
+  
+  // Column Widths
+  rankCol: { width: '12%' },
+  nameCol: { width: '50%' },
+  votesCol: { width: '20%', textAlign: 'right' },
+  percentCol: { width: '18%', textAlign: 'right' },
+  
+  // Winner Badge
+  winnerBadge: {
+    fontSize: 7,
+    color: COLORS.primary,
+    fontWeight: 'bold',
+    marginLeft: 5,
+  },
+  
+  // Official Footer
+  officialFooter: {
     marginTop: 40,
     paddingTop: 20,
-    borderTopWidth: 1,
+    borderTopWidth: 2,
     borderTopColor: COLORS.border,
+  },
+  certificationText: {
     fontSize: 8,
     color: COLORS.text,
+    marginBottom: 25,
+    lineHeight: 1.5,
+    textAlign: 'justify',
+  },
+  signatureSection: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 30,
+  },
+  signatureBox: {
+    width: '45%',
+  },
+  signatureLine: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.text,
+    marginTop: 30,
+    paddingTop: 5,
+  },
+  signatureLabel: {
+    fontSize: 8,
+    color: COLORS.text,
+    fontWeight: 'bold',
+  },
+  signatureTitle: {
+    fontSize: 7,
+    color: COLORS.mediumGray,
+    marginTop: 2,
+  },
+  
+  // Document Footer
+  documentFooter: {
+    marginTop: 30,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
     textAlign: 'center',
+  },
+  footerText: {
+    fontSize: 7,
+    color: COLORS.mediumGray,
+    marginBottom: 3,
+  },
+  referenceNumber: {
+    fontSize: 7,
+    color: COLORS.text,
+    fontFamily: 'Courier',
+    marginTop: 5,
   },
 });
 
@@ -198,41 +274,52 @@ export const ResultsPDF: React.FC<ResultsPDFProps> = ({
   totalVotes,
   totalVoters,
 }) => {
+  const documentDate = new Date();
+  const referenceNumber = `SVMPC-ER-${documentDate.getFullYear()}-${String(documentDate.getMonth() + 1).padStart(2, '0')}-${String(documentDate.getDate()).padStart(2, '0')}-${String(documentDate.getHours()).padStart(2, '0')}${String(documentDate.getMinutes()).padStart(2, '0')}`;
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Image src="/SVMPC_LOGO.png" style={styles.logo} />
-          <View style={styles.headerText}>
-            <Text style={styles.title}>SAINT VINCENT COOPERATIVE</Text>
-            <Text style={styles.subtitle}>Election Results Report</Text>
-          </View>
-          <Text style={styles.timestamp}>{new Date().toLocaleDateString()}</Text>
+        {/* Official Header */}
+        <View style={styles.officialHeader}>
+          <Text style={styles.republicText}>REPUBLIC OF THE PHILIPPINES</Text>
+          <Text style={styles.organizationName}>SAINT VINCENT MULTIPURPOSE COOPERATIVE</Text>
+          <Text style={styles.organizationSubtitle}>OFFICIAL ELECTION COMMISSION</Text>
+          <Text style={styles.documentTitle}>OFFICIAL ELECTION RESULTS CERTIFICATE</Text>
         </View>
 
-        {/* Main Title */}
-        <Text style={styles.mainTitle}>Election Results</Text>
+        {/* Document Information Bar */}
+        <View style={styles.infoBar}>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Document No.</Text>
+            <Text style={styles.infoValue}>{referenceNumber}</Text>
+          </View>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Date Issued</Text>
+            <Text style={styles.infoValue}>{documentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
+          </View>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Time Issued</Text>
+            <Text style={styles.infoValue}>{documentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Text>
+          </View>
+        </View>
 
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statBox}>
-            <View style={styles.statBoxAccent} />
-            <Text style={styles.statLabel}>Participation Rate</Text>
-            <Text style={styles.statValue}>{participationRate.toFixed(1)}%</Text>
-            <Text style={styles.statSubtext}>of eligible voters</Text>
+        {/* Statistics Summary */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Text style={styles.statHeader}>Voter Turnout</Text>
+            <Text style={styles.statNumber}>{participationRate.toFixed(1)}%</Text>
+            <Text style={styles.statFooter}>Participation Rate</Text>
           </View>
-          <View style={styles.statBox}>
-            <View style={styles.statBoxAccent} />
-            <Text style={styles.statLabel}>Total Votes Cast</Text>
-            <Text style={styles.statValue}>{totalVotes.toLocaleString()}</Text>
-            <Text style={styles.statSubtext}>verified votes</Text>
+          <View style={styles.statCard}>
+            <Text style={styles.statHeader}>Total Votes</Text>
+            <Text style={styles.statNumber}>{totalVotes.toLocaleString()}</Text>
+            <Text style={styles.statFooter}>Verified Ballots</Text>
           </View>
-          <View style={styles.statBox}>
-            <View style={styles.statBoxAccent} />
-            <Text style={styles.statLabel}>Total Voters</Text>
-            <Text style={styles.statValue}>{totalVoters.toLocaleString()}</Text>
-            <Text style={styles.statSubtext}>registered members</Text>
+          <View style={styles.statCard}>
+            <Text style={styles.statHeader}>Registered</Text>
+            <Text style={styles.statNumber}>{totalVoters.toLocaleString()}</Text>
+            <Text style={styles.statFooter}>Eligible Voters</Text>
           </View>
         </View>
 
@@ -245,15 +332,15 @@ export const ResultsPDF: React.FC<ResultsPDFProps> = ({
           const total = posCandidates.reduce((acc, c) => acc + c.votes, 0);
 
           return (
-            <View key={pos.id}>
-              <Text style={styles.sectionTitle}>{pos.title}</Text>
+            <View key={pos.id} style={styles.table}>
+              <Text style={styles.sectionHeader}>{pos.title}</Text>
 
               {/* Table Header */}
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderCell, styles.rankCol]}>Rank</Text>
-                <Text style={[styles.tableHeaderCell, styles.nameCol]}>Candidate</Text>
-                <Text style={[styles.tableHeaderCell, styles.votesCol]}>Votes</Text>
-                <Text style={[styles.tableHeaderCell, styles.percentCol]}>%</Text>
+                <Text style={[styles.tableHeaderText, styles.rankCol]}>RANK</Text>
+                <Text style={[styles.tableHeaderText, styles.nameCol]}>CANDIDATE NAME</Text>
+                <Text style={[styles.tableHeaderText, styles.votesCol]}>VOTES</Text>
+                <Text style={[styles.tableHeaderText, styles.percentCol]}>PERCENTAGE</Text>
               </View>
 
               {/* Table Rows */}
@@ -266,25 +353,18 @@ export const ResultsPDF: React.FC<ResultsPDFProps> = ({
                     key={candidate.id}
                     style={isWinner ? [styles.tableRow, styles.tableRowWinner] : styles.tableRow}
                   >
-                    <Text
-                      style={isWinner ? [styles.tableCell, styles.rankCol, styles.tableCellWinner] : [styles.tableCell, styles.rankCol]}
-                    >
+                    <Text style={[isWinner ? styles.tableCellBold : styles.tableCell, styles.rankCol]}>
                       {idx + 1}
                     </Text>
-                    <Text
-                      style={isWinner ? [styles.tableCell, styles.nameCol, styles.tableCellWinner] : [styles.tableCell, styles.nameCol]}
-                    >
-                      {candidate.name}
+                    <Text style={[isWinner ? styles.tableCellBold : styles.tableCell, styles.nameCol]}>
+                      {candidate.name.toUpperCase()}
+                      {isWinner && <Text style={styles.winnerBadge}> ★ ELECTED</Text>}
                     </Text>
-                    <Text
-                      style={isWinner ? [styles.tableCell, styles.votesCol, styles.tableCellWinner] : [styles.tableCell, styles.votesCol]}
-                    >
+                    <Text style={[isWinner ? styles.tableCellBold : styles.tableCell, styles.votesCol]}>
                       {candidate.votes.toLocaleString()}
                     </Text>
-                    <Text
-                      style={isWinner ? [styles.tableCell, styles.percentCol, styles.tableCellWinner] : [styles.tableCell, styles.percentCol]}
-                    >
-                      {pct.toFixed(1)}%
+                    <Text style={[isWinner ? styles.tableCellBold : styles.tableCell, styles.percentCol]}>
+                      {pct.toFixed(2)}%
                     </Text>
                   </View>
                 );
@@ -293,10 +373,38 @@ export const ResultsPDF: React.FC<ResultsPDFProps> = ({
           );
         })}
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text>
-            This report was generated on {new Date().toLocaleString()}. For official records, please verify with the election authority.
+        {/* Official Certification Footer */}
+        <View style={styles.officialFooter}>
+          <Text style={styles.certificationText}>
+            This is to certify that the above election results are true and correct based on the official tally conducted by the Saint Vincent Multipurpose Cooperative Election Commission. All votes have been verified and counted in accordance with the cooperative's bylaws and election procedures.
+          </Text>
+
+          <View style={styles.signatureSection}>
+            <View style={styles.signatureBox}>
+              <View style={styles.signatureLine}>
+                <Text style={styles.signatureLabel}>ELECTION COMMISSIONER</Text>
+                <Text style={styles.signatureTitle}>Chairperson, Election Commission</Text>
+              </View>
+            </View>
+            <View style={styles.signatureBox}>
+              <View style={styles.signatureLine}>
+                <Text style={styles.signatureLabel}>BOARD SECRETARY</Text>
+                <Text style={styles.signatureTitle}>Board of Directors</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Document Footer */}
+        <View style={styles.documentFooter}>
+          <Text style={styles.footerText}>
+            This document is computer-generated and requires no signature to be valid.
+          </Text>
+          <Text style={styles.footerText}>
+            For verification purposes, please contact the SVMPC Election Commission.
+          </Text>
+          <Text style={styles.referenceNumber}>
+            Reference: {referenceNumber}
           </Text>
         </View>
       </Page>

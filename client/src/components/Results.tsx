@@ -168,13 +168,12 @@ export const Results: React.FC<{ user?: User | null }> = ({ user }) => {
         resultsPublic?: boolean;
       }
 
-      // Newest-first: active > paused > completed. This ensures results persist
-      // after an election ends and always shows the MOST RECENT election.
-      const newestFirst = [...electionsData as ElectionData[]].reverse();
+      // Get elections sorted by newest first (API returns them sorted by createdAt: -1)
+      // Priority: active > paused > most recent completed
       const currentElection =
-        newestFirst.find(e => e.status === 'active' || e.status === 'ongoing') ??
-        newestFirst.find(e => e.status === 'paused') ??
-        newestFirst.find(e => e.status === 'completed');
+        (electionsData as ElectionData[]).find(e => e.status === 'active' || e.status === 'ongoing') ??
+        (electionsData as ElectionData[]).find(e => e.status === 'paused') ??
+        (electionsData as ElectionData[]).find(e => e.status === 'completed');
 
       const userIsAdminOrOfficer = user?.role === 'admin' || user?.role === 'officer';
 

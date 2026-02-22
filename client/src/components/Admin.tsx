@@ -85,7 +85,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
   const [hasEndDateChanged, setHasEndDateChanged] = useState(false);
   const [logs, setLogs] = useState<Array<{ id: string; timestamp: string; user: string; role: string; action: string }>>([]);
 
-  const canManageSystem = user.role === 'admin';
+  const canManageSystem = user.role === 'admin' || user.role === 'officer';
 
   const handleNavScroll = (e: React.UIEvent<HTMLDivElement>) => {
     scrollPosRef.current = e.currentTarget.scrollTop;
